@@ -2,18 +2,35 @@ import React, { useEffect, useRef } from 'react';
 import 'aframe';
 import 'mind-ar/dist/mindar-image-aframe.prod.js';
 
-export default () => {
-  const sceneRef = useRef(null);
+type MindARScene = HTMLElement & {
+  systems: {
+    ['mindar-image-system']?: {
+      start: () => void;
+      stop: () => void;
+    };
+  };
+};
+
+const MindARViewer: React.FC = () => {
+  const sceneRef = useRef<MindARScene | null>(null);
 
   useEffect(() => {
     const sceneEl = sceneRef.current;
-    const arSystem = sceneEl.systems["mindar-image-system"];
-    sceneEl.addEventListener('renderstart', () => {
-      arSystem.start(); // start AR 
-    });
-    return () => {
-      arSystem.stop();
+    if (!sceneEl) {
+      return undefined;
     }
+    const arSystem = sceneEl.systems['mindar-image-system'];
+    if (!arSystem) {
+      return undefined;
+    }
+    const handleRenderStart = () => {
+      arSystem.start();
+    };
+    sceneEl.addEventListener('renderstart', handleRenderStart);
+    return () => {
+      sceneEl.removeEventListener('renderstart', handleRenderStart);
+      arSystem.stop();
+    };
   }, []);
 
   return (
@@ -30,5 +47,7 @@ export default () => {
         <a-gltf-model rotation="0 0 0 " position="0 0 0.1" scale="0.005 0.005 0.005" src="#avatarModel" animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"></a-gltf-model>
       </a-entity>
     </a-scene>
-  )
-}
+  );
+};
+
+export default MindARViewer;

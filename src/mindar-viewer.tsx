@@ -23,9 +23,36 @@ const MindARViewer: React.FC = () => {
     if (!arSystem) {
       return undefined
     }
+
+    const ensureVideoPlayback = () => {
+      const videoEl = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+      if (!videoEl) {
+        return
+      }
+
+      const playVideo = () => {
+        void videoEl.play().catch(() => {
+          // playback can still be blocked by browser policies without user gesture
+        })
+      }
+
+      if (videoEl.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        playVideo()
+        return
+      }
+
+      const handleCanPlay = () => {
+        videoEl.removeEventListener('canplay', handleCanPlay)
+        playVideo()
+      }
+      videoEl.addEventListener('canplay', handleCanPlay)
+    }
+
     const handleRenderStart = () => {
       arSystem.start()
+      ensureVideoPlayback()
     }
+
     sceneEl.addEventListener('renderstart', handleRenderStart)
     return () => {
       sceneEl.removeEventListener('renderstart', handleRenderStart)
@@ -44,33 +71,32 @@ const MindARViewer: React.FC = () => {
       device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
-        <img
-          id="card"
-          src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.0/examples/image-tracking/assets/card-example/card.png"
-        />
-        <a-asset-item
-          id="avatarModel"
-          src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.0/examples/image-tracking/assets/card-example/softmind/scene.gltf"
-        ></a-asset-item>
+        <video
+          id="ar-video"
+          src="/video.mp4"
+          loop
+          crossOrigin="anonymous"
+          playsInline
+          webkit-playsinline="true"
+          muted
+          preload="auto"
+        ></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane
-          src="#card"
+        <a-video
+          src="#ar-video"
           position="0 0 0"
           height="0.552"
           width="1"
           rotation="0 0 0"
-        ></a-plane>
-        <a-gltf-model
-          rotation="0 0 0 "
-          position="0 0 0.1"
-          scale="0.005 0.005 0.005"
-          src="#avatarModel"
-          animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
-        ></a-gltf-model>
+          loop="true"
+          muted="true"
+          autoplay="true"
+          playsinline="true"
+        ></a-video>
       </a-entity>
     </a-scene>
   )

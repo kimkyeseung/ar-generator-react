@@ -10,6 +10,7 @@ declare global {
       'a-entity': any;
       'a-plane': any;
       'a-gltf-model': any;
+      'a-video': any;
     }
   }
 }

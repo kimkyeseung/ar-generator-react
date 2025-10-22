@@ -1,37 +1,90 @@
-import React, { useState } from 'react';
-import './App.css';
-import MindARViewer from './mindar-viewer';
-import MindARThreeViewer from './mindar-three-viewer';
+import React from 'react'
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
+import './App.css'
+import MindARViewer from './mindar-viewer'
+import MindARThreeViewer from './mindar-three-viewer'
+import { Home } from './components/Home'
 
-type ViewerVariant = 'aframe' | 'three';
+const AframePage: React.FC = () => (
+  <div className="container">
+    <MindARViewer />
+    <video></video>
+  </div>
+)
 
-const App: React.FC = () => {
-  const [started, setStarted] = useState<ViewerVariant | null>(null);
+const ThreePage: React.FC = () => (
+  <div className="container">
+    <MindARThreeViewer />
+  </div>
+)
+
+const Navigation: React.FC = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const isAframe = location.pathname === '/aframe'
+  const isThree = location.pathname === '/three'
 
   return (
-    <div className="App">
-      <h1>Example React component with <a href="https://github.com/hiukim/mind-ar-js" target="_blank" rel="noreferrer">MindAR</a></h1>
-
-      <div className="control-buttons">
-        {started === null && <button onClick={() => {setStarted('aframe');}}>Start AFRAME version</button>}
-        {started === null && <button onClick={() => {setStarted('three');}}>Start ThreeJS version</button>}
-        {started !== null && <button onClick={() => {setStarted(null);}}>Stop</button>}
-      </div>
-
-      {started === 'aframe' && (
-        <div className="container">
-          <MindARViewer/>
-          <video></video>
-        </div>
+    <div className="control-buttons">
+      <button
+        type="button"
+        onClick={() => {
+          navigate('/')
+        }}
+      >
+        Home
+      </button>
+      {!isAframe && (
+        <button
+          type="button"
+          onClick={() => {
+            navigate('/aframe')
+          }}
+        >
+          Go to AFRAME version
+        </button>
       )}
-
-      {started === 'three' && (
-        <div className="container">
-          <MindARThreeViewer />
-        </div>
+      {!isThree && (
+        <button
+          type="button"
+          onClick={() => {
+            navigate('/three')
+          }}
+        >
+          Go to ThreeJS version
+        </button>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default App;
+const App: React.FC = () => (
+  <div className="App">
+    <h1>
+      Example React component with{' '}
+      <a
+        href="https://github.com/hiukim/mind-ar-js"
+        target="_blank"
+        rel="noreferrer"
+      >
+        MindAR
+      </a>
+    </h1>
+
+    <Navigation />
+
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/aframe" element={<AframePage />} />
+      <Route path="/three" element={<ThreePage />} />
+    </Routes>
+  </div>
+)
+
+export default App

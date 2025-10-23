@@ -11,7 +11,9 @@
     "aframe": "^1.4.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react": "^0.546.0",
     "mind-ar": "^1.2.1",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.65.0",
@@ -50,6 +52,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^18.19.68",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.5",
     "@types/three": "^0.165.0",

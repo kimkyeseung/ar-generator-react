@@ -2,6 +2,9 @@
   "name": "mind-ar-react",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "overrides": {
     "canvas": "2.11.2"
   },

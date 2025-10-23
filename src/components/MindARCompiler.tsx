@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, FC } from 'react'
 import { Controller, useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-import Dropzone from './Dropzone'
 import { Compiler } from '../lib/image-target/compiler'
 import { Button } from './ui/button'
+import { Progress } from './ui/progress'
+import { FileUpload } from './FileUpload'
 
 const fileUploadSchema = z.object({
   attachments: z
@@ -19,18 +20,25 @@ const fileUploadSchema = z.object({
 // 스키마로부터 TypeScript 타입 추론
 type FileUploadFormData = z.infer<typeof fileUploadSchema>
 
-const MindARCompiler = () => {
+interface Props {
+  onCompileColplete: (target: ArrayBuffer) => void
+}
+
+const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
   const {
     control,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<FileUploadFormData>({
     resolver: zodResolver(fileUploadSchema),
     defaultValues: { attachments: [] },
   })
+  const attachments = watch('attachments')
+
   // 상태 변수들
   const [progress, setProgress] = useState<number>(0)
-  const [compiledData, setCompiledData] = useState<ArrayBuffer | null>(null)
+  // const [compiledData, setCompiledData] = useState<ArrayBuffer | null>(null)
 
   // DOM 요소와 인스턴스를 참조하기 위한 Ref
   const containerRef = useRef<HTMLDivElement>(null)
@@ -82,10 +90,14 @@ const MindARCompiler = () => {
     [],
   )
 
+  const initialize = function () {
+    setProgress(0)
+    if (containerRef.current) containerRef.current.innerHTML = '' // 이전 캔버스 초기화
+  }
+
   // 컴파일된 데이터의 시각화 정보를 표시하는 함수
   const showData = useCallback(
     (data: any) => {
-      console.log('data', data)
       for (let i = 0; i < data.trackingImageList.length; i++) {
         const image = data.trackingImageList[i]
         const points = data.trackingData[i].points.map((p: any) => ({
@@ -127,7 +139,8 @@ const MindARCompiler = () => {
       const images = await Promise.all(files.map(loadImage))
 
       const startTime = performance.now()
-      const dataList = await compilerRef.current.compileImageTargets(
+      // const dataList = 
+      await compilerRef.current.compileImageTargets(
         images,
         (progressValue: number) => {
           setProgress(progressValue)
@@ -137,8 +150,8 @@ const MindARCompiler = () => {
         `Execution time (compile): ${performance.now() - startTime}ms`,
       )
 
-      if (containerRef.current) containerRef.current.innerHTML = '' // 이전 캔버스 초기화
-      dataList.forEach(showData)
+      // if (containerRef.current) containerRef.current.innerHTML = '' // 이전 캔버스 초기화
+      // dataList.forEach(showData)
 
       const exportedBuffer = compilerRef.current.exportData()
       const _arrayBuffer = exportedBuffer.buffer.slice(
@@ -146,9 +159,12 @@ const MindARCompiler = () => {
         exportedBuffer.byteOffset + exportedBuffer.byteLength,
       )
       const arrayBuffer = new ArrayBuffer(_arrayBuffer.byteLength)
-      setCompiledData(arrayBuffer)
+      onCompileColplete(arrayBuffer)
     },
-    [showData],
+    [
+      onCompileColplete,
+      // showData
+    ],
   )
 
   // .mind 파일을 로드하는 함수
@@ -174,8 +190,7 @@ const MindARCompiler = () => {
       formData.append('files', file) // 'files'라는 키로 파일 추가
     })
 
-    setCompiledData(null) // 새로운 시작 시 다운로드 데이터 초기화
-    setProgress(0)
+    initialize()
 
     const ext = data.attachments[0].name.split('.').pop()?.toLowerCase()
     if (ext === 'mind') {
@@ -185,46 +200,37 @@ const MindARCompiler = () => {
     }
   }
 
-  // 'Download' 버튼 클릭 핸들러
-  const handleDownload = () => {
-    if (!compiledData) return
-    const blob = new Blob([compiledData])
-    const aLink = document.createElement('a')
-    aLink.download = 'targets.mind'
-    aLink.href = window.URL.createObjectURL(blob)
-    aLink.click()
-    window.URL.revokeObjectURL(aLink.href)
-  }
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
-      <span style={{ marginLeft: '1rem' }}>
-        {progress > 0 && progress < 100 && `Progress: ${progress.toFixed(2)}%`}
-      </span>
+    <form onSubmit={handleSubmit(onSubmit)}>
       <Controller
         control={control}
         name="attachments"
-        render={({ field, fieldState }) => (
-          <Dropzone
-            value={field.value}
-            onChange={field.onChange}
-            errorMessage={fieldState.error?.message}
+        render={({ field }) => (
+          <FileUpload
+            accept="image/*"
+            label="Target Image"
+            icon="image"
+            isMultiple
+            onFileSelect={(...args) => {
+              initialize()
+              field.onChange(...args)
+            }}
+            file={field.value}
           />
         )}
       />
+      {progress !== 0 && progress !== 100 && <Progress value={progress} />}
 
-      <div className="flex gap-2 justify-center">
-        <Button type="submit">Start</Button>
-        {compiledData && (
-          <Button
-            onClick={handleDownload}
-            disabled={!compiledData}
-            type="button"
-          >
-            Download
-          </Button>
-        )}
-      </div>
+      {progress !== 100 && (
+        <Button
+          type="submit"
+          disabled={!attachments || attachments.length === 0}
+          className="w-full mt-6"
+          size="lg"
+        >
+          Upload target image
+        </Button>
+      )}
 
       <div
         ref={containerRef}

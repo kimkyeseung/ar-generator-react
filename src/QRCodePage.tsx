@@ -1,21 +1,20 @@
-import React, { useEffect, useRef } from 'react'
-import { Button } from './ui/button'
+import { useEffect, useRef } from 'react'
+import { Button } from './components/ui/button'
 import { ArrowLeft, Download } from 'lucide-react'
 import QRCode from 'qrcode'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 
-interface QRCodePageProps {
-  onBack: () => void
-  targetFile: File | null
-  videoFile: File | null
-}
-
-export function QRCodePage({ onBack, targetFile, videoFile }: QRCodePageProps) {
+export function QRCodePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const publishedUrl = `https://ar.viswave.io/view/${Date.now()}`
+  const { folderId } = useParams<{ folderId: string }>()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const fullUrl = `${window.location.origin}${location.pathname}${location.search}${location.hash}`
 
   useEffect(() => {
     if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, publishedUrl, {
+      QRCode.toCanvas(canvasRef.current, fullUrl, {
         width: 300,
         margin: 2,
         color: {
@@ -24,7 +23,7 @@ export function QRCodePage({ onBack, targetFile, videoFile }: QRCodePageProps) {
         },
       })
     }
-  }, [publishedUrl])
+  }, [fullUrl])
 
   const handleDownload = () => {
     if (canvasRef.current) {
@@ -39,7 +38,11 @@ export function QRCodePage({ onBack, targetFile, videoFile }: QRCodePageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-        <Button variant="ghost" onClick={onBack} className="mb-6 -ml-2">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-6 -ml-2"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
           뒤로 가기
         </Button>
@@ -56,7 +59,7 @@ export function QRCodePage({ onBack, targetFile, videoFile }: QRCodePageProps) {
             </div>
           </div>
 
-          <div className="space-y-3 mb-6">
+          {/* <div className="space-y-3 mb-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-1">Target Image</p>
               <p className="text-gray-900">{targetFile?.name}</p>
@@ -65,14 +68,23 @@ export function QRCodePage({ onBack, targetFile, videoFile }: QRCodePageProps) {
               <p className="text-sm text-gray-600 mb-1">Video Content</p>
               <p className="text-gray-900">{videoFile?.name}</p>
             </div>
-          </div>
+          </div> */}
 
-          <Button onClick={handleDownload} className="w-full">
-            <Download className="w-4 h-4 mr-2" />
-            QR 코드 다운로드
+          <Button
+            onClick={() => {
+              navigate(`/result/${folderId}`)
+            }}
+            className="w-full"
+          >
+            이동하기
           </Button>
 
-          <p className="text-sm text-gray-500 mt-4 break-all">{publishedUrl}</p>
+          <Button variant={'outline'} onClick={handleDownload}>
+            <Download />
+            다운로드
+          </Button>
+
+          <p className="text-sm text-gray-500 mt-4 break-all">{fullUrl}</p>
         </div>
       </div>
     </div>

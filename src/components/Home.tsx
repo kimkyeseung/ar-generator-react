@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react'
 import { FileUpload } from './FileUpload'
-import { QRCodePage } from './QRCodePage'
 import { Button } from './ui/button'
 import { Sparkles } from 'lucide-react'
 import MindARCompiler from './MindARCompiler'
+import { useNavigate } from 'react-router-dom'
+import { Progress } from './ui/progress'
 
 const stepMessageMap = {
   1: 'Step 1. 타겟 이미지를 업로드해주세요.',
@@ -15,6 +16,7 @@ const API_URL = process.env.REACT_APP_API_URL
 export default function App() {
   const [step, setStep] = useState<1 | 2>(1)
   const [progress, setProgress] = useState<number>(0)
+  const navigate = useNavigate()
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
@@ -24,7 +26,6 @@ export default function App() {
       setVideoFile(input)
     }
   }, [])
-  const [isPublished, setIsPublished] = useState(false)
 
   const canPublish = targetFile !== null && videoFile !== null
 
@@ -37,9 +38,9 @@ export default function App() {
 
       const res = await uploadWithProgress(formData)
 
-      alert('DONE')
-      console.log(res)
-      // setIsPublished(true)
+      const fullUrl = `${window.location.origin}/result/${res.fileId}`
+
+      navigate(fullUrl)
     }
   }
 
@@ -70,10 +71,6 @@ export default function App() {
       xhr.onerror = () => reject(new Error('Network error'))
       xhr.send(formData)
     })
-  }
-
-  const handleBack = () => {
-    setIsPublished(false)
   }
 
   const handleComplieComplete = (target: ArrayBuffer) => {
@@ -124,7 +121,7 @@ export default function App() {
                 <div className="pt-4">
                   <Button
                     onClick={handlePublish}
-                    disabled={!canPublish}
+                    disabled={!canPublish && progress !== 0}
                     className="w-full"
                     size="lg"
                   >
@@ -139,6 +136,7 @@ export default function App() {
                 )} */}
                 </div>
               )}
+              {progress !== 0 && <Progress value={progress} />}
             </div>
           </div>
 

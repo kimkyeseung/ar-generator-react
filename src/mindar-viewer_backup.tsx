@@ -11,12 +11,7 @@ type MindARScene = HTMLElement & {
   }
 }
 
-interface Props {
-  mindUrl: string
-  videoUrl: string
-}
-
-const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
+const MindARViewer: React.FC = () => {
   const sceneRef = useRef<MindARScene | null>(null)
 
   useEffect(() => {
@@ -69,7 +64,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     <a-scene
       className="h-full w-full"
       ref={sceneRef}
-      mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`}
+      mindar-image="imageTargetSrc: /targets.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;"
       color-space="sRGB"
       embedded
       renderer="colorManagement: true, physicallyCorrectLights"
@@ -79,7 +74,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       <a-assets>
         <video
           id="ar-video"
-          src={videoUrl}
+          src="/video.mp4"
           loop
           crossOrigin="anonymous"
           playsInline

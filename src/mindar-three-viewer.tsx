@@ -26,7 +26,7 @@ const MindARThreeViewer: React.FC = () => {
 
     const mindarThree = new MindARThree({
       container: containerEl,
-      imageTargetSrc: 'targets.mind',
+      imageTargetSrc: '/targets.mind',
     }) as MindARThreeInstance
     const { renderer, scene, camera } = mindarThree
     const anchor = mindarThree.addAnchor(0)

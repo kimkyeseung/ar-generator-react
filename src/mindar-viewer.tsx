@@ -62,8 +62,9 @@ const MindARViewer: React.FC = () => {
 
   return (
     <a-scene
+      className="h-full w-full"
       ref={sceneRef}
-      mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;"
+      mindar-image="imageTargetSrc: /targets.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;"
       color-space="sRGB"
       embedded
       renderer="colorManagement: true, physicallyCorrectLights"

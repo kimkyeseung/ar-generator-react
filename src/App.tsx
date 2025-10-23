@@ -77,7 +77,7 @@ const App: React.FC = () => (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
       <header className="space-y-4 text-center">
         <span className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-slate-300">
-          Augmented Reality Demo
+          Augmented Reality Generator
         </span>
         <h1 className="text-3xl font-semibold text-white sm:text-4xl">
           Explore AR examples built with{' '}

@@ -2,12 +2,6 @@
   "name": "ar-generator-react",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": "20.x"
-  },
-  "overrides": {
-    "canvas": "2.11.2"
-  },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
     "@radix-ui/react-slot": "^1.2.3",

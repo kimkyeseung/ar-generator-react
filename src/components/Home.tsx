@@ -32,8 +32,8 @@ export default function App() {
   const handlePublish = async () => {
     if (canPublish) {
       const formData = new FormData()
-      const blob = new Blob([targetFile])
-      formData.append('target', blob)
+      const blob = new Blob([targetFile], { type: 'application/octet-stream' })
+      formData.append('target', blob, 'targets.mind')
       formData.append('video', videoFile)
 
       const res = await uploadWithProgress(formData)

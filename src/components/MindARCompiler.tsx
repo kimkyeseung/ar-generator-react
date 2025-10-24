@@ -38,7 +38,7 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
 
   // 상태 변수들
   const [progress, setProgress] = useState<number>(0)
-  // const [compiledData, setCompiledData] = useState<ArrayBuffer | null>(null)
+  const [compiledData, setCompiledData] = useState<ArrayBuffer | null>(null)
 
   // DOM 요소와 인스턴스를 참조하기 위한 Ref
   const containerRef = useRef<HTMLDivElement>(null)
@@ -139,7 +139,7 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
       const images = await Promise.all(files.map(loadImage))
 
       const startTime = performance.now()
-      // const dataList = 
+      // const dataList =
       await compilerRef.current.compileImageTargets(
         images,
         (progressValue: number) => {
@@ -154,12 +154,10 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
       // dataList.forEach(showData)
 
       const exportedBuffer = compilerRef.current.exportData()
-      const _arrayBuffer = exportedBuffer.buffer.slice(
-        exportedBuffer.byteOffset,
-        exportedBuffer.byteOffset + exportedBuffer.byteLength,
-      )
-      const arrayBuffer = new ArrayBuffer(_arrayBuffer.byteLength)
+      const arrayCopy = exportedBuffer.slice()
+      const arrayBuffer = arrayCopy.buffer
       onCompileColplete(arrayBuffer)
+      setCompiledData(arrayBuffer)
     },
     [
       onCompileColplete,
@@ -182,6 +180,17 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
     },
     [showData],
   )
+
+  // 'Download' 버튼 클릭 핸들러
+  const handleDownload = () => {
+    if (!compiledData) return
+    const blob = new Blob([compiledData])
+    const aLink = document.createElement('a')
+    aLink.download = 'targets.mind'
+    aLink.href = window.URL.createObjectURL(blob)
+    aLink.click()
+    window.URL.revokeObjectURL(aLink.href)
+  }
 
   // 'Start' 버튼 클릭 핸들러
   const onSubmit: SubmitHandler<FileUploadFormData> = async (data) => {
@@ -220,6 +229,12 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
         )}
       />
       {progress !== 0 && progress !== 100 && <Progress value={progress} />}
+
+      {compiledData && (
+        <Button onClick={handleDownload} disabled={!compiledData} type="button">
+          Download
+        </Button>
+      )}
 
       {progress !== 100 && (
         <Button

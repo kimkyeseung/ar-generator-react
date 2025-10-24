@@ -199,6 +199,15 @@ AFRAME.registerSystem('mindar-image-system', {
       this.video.style.width = container.clientWidth + 'px';
       this.video.style.height = container.clientHeight + 'px';
       this.video.style.objectFit = 'cover';
+      const canvases = container.querySelectorAll('canvas');
+      canvases.forEach((canvas) => {
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0px';
+        canvas.style.left = '0px';
+        canvas.style.width = container.clientWidth + 'px';
+        canvas.style.height = container.clientHeight + 'px';
+        canvas.style.objectFit = 'cover';
+      });
       return;
     }
 
@@ -207,6 +216,15 @@ AFRAME.registerSystem('mindar-image-system', {
     this.video.style.left = (-(vw - container.clientWidth) / 2) + "px";
     this.video.style.width = vw + "px";
     this.video.style.height = vh + "px";
+    const canvases = container.querySelectorAll('canvas');
+    canvases.forEach((canvas) => {
+      canvas.style.position = 'absolute';
+      canvas.style.top = (-(vh - container.clientHeight) / 2) + "px";
+      canvas.style.left = (-(vw - container.clientWidth) / 2) + "px";
+      canvas.style.width = vw + "px";
+      canvas.style.height = vh + "px";
+      canvas.style.objectFit = '';
+    });
   }
 });
 

@@ -192,6 +192,17 @@ AFRAME.registerSystem('mindar-image-system', {
     //const newCam = new AFRAME.THREE.PerspectiveCamera(fov, newRatio, near, far);
     //camera.getObject3D('camera').projectionMatrix = newCam.projectionMatrix;
 
+    const isMobileViewport = window.matchMedia('(max-width: 768px)').matches;
+    if (isMobileViewport) {
+      this.video.style.top = '0px';
+      this.video.style.left = '0px';
+      this.video.style.width = container.clientWidth + 'px';
+      this.video.style.height = container.clientHeight + 'px';
+      this.video.style.objectFit = 'cover';
+      return;
+    }
+
+    this.video.style.objectFit = '';
     this.video.style.top = (-(vh - container.clientHeight) / 2) + "px";
     this.video.style.left = (-(vw - container.clientWidth) / 2) + "px";
     this.video.style.width = vw + "px";

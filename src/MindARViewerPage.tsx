@@ -48,8 +48,8 @@ export default function MindARViewerPage() {
   if (!isReady) return <p>Loading AR assets...</p>
 
   return (
-    <section className="flex w-full justify-center">
-      <div className="relative h-screen w-full overflow-hidden rounded-2xl border border-slate-700 bg-transparent shadow-2xl">
+    <section className="relative flex min-h-[100dvh] w-full">
+      <div className="absolute inset-0">
         <MindARViewer mindUrl={mindUrl} videoUrl={videoUrl} />
       </div>
     </section>

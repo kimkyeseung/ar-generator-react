@@ -29,6 +29,27 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       return undefined
     }
 
+    const styleCameraFeed = () => {
+      const cameraFeed = document.querySelector<HTMLVideoElement>(
+        'video.mindar-video',
+      )
+      if (!cameraFeed) {
+        return
+      }
+      cameraFeed.style.position = 'absolute'
+      cameraFeed.style.top = '0'
+      cameraFeed.style.left = '0'
+      cameraFeed.style.width = '100%'
+      cameraFeed.style.height = '100%'
+      cameraFeed.style.objectFit = 'cover'
+      cameraFeed.style.zIndex = '-1'
+      cameraFeed.style.transform = ''
+    }
+
+    const observer = new MutationObserver(() => styleCameraFeed())
+    observer.observe(sceneEl, { childList: true, subtree: true })
+    window.addEventListener('resize', styleCameraFeed)
+
     const ensureVideoPlayback = () => {
       const videoEl = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (!videoEl) {
@@ -56,18 +77,22 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     const handleRenderStart = () => {
       arSystem.start()
       ensureVideoPlayback()
+      styleCameraFeed()
     }
 
     sceneEl.addEventListener('renderstart', handleRenderStart)
     return () => {
       sceneEl.removeEventListener('renderstart', handleRenderStart)
       arSystem.stop()
+      observer.disconnect()
+      window.removeEventListener('resize', styleCameraFeed)
     }
   }, [])
 
   return (
     <a-scene
       className="h-full w-full"
+      style={{ width: '100%', height: '100%' }}
       ref={sceneRef}
       mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`}
       color-space="sRGB"

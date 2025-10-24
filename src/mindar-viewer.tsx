@@ -29,6 +29,18 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       return undefined
     }
 
+    const targetEntity =
+      sceneEl.querySelector<HTMLElement>('[mindar-image-target]')
+
+    const handleTargetFound = () => {
+      console.log('[MindAR] targetFound')
+    }
+    const handleTargetLost = () => {
+      console.log('[MindAR] targetLost')
+    }
+    targetEntity?.addEventListener('targetFound', handleTargetFound)
+    targetEntity?.addEventListener('targetLost', handleTargetLost)
+
     const styleCameraFeed = () => {
       const cameraFeed = document.querySelector<HTMLVideoElement>(
         'video.mindar-video',
@@ -86,6 +98,8 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       arSystem.stop()
       observer.disconnect()
       window.removeEventListener('resize', styleCameraFeed)
+      targetEntity?.removeEventListener('targetFound', handleTargetFound)
+      targetEntity?.removeEventListener('targetLost', handleTargetLost)
     }
   }, [])
 

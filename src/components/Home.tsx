@@ -37,17 +37,18 @@ export default function App() {
       formData.append('video', videoFile)
 
       const res = await uploadWithProgress(formData)
-
-      const fullUrl = `${window.location.origin}/result/${res.fileId}`
-
-      navigate(fullUrl)
+      navigate(`/result/qr/${res.folderId}`)
     }
   }
 
   // 업로드 (진행률 표시용: XMLHttpRequest 사용)
   const uploadWithProgress = async (formData: FormData) => {
     setProgress(0)
-    return await new Promise<{ fileId: string }>((resolve, reject) => {
+    return await new Promise<{
+      folderId: string
+      targetFileId: string
+      videoFileId: string
+    }>((resolve, reject) => {
       const xhr = new XMLHttpRequest()
 
       xhr.open('POST', `${API_URL}/upload`)

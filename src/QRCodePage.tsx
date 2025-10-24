@@ -2,15 +2,14 @@ import { useEffect, useRef } from 'react'
 import { Button } from './components/ui/button'
 import { ArrowLeft, Download } from 'lucide-react'
 import QRCode from 'qrcode'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 export function QRCodePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { folderId } = useParams<{ folderId: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
 
-  const fullUrl = `${window.location.origin}${location.pathname}${location.search}${location.hash}`
+  const fullUrl = `${window.location.origin}/result/${folderId}`
 
   useEffect(() => {
     if (canvasRef.current) {

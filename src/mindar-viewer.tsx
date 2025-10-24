@@ -62,15 +62,34 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     observer.observe(sceneEl, { childList: true, subtree: true })
     window.addEventListener('resize', styleCameraFeed)
 
+    const gestureCleanup: Array<() => void> = []
+
     const ensureVideoPlayback = () => {
       const videoEl = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (!videoEl) {
         return
       }
 
+      const scheduleGestureResume = () => {
+        const resumePlayback = () => {
+          document.removeEventListener('touchend', resumePlayback)
+          document.removeEventListener('click', resumePlayback)
+          void videoEl.play().catch((error) => {
+            console.warn('[MindAR] video playback blocked after gesture', error)
+          })
+        }
+        document.addEventListener('touchend', resumePlayback, { once: true })
+        document.addEventListener('click', resumePlayback, { once: true })
+        gestureCleanup.push(() => {
+          document.removeEventListener('touchend', resumePlayback)
+          document.removeEventListener('click', resumePlayback)
+        })
+      }
+
       const playVideo = () => {
-        void videoEl.play().catch(() => {
-          // playback can still be blocked by browser policies without user gesture
+        void videoEl.play().catch((error) => {
+          console.warn('[MindAR] video autoplay blocked', error)
+          scheduleGestureResume()
         })
       }
 
@@ -100,6 +119,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       window.removeEventListener('resize', styleCameraFeed)
       targetEntity?.removeEventListener('targetFound', handleTargetFound)
       targetEntity?.removeEventListener('targetLost', handleTargetLost)
+      gestureCleanup.forEach((cleanupHandler) => cleanupHandler())
     }
   }, [])
 
@@ -109,6 +129,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       style={{ width: '100%', height: '100%' }}
       ref={sceneRef}
       mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`}
+      assettimeout="15000"
       color-space="sRGB"
       embedded
       renderer="colorManagement: true, physicallyCorrectLights"

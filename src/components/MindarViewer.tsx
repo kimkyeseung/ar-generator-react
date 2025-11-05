@@ -25,6 +25,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
   useEffect(() => {
     const sceneEl = sceneRef.current
     if (!sceneEl) return
+    const containerEl = sceneEl.parentElement as HTMLElement | null
 
     const arSystem = sceneEl.systems['mindar-image-system']
     if (!arSystem) return
@@ -54,25 +55,54 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     targetEntity?.addEventListener('targetLost', handleTargetLost)
 
     /** ---------- 카메라 피드 스타일 ---------- **/
-    const styleCameraFeed = () => {
-      const cameraFeed =
-        document.querySelector<HTMLVideoElement>('video.mindar-video')
-      if (!cameraFeed) return
-
-      Object.assign(cameraFeed.style, {
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        zIndex: '-1',
-        transform: '',
-      })
+    const getCameraFeed = () => {
+      if (!containerEl) return null
+      const cameraFeed = Array.from(
+        containerEl.querySelectorAll<HTMLVideoElement>('video'),
+      ).find((videoEl) => !sceneEl.contains(videoEl))
+      if (!cameraFeed) return null
+      cameraFeed.classList.add('mindar-camera-feed') // 나중에 스타일링 할 수 있을 수도
+      return cameraFeed
     }
 
-    const observer = new MutationObserver(() => styleCameraFeed())
-    observer.observe(sceneEl, { childList: true, subtree: true })
+    const styleCameraFeed = () => {
+      const cameraFeed = getCameraFeed()
+      if (!cameraFeed) return
+
+      cameraFeed.style.position = 'absolute'
+      cameraFeed.style.zIndex = '-1'
+      cameraFeed.style.transform = ''
+
+      const isMobileViewport =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(max-width: 768px)').matches
+
+      if (isMobileViewport) {
+        cameraFeed.dataset.mindarViewport = 'mobile'
+        Object.assign(cameraFeed.style, {
+          top: '0',
+          left: '0',
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+        })
+        return
+      }
+
+      if (cameraFeed.dataset.mindarViewport === 'mobile') {
+        delete cameraFeed.dataset.mindarViewport
+        cameraFeed.style.removeProperty('top')
+        cameraFeed.style.removeProperty('left')
+        cameraFeed.style.removeProperty('width')
+        cameraFeed.style.removeProperty('height')
+        cameraFeed.style.removeProperty('object-fit')
+      }
+    }
+
+    const observer = containerEl ? new MutationObserver(styleCameraFeed) : null
+    if (observer && containerEl) {
+      observer.observe(containerEl, { childList: true, subtree: true })
+    }
     window.addEventListener('resize', styleCameraFeed)
 
     /** ---------- 비디오 재생 보장 ---------- **/
@@ -143,7 +173,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     return () => {
       sceneEl.removeEventListener('renderstart', handleRenderStart)
       arSystem.stop()
-      observer.disconnect()
+      observer?.disconnect()
       window.removeEventListener('resize', styleCameraFeed)
       targetEntity?.removeEventListener('targetFound', handleTargetFound)
       targetEntity?.removeEventListener('targetLost', handleTargetLost)

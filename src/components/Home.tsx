@@ -129,12 +129,6 @@ export default function App() {
                     <Sparkles className="w-5 h-5 mr-2" />
                     Publish
                   </Button>
-
-                  {/* {!canPublish && (
-                  <p className="text-sm text-gray-500 text-center mt-3">
-                    모든 파일을 업로드해주세요
-                  </p>
-                )} */}
                 </div>
               )}
               {progress !== 0 && <Progress value={progress} />}

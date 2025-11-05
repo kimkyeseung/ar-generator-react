@@ -1,4 +1,4 @@
-import MindARViewer from './mindar-viewer'
+import MindARViewer from './components/MindarViewer'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
@@ -29,11 +29,10 @@ export default function MindARViewerPage() {
     queryFn: () => fetchArFiles(folderId),
   })
 
-  // 2️⃣ .mind 파일 및 video 파일 병렬 요청
   const { data: mindUrl, isLoading: isMindLoading } = useQuery({
     queryKey: ['mindUrl', fileIds?.mindFileId],
     queryFn: () => fetchBlobUrlFromFileId(fileIds!.mindFileId),
-    enabled: !!fileIds, // fileIds가 로드된 후 실행
+    enabled: !!fileIds,
   })
 
   const { data: videoUrl, isLoading: isVideoLoading } = useQuery({

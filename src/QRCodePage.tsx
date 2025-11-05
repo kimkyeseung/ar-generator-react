@@ -58,17 +58,6 @@ export function QRCodePage() {
             </div>
           </div>
 
-          {/* <div className="space-y-3 mb-6">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Target Image</p>
-              <p className="text-gray-900">{targetFile?.name}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Video Content</p>
-              <p className="text-gray-900">{videoFile?.name}</p>
-            </div>
-          </div> */}
-
           <Button
             onClick={() => {
               navigate(`/result/${folderId}`)

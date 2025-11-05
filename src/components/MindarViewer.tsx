@@ -34,6 +34,22 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       '[mindar-image-target]',
     )
 
+    const mindarVideoPlane =
+      sceneEl.querySelector<HTMLElement>('a-video[src="#ar-video"]') ?? null
+
+    const updateVideoPlaneAspect = () => {
+      if (!mindarVideoPlane) return
+      const videoElement = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+      if (!videoElement) return
+      const { videoWidth, videoHeight } = videoElement
+      if (!videoWidth || !videoHeight) return
+
+      const planeWidth = 1
+      const planeHeight = (videoHeight / videoWidth) * planeWidth
+      mindarVideoPlane.setAttribute('width', planeWidth.toString())
+      mindarVideoPlane.setAttribute('height', planeHeight.toString())
+    }
+
     /** ---------- 타겟 이벤트 ---------- **/
     const handleTargetFound = () => {
       console.log('[MindAR] targetFound')
@@ -123,6 +139,19 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       }
     }
 
+    const videoMetadataHandler = () => {
+      updateVideoPlaneAspect()
+    }
+
+    const videoElement = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+    videoElement?.addEventListener('loadedmetadata', videoMetadataHandler)
+    if (
+      videoElement &&
+      videoElement.readyState >= HTMLMediaElement.HAVE_METADATA
+    ) {
+      updateVideoPlaneAspect()
+    }
+
     /** ---------- iOS 권한 요청 + 최초 제스처 처리 ---------- **/
     const requestIOSPermissions = async () => {
       try {
@@ -164,6 +193,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     const handleRenderStart = () => {
       arSystem.start()
       ensureVideoPlayback()
+      updateVideoPlaneAspect()
       styleCameraFeed()
     }
 
@@ -179,6 +209,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       targetEntity?.removeEventListener('targetLost', handleTargetLost)
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
+      videoElement?.removeEventListener('loadedmetadata', videoMetadataHandler)
     }
   }, [])
 

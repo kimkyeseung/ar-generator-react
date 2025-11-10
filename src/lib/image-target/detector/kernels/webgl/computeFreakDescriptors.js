@@ -1,17 +1,17 @@
+import { FREAKPOINTS } from '../../freak.js'
 
-import { FREAKPOINTS } from '../../freak.js';
+const FREAK_CONPARISON_COUNT =
+  ((FREAKPOINTS.length - 1) * FREAKPOINTS.length) / 2
+const descriptorCount = Math.ceil(FREAK_CONPARISON_COUNT / 8)
 
-const FREAK_CONPARISON_COUNT = (FREAKPOINTS.length - 1) * (FREAKPOINTS.length) / 2;
-const descriptorCount = Math.ceil(FREAK_CONPARISON_COUNT / 8);
-
-const cache={};
-function GetProgram(extremaFreaks){
-    const key=`${extremaFreaks.shape[0]}`;
-    if (!cache.hasOwnProperty(key)) {
-        const kernel = {
-            variableNames: ['freak', 'p'],
-            outputShape: [extremaFreaks.shape[0], descriptorCount],
-            userCode: `
+const cache = {}
+function GetProgram(extremaFreaks) {
+  const key = `${extremaFreaks.shape[0]}`
+  if (!cache.hasOwnProperty(key)) {
+    const kernel = {
+      variableNames: ['freak', 'p'],
+      outputShape: [extremaFreaks.shape[0], descriptorCount],
+      userCode: `
   void main() {
     ivec2 coords = getOutputCoords();
     int featureIndex = coords[0];
@@ -35,23 +35,23 @@ function GetProgram(extremaFreaks){
     }
     setOutput(float(sum));
   }
-`
-        }
-        cache[key]=kernel;
+`,
     }
-    return cache[key];
+    cache[key] = kernel
+  }
+  return cache[key]
 }
 
-export const computeFreakDescriptor=(args)=>{
-    const {extremaFreaks, positionT} =args.inputs;
-    const {backend} = args;
-    const program = GetProgram(extremaFreaks);
-    return backend.runWebGLProgram(program,[extremaFreaks, positionT],'int32');
+export const computeFreakDescriptor = (args) => {
+  const { extremaFreaks, positionT } = args.inputs
+  const { backend } = args
+  const program = GetProgram(extremaFreaks)
+  return backend.runWebGLProgram(program, [extremaFreaks, positionT], 'int32')
 }
 
-export const computeFreakDescriptorConfig = {//: KernelConfig
-    kernelName: "ComputeFreakDescriptors",
-    backendName: 'webgl',
-    kernelFunc: computeFreakDescriptor,// as {} as KernelFunc,
-};
-
+export const computeFreakDescriptorConfig = {
+  //: KernelConfig
+  kernelName: 'ComputeFreakDescriptors',
+  backendName: 'webgl',
+  kernelFunc: computeFreakDescriptor, // as {} as KernelFunc,
+}

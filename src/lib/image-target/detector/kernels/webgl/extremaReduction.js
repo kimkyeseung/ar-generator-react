@@ -1,14 +1,14 @@
-export const extremaReduction=(args)=>{
-    /** @type {import('@tensorflow/tfjs').TensorInfo[]} */
-    const {extremasResultT} = args.inputs;
-    /** @type {MathBackendWebGL} */
-	const backend = args.backend;
-    const extremaHeight = extremasResultT.shape[0];
-	const extremaWidth = extremasResultT.shape[1];
-	const kernel = {
-		variableNames: ['extrema'],
-		outputShape: [Math.floor(extremaHeight/2), Math.floor(extremaWidth/2)],
-		userCode: `
+export const extremaReduction = (args) => {
+  /** @type {import('@tensorflow/tfjs').TensorInfo[]} */
+  const { extremasResultT } = args.inputs
+  /** @type {MathBackendWebGL} */
+  const backend = args.backend
+  const extremaHeight = extremasResultT.shape[0]
+  const extremaWidth = extremasResultT.shape[1]
+  const kernel = {
+    variableNames: ['extrema'],
+    outputShape: [Math.floor(extremaHeight / 2), Math.floor(extremaWidth / 2)],
+    userCode: `
 		  void main() {
 			ivec2 coords = getOutputCoords();
 			int y = coords[0] * 2;
@@ -36,14 +36,19 @@ export const extremaReduction=(args)=>{
 			  setOutput(location * 1000.0 + values);
 			}
 		  }
-		`
-	}
+		`,
+  }
 
-	return backend.runWebGLProgram(kernel,[extremasResultT],extremasResultT.dtype);
+  return backend.runWebGLProgram(
+    kernel,
+    [extremasResultT],
+    extremasResultT.dtype
+  )
 }
 
-export const extremaReductionConfig = {//: KernelConfig
-    kernelName: "ExtremaReduction",
-    backendName: 'webgl',
-    kernelFunc: extremaReduction,// as {} as KernelFunc,
-};
+export const extremaReductionConfig = {
+  //: KernelConfig
+  kernelName: 'ExtremaReduction',
+  backendName: 'webgl',
+  kernelFunc: extremaReduction, // as {} as KernelFunc,
+}

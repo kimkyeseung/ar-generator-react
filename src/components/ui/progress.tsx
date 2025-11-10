@@ -46,7 +46,7 @@ export function Progress({
   return (
     <div className={`w-full ${className}`} {...rest}>
       <div
-        role="progressbar"
+        role='progressbar'
         aria-label={label}
         aria-valuenow={Math.round(percent)}
         aria-valuemin={0}
@@ -66,7 +66,7 @@ export function Progress({
       </div>
 
       {showPercent && (
-        <div className="mt-1 text-right text-xs tabular-nums text-slate-600">
+        <div className='mt-1 text-right text-xs tabular-nums text-slate-600'>
           {Math.round(percent)}%
         </div>
       )}

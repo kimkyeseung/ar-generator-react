@@ -1,31 +1,30 @@
+const oneOver2PI = 0.159154943091895
+const ORIENTATION_NUM_BINS = 36
 
-const oneOver2PI = 0.159154943091895;
-const ORIENTATION_NUM_BINS = 36;
+const cache = {}
 
-const cache={};
+function GetPrograms(prunedExtremasT, radialPropertiesT, pyramidImagesLength) {
+  const key = `${pyramidImagesLength}|${prunedExtremasT.shape[0]}|${radialPropertiesT.shape[0]}`
+  if (!cache.hasOwnProperty(key)) {
+    const imageVariableNames = []
+    for (let i = 1; i < pyramidImagesLength; i++) {
+      imageVariableNames.push('image' + i)
+    }
 
-function GetPrograms(prunedExtremasT, radialPropertiesT,pyramidImagesLength){
-    const key=`${pyramidImagesLength}|${prunedExtremasT.shape[0]}|${radialPropertiesT.shape[0]}`;
-    if (!cache.hasOwnProperty(key)) {
-        const imageVariableNames = [];
-        for (let i = 1; i < pyramidImagesLength; i++) {
-            imageVariableNames.push('image' + i);
-        }
-
-        let kernel1SubCodes = `float getPixel(int octave, int y, int x) {`;
-        for (let i = 1; i <pyramidImagesLength; i++) {
-            kernel1SubCodes += `
+    let kernel1SubCodes = `float getPixel(int octave, int y, int x) {`
+    for (let i = 1; i < pyramidImagesLength; i++) {
+      kernel1SubCodes += `
             if (octave == ${i}) {
                 return getImage${i}(y, x);
             }
-            `;
-        }
-        kernel1SubCodes += `}`;
+            `
+    }
+    kernel1SubCodes += `}`
 
-        const kernel1 = {
-            variableNames: [...imageVariableNames, 'extrema', 'radial'],
-            outputShape: [prunedExtremasT.shape[0], radialPropertiesT.shape[0], 2], // last dimension: [fbin, magnitude]
-            userCode: `
+    const kernel1 = {
+      variableNames: [...imageVariableNames, 'extrema', 'radial'],
+      outputShape: [prunedExtremasT.shape[0], radialPropertiesT.shape[0], 2], // last dimension: [fbin, magnitude]
+      userCode: `
                 ${kernel1SubCodes}
 
                 void main() {
@@ -65,13 +64,13 @@ function GetPrograms(prunedExtremasT, radialPropertiesT,pyramidImagesLength){
                     }
                 }
 
-                `
-        }
+                `,
+    }
 
-        const kernel2 = {
-            variableNames: ['fbinMag'],
-            outputShape: [prunedExtremasT.shape[0], ORIENTATION_NUM_BINS],
-            userCode: `
+    const kernel2 = {
+      variableNames: ['fbinMag'],
+      outputShape: [prunedExtremasT.shape[0], ORIENTATION_NUM_BINS],
+      userCode: `
             void main() {
                 ivec2 coords = getOutputCoords();
                 int featureIndex = coords[0];
@@ -99,29 +98,45 @@ function GetPrograms(prunedExtremasT, radialPropertiesT,pyramidImagesLength){
                 }
                 setOutput(sum);
             }
-            `
-        }
-
-        cache[key] = [kernel1, kernel2];
+            `,
     }
-    return cache[key];
+
+    cache[key] = [kernel1, kernel2]
+  }
+  return cache[key]
 }
 
-export const computeOrientationHistograms=(args)=>{
-    const {gaussianImagesT, prunedExtremasT, radialPropertiesT,pyramidImagesLength}=args.inputs;
-    /** @type {MathBackendWebGL} */
-    const backend = args.backend;
-    const [program1,program2]=GetPrograms(prunedExtremasT, radialPropertiesT,pyramidImagesLength);
-    
-    const result1 = backend.runWebGLProgram(program1, [...gaussianImagesT, prunedExtremasT, radialPropertiesT],radialPropertiesT.dtype);
-    const result2 = backend.runWebGLProgram(program2, [result1],radialPropertiesT.dtype);
-    backend.disposeIntermediateTensorInfo(result1);
-    return result2;
+export const computeOrientationHistograms = (args) => {
+  const {
+    gaussianImagesT,
+    prunedExtremasT,
+    radialPropertiesT,
+    pyramidImagesLength,
+  } = args.inputs
+  /** @type {MathBackendWebGL} */
+  const backend = args.backend
+  const [program1, program2] = GetPrograms(
+    prunedExtremasT,
+    radialPropertiesT,
+    pyramidImagesLength
+  )
+
+  const result1 = backend.runWebGLProgram(
+    program1,
+    [...gaussianImagesT, prunedExtremasT, radialPropertiesT],
+    radialPropertiesT.dtype
+  )
+  const result2 = backend.runWebGLProgram(
+    program2,
+    [result1],
+    radialPropertiesT.dtype
+  )
+  backend.disposeIntermediateTensorInfo(result1)
+  return result2
 }
 
-export const computeOrientationHistogramsConfig={
-    kernelName: "ComputeOrientationHistograms",
-    backendName: 'webgl',
-    kernelFunc: computeOrientationHistograms,// as {} as KernelFunc,
+export const computeOrientationHistogramsConfig = {
+  kernelName: 'ComputeOrientationHistograms',
+  backendName: 'webgl',
+  kernelFunc: computeOrientationHistograms, // as {} as KernelFunc,
 }
-

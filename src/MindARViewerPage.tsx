@@ -1,6 +1,6 @@
-import MindARViewer from './components/MindarViewer'
-import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useParams } from 'react-router-dom'
+import MindARViewer from './components/MindarViewer'
 
 const API_URL = process.env.REACT_APP_API_URL
 
@@ -24,7 +24,7 @@ async function fetchJson<T>(path: string, errorMessage: string): Promise<T> {
 async function fetchArFiles(folderId: string) {
   return fetchJson<ArFileIds>(
     `/ar-files/${folderId}`,
-    'AR 파일 정보를 불러오지 못했습니다.',
+    'AR 파일 정보를 불러오지 못했습니다.'
   )
 }
 
@@ -35,8 +35,7 @@ async function fetchBlobUrlFromFileId(fileId: string) {
   return URL.createObjectURL(blob)
 }
 
-const buildVideoStreamUrl = (fileId: string) =>
-  buildApiUrl(`/stream/${fileId}`)
+const buildVideoStreamUrl = (fileId: string) => buildApiUrl(`/stream/${fileId}`)
 
 type UseArAssetsResult = {
   mindUrl: string | null
@@ -99,8 +98,8 @@ export default function MindARViewerPage() {
     return <p>Loading AR assets...</p>
 
   return (
-    <section className="relative flex min-h-[100dvh] w-full">
-      <div className="absolute inset-0">
+    <section className='relative flex min-h-[100dvh] w-full'>
+      <div className='absolute inset-0'>
         <MindARViewer mindUrl={mindUrl} videoUrl={videoUrl} />
       </div>
     </section>

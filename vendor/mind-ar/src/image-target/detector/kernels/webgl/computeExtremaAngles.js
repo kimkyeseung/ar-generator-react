@@ -1,14 +1,13 @@
+const ORIENTATION_NUM_BINS = 36
 
-const ORIENTATION_NUM_BINS = 36;
-
-const cache={};
-function GetProgram(histograms){
-    const key=histograms.shape[0];
-    if(!cache.hasOwnProperty(key)){
-        const kernel = {
-            variableNames: ['histogram'],
-            outputShape: [histograms.shape[0]],
-            userCode: `
+const cache = {}
+function GetProgram(histograms) {
+  const key = histograms.shape[0]
+  if (!cache.hasOwnProperty(key)) {
+    const kernel = {
+      variableNames: ['histogram'],
+      outputShape: [histograms.shape[0]],
+      userCode: `
             void main() {
                 int featureIndex = getOutputCoords();
 
@@ -58,26 +57,26 @@ function GetProgram(histograms){
                 float an = 2.0 *${Math.PI} * (fbin + 0.5) / ${ORIENTATION_NUM_BINS}. - ${Math.PI};
                 setOutput(an);
             }
-            `
-        }
-        cache[key]=kernel;
+            `,
     }
-    return cache[key];
+    cache[key] = kernel
+  }
+  return cache[key]
 }
 
-export const computeExtremaAngles=(args)=>{
-    /** @type {import('@tensorflow/tfjs').TensorInfo} */
-    const {histograms} = args.inputs;
-    /** @type {MathBackendWebGL} */
-    const backend = args.backend;
+export const computeExtremaAngles = (args) => {
+  /** @type {import('@tensorflow/tfjs').TensorInfo} */
+  const { histograms } = args.inputs
+  /** @type {MathBackendWebGL} */
+  const backend = args.backend
 
-    const program = GetProgram(histograms);
-    return backend.runWebGLProgram(program,[histograms],histograms.dtype);
+  const program = GetProgram(histograms)
+  return backend.runWebGLProgram(program, [histograms], histograms.dtype)
 }
 
-
-export const computeExtremaAnglesConfig = {//: KernelConfig
-    kernelName: "ComputeExtremaAngles",
-    backendName: 'webgl',
-    kernelFunc: computeExtremaAngles,// as {} as KernelFunc,
-};
+export const computeExtremaAnglesConfig = {
+  //: KernelConfig
+  kernelName: 'ComputeExtremaAngles',
+  backendName: 'webgl',
+  kernelFunc: computeExtremaAngles, // as {} as KernelFunc,
+}

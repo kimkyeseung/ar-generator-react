@@ -1,10 +1,12 @@
-import { useCallback, useState } from 'react'
-import { FileUpload } from './FileUpload'
-import { Button } from './ui/button'
-import { Sparkles } from 'lucide-react'
-import MindARCompiler from './MindARCompiler'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Progress } from './ui/progress'
+import MindARCompiler from './MindARCompiler'
+import HeroHeader from './home/HeroHeader'
+import InfoFooter from './home/InfoFooter'
+import PageBackground from './home/PageBackground'
+import PublishSection from './home/PublishSection'
+import UploadCard from './home/UploadCard'
+import VideoUploadSection from './home/VideoUploadSection'
 
 const stepMessageMap = {
   1: 'Step 1. 타겟 이미지를 업로드해주세요.',
@@ -12,6 +14,8 @@ const stepMessageMap = {
 }
 
 const API_URL = process.env.REACT_APP_API_URL
+const MAX_VIDEO_SIZE_MB = 32
+const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
 
 export default function App() {
   const [step, setStep] = useState<1 | 2>(1)
@@ -19,59 +23,106 @@ export default function App() {
   const navigate = useNavigate()
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoError, setVideoError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isCompiling, setIsCompiling] = useState(false)
+
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
+    setVideoError(null)
+
     if (Array.isArray(input)) {
-      setVideoFile(input[0] ?? null)
-    } else {
-      setVideoFile(input)
+      if (input.length === 0) {
+        setVideoFile(null)
+        return
+      }
+      const candidate = input[0]
+      if (candidate.size > MAX_VIDEO_SIZE_BYTES) {
+        setVideoError(
+          `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
+        )
+        setVideoFile(null)
+        return
+      }
+      setVideoFile(candidate)
+      return
     }
+
+    if (!input) {
+      setVideoFile(null)
+      return
+    }
+
+    if (input.size > MAX_VIDEO_SIZE_BYTES) {
+      setVideoError(
+        `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
+      )
+      setVideoFile(null)
+      return
+    }
+
+    setVideoFile(input)
   }, [])
 
   const canPublish = targetFile !== null && videoFile !== null
 
   const handlePublish = async () => {
-    if (canPublish) {
-      const formData = new FormData()
-      const blob = new Blob([targetFile], { type: 'application/octet-stream' })
-      formData.append('target', blob, 'targets.mind')
-      formData.append('video', videoFile)
+    if (!canPublish || isUploading || isCompiling) return
+    const formData = new FormData()
+    const blob = new Blob([targetFile], { type: 'application/octet-stream' })
+    formData.append('target', blob, 'targets.mind')
+    formData.append('video', videoFile)
 
+    try {
       const res = await uploadWithProgress(formData)
       navigate(`/result/qr/${res.folderId}`)
+    } catch (error) {
+      console.error(error)
+      setUploadError(
+        error instanceof Error
+          ? error.message
+          : '업로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      )
     }
   }
 
   // 업로드 (진행률 표시용: XMLHttpRequest 사용)
   const uploadWithProgress = async (formData: FormData) => {
     setProgress(0)
-    return await new Promise<{
-      folderId: string
-      targetFileId: string
-      videoFileId: string
-    }>((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
+    setUploadError(null)
+    setIsUploading(true)
+    try {
+      return await new Promise<{
+        folderId: string
+        targetFileId: string
+        videoFileId: string
+      }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
 
-      xhr.open('POST', `${API_URL}/upload`)
-      xhr.responseType = 'json'
+        xhr.open('POST', `${API_URL}/upload`)
+        xhr.responseType = 'json'
 
-      xhr.upload.onprogress = (evt) => {
-        if (evt.lengthComputable) {
-          const pct = Math.round((evt.loaded / evt.total) * 100)
-          setProgress(pct)
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            const pct = Math.round((evt.loaded / evt.total) * 100)
+            setProgress(pct)
+          }
         }
-      }
 
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          setProgress(100)
-          resolve(xhr.response)
-        } else {
-          reject(new Error(`Upload failed: ${xhr.status}`))
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setProgress(100)
+            resolve(xhr.response)
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status}`))
+          }
         }
-      }
-      xhr.onerror = () => reject(new Error('Network error'))
-      xhr.send(formData)
-    })
+        xhr.onerror = () => reject(new Error('Network error'))
+        xhr.send(formData)
+      })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleComplieComplete = (target: ArrayBuffer) => {
@@ -79,71 +130,49 @@ export default function App() {
     setStep(2)
   }
 
+  const workflowStatus = useMemo(() => {
+    if (isCompiling) return '타겟 변환 중'
+    if (isUploading) return '업로드 중'
+    if (canPublish) return '배포 준비 완료'
+    return '업로드를 진행해주세요'
+  }, [canPublish, isCompiling, isUploading])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Sparkles className="w-8 h-8 text-indigo-600" />
-              <h1 className="text-gray-900 text-3xl font-semibold">
-                Viswave{' '}
-                <strong className="text-emerald-400 underline decoration-emerald-500/40 underline-offset-4 transition hover:text-emerald-300">
-                  AR site
-                </strong>{' '}
-                publisher
-              </h1>
-            </div>
-            <p className="text-gray-600">
-              AR 콘텐츠를 업로드하고 QR 코드로 배포하세요
-            </p>
-          </div>
+    <PageBackground>
+      <div className='container mx-auto px-4 py-12'>
+        <div className='mx-auto max-w-2xl space-y-10'>
+          <HeroHeader />
 
-          {/* Form Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-lg text-gray-900 font-semibold">
-              {stepMessageMap[step]}
-            </h2>
-            <div className="space-y-6">
-              <MindARCompiler onCompileColplete={handleComplieComplete} />
+          <UploadCard
+            stepMessage={stepMessageMap[step]}
+            status={workflowStatus}
+          >
+            <MindARCompiler
+              onCompileColplete={handleComplieComplete}
+              onCompileStateChange={setIsCompiling}
+            />
 
-              {targetFile && (
-                <FileUpload
-                  accept="video/*"
-                  label="Video Content"
-                  icon="video"
-                  onFileSelect={handleVideoSelect}
-                  file={videoFile}
-                />
-              )}
+            <VideoUploadSection
+              isTargetReady={Boolean(targetFile)}
+              videoFile={videoFile}
+              onFileSelect={handleVideoSelect}
+              limitMb={MAX_VIDEO_SIZE_MB}
+              videoError={videoError}
+            />
 
-              {canPublish && (
-                <div className="pt-4">
-                  <Button
-                    onClick={handlePublish}
-                    disabled={!canPublish && progress !== 0}
-                    className="w-full"
-                    size="lg"
-                  >
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    Publish
-                  </Button>
-                </div>
-              )}
-              {progress !== 0 && <Progress value={progress} />}
-            </div>
-          </div>
+            <PublishSection
+              canPublish={canPublish}
+              onPublish={handlePublish}
+              progress={progress}
+              isUploading={isUploading}
+              isCompiling={isCompiling}
+              uploadError={uploadError}
+            />
+          </UploadCard>
 
-          {/* Info Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600">
-              이미지 타겟과 비디오를 업로드하면 AR 경험을 위한 QR 코드가
-              생성됩니다
-            </p>
-          </div>
+          <InfoFooter />
         </div>
       </div>
-    </div>
+    </PageBackground>
   )
 }

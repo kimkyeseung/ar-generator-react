@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { Button } from './components/ui/button'
 import { ArrowLeft, Download } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Button } from './components/ui/button'
 
 export function QRCodePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -35,26 +35,26 @@ export function QRCodePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+    <div className='flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6'>
+      <div className='w-full max-w-md rounded-2xl bg-white p-8 shadow-xl'>
         <Button
-          variant="ghost"
+          variant='ghost'
           onClick={() => navigate('/')}
-          className="mb-6 -ml-2"
+          className='-ml-2 mb-6'
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className='mr-2 h-4 w-4' />
           뒤로 가기
         </Button>
 
-        <div className="text-center">
-          <h1 className="text-gray-900 mb-2">게시 완료!</h1>
-          <p className="text-gray-600 mb-8">
+        <div className='text-center'>
+          <h1 className='mb-2 text-gray-900'>게시 완료!</h1>
+          <p className='mb-8 text-gray-600'>
             QR 코드를 스캔하여 AR 콘텐츠를 확인하세요
           </p>
 
-          <div className="flex justify-center mb-8">
-            <div className="bg-white p-6 rounded-xl shadow-lg">
-              <canvas ref={canvasRef} className="mx-auto" />
+          <div className='mb-8 flex justify-center'>
+            <div className='rounded-xl bg-white p-6 shadow-lg'>
+              <canvas ref={canvasRef} className='mx-auto' />
             </div>
           </div>
 
@@ -62,7 +62,7 @@ export function QRCodePage() {
             onClick={() => {
               navigate(`/result/${folderId}`)
             }}
-            className="w-full"
+            className='w-full'
           >
             이동하기
           </Button>
@@ -72,7 +72,7 @@ export function QRCodePage() {
             다운로드
           </Button>
 
-          <p className="text-sm text-gray-500 mt-4 break-all">{fullUrl}</p>
+          <p className='mt-4 break-all text-sm text-gray-500'>{fullUrl}</p>
         </div>
       </div>
     </div>

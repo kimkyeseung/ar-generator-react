@@ -1,15 +1,15 @@
-import {MathBackendWebGL} from '@tensorflow/tfjs-backend-webgl';
+import { MathBackendWebGL } from '@tensorflow/tfjs-backend-webgl'
 
-const cache={};
-function GetProgram(image,targetImage){
-    const targetImageWidth = targetImage.shape[1];
-    const targetImageHeight = targetImage.shape[0];
-    const kernelKey = 'w' + targetImageWidth + "h" + targetImageHeight;
-    if(!cache.hasOwnProperty(kernelKey)){
-        const kernel = {
-            variableNames: ['p'],
-            outputShape: [targetImageHeight, targetImageWidth],
-            userCode: `
+const cache = {}
+function GetProgram(image, targetImage) {
+  const targetImageWidth = targetImage.shape[1]
+  const targetImageHeight = targetImage.shape[0]
+  const kernelKey = 'w' + targetImageWidth + 'h' + targetImageHeight
+  if (!cache.hasOwnProperty(kernelKey)) {
+    const kernel = {
+      variableNames: ['p'],
+      outputShape: [targetImageHeight, targetImageWidth],
+      userCode: `
               void main() {
                 ivec2 coords = getOutputCoords();
                 int j = coords[0];
@@ -35,30 +35,28 @@ function GetProgram(image,targetImage){
                 sum += getP(sj1I, si1I) * (si - si0) * (sj - sj0);
                 setOutput(sum);
               }
-            `
-        };
-        cache[kernelKey]=kernel;
+            `,
     }
+    cache[kernelKey] = kernel
+  }
 
-    return cache[kernelKey];
+  return cache[kernelKey]
 }
 
-export const upsampleBilinear =(args)=>{
-    /** @type {import('@tensorflow/tfjs').TensorInfo} */
-    const {image,targetImage} = args.inputs;
+export const upsampleBilinear = (args) => {
+  /** @type {import('@tensorflow/tfjs').TensorInfo} */
+  const { image, targetImage } = args.inputs
 
-    
-    /** @type {MathBackendWebGL} */
-    const backend = args.backend;
+  /** @type {MathBackendWebGL} */
+  const backend = args.backend
 
-    const program = GetProgram(image,targetImage);
-    return backend.runWebGLProgram(program,[image],image.dtype);
-
-    
+  const program = GetProgram(image, targetImage)
+  return backend.runWebGLProgram(program, [image], image.dtype)
 }
 
-export const upsampleBilinearConfig = {//: KernelConfig
-    kernelName: "UpsampleBilinear",
-    backendName: 'webgl',
-    kernelFunc: upsampleBilinear,// as {} as KernelFunc,
-};
+export const upsampleBilinearConfig = {
+  //: KernelConfig
+  kernelName: 'UpsampleBilinear',
+  backendName: 'webgl',
+  kernelFunc: upsampleBilinear, // as {} as KernelFunc,
+}

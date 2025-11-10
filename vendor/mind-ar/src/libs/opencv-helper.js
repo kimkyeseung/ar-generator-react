@@ -1,24 +1,25 @@
-import {cv} from './opencv.js'
-let initialized = false;
+import { cv } from './opencv.js'
 
-const _cv = {};
+let initialized = false
 
-const waitResolves = [];
+const _cv = {}
 
-export const waitCV = async() => {
-  if (initialized) return true;
+const waitResolves = []
+
+export const waitCV = async () => {
+  if (initialized) return true
   return new Promise((resolve, reject) => {
-    waitResolves.push(resolve);
-  });
+    waitResolves.push(resolve)
+  })
 }
 
 cv().then((target) => {
-  initialized = true;
-  Object.assign(_cv, target);
+  initialized = true
+  Object.assign(_cv, target)
   waitResolves.forEach((resolve) => {
-    resolve();
-  });
-});
+    resolve()
+  })
+})
 
-export const opencv=_cv;
+export const opencv = _cv
 //module.exports={waitCV,opencv}

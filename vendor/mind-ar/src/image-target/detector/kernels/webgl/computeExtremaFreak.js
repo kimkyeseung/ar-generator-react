@@ -1,29 +1,34 @@
 import { FREAKPOINTS } from '../../freak.js'
 
-const FREAK_EXPANSION_FACTOR = 7.0;
-const cache = {};
+const FREAK_EXPANSION_FACTOR = 7.0
+const cache = {}
 function GetProgram(imageCount, prunedExtremas) {
-    const key = `${imageCount}|${prunedExtremas.shape[0]}`;
-    if (!cache.hasOwnProperty(key)) {
-		const imageVariableNames = [];
-		for (let i = 1; i < imageCount; i++) {
-			imageVariableNames.push('image' + i);
-		}
+  const key = `${imageCount}|${prunedExtremas.shape[0]}`
+  if (!cache.hasOwnProperty(key)) {
+    const imageVariableNames = []
+    for (let i = 1; i < imageCount; i++) {
+      imageVariableNames.push('image' + i)
+    }
 
-		let pixelsSubCodes = `float getPixel(int octave, int y, int x) {`;
-		for (let i = 1; i < imageCount; i++) {
-			pixelsSubCodes += `
+    let pixelsSubCodes = `float getPixel(int octave, int y, int x) {`
+    for (let i = 1; i < imageCount; i++) {
+      pixelsSubCodes += `
   if (octave == ${i}) {
 	return getImage${i}(y, x);
   }
 `
-		}
-		pixelsSubCodes += `}`;
+    }
+    pixelsSubCodes += `}`
 
-		const kernel = {
-			variableNames: [...imageVariableNames, 'extrema', 'angles', 'freakPoints'],
-			outputShape: [prunedExtremas.shape[0], FREAKPOINTS.length],
-			userCode: `
+    const kernel = {
+      variableNames: [
+        ...imageVariableNames,
+        'extrema',
+        'angles',
+        'freakPoints',
+      ],
+      outputShape: [prunedExtremas.shape[0], FREAKPOINTS.length],
+      userCode: `
   ${pixelsSubCodes}
   void main() {
 	ivec2 coords = getOutputCoords();
@@ -67,29 +72,39 @@ function GetProgram(imageCount, prunedExtremas) {
 
 	setOutput(value);
   }
-`
-		}
+`,
+    }
 
-		cache[key] = kernel;
-	}
+    cache[key] = kernel
+  }
 
-    return cache[key];
+  return cache[key]
 }
 
 export const computeExtremaFreak = (args) => {
-    /** @type {import('@tensorflow/tfjs').TensorInfo} */
-    const { gaussianImagesT, prunedExtremas, prunedExtremasAngles, freakPointsT,pyramidImagesLength } = args.inputs;
-    /** @type {MathBackendWebGL} */
-    const backend = args.backend;
+  /** @type {import('@tensorflow/tfjs').TensorInfo} */
+  const {
+    gaussianImagesT,
+    prunedExtremas,
+    prunedExtremasAngles,
+    freakPointsT,
+    pyramidImagesLength,
+  } = args.inputs
+  /** @type {MathBackendWebGL} */
+  const backend = args.backend
 
-    const program = GetProgram(pyramidImagesLength, prunedExtremas);
+  const program = GetProgram(pyramidImagesLength, prunedExtremas)
 
-    return backend.runWebGLProgram(program, [...gaussianImagesT, prunedExtremas, prunedExtremasAngles, freakPointsT], 'float32');
+  return backend.runWebGLProgram(
+    program,
+    [...gaussianImagesT, prunedExtremas, prunedExtremasAngles, freakPointsT],
+    'float32'
+  )
 }
 
-export const computeExtremaFreakConfig = {//: KernelConfig
-    kernelName: "ComputeExtremaFreak",
-    backendName: 'webgl',
-    kernelFunc: computeExtremaFreak,// as {} as KernelFunc,
-};
-
+export const computeExtremaFreakConfig = {
+  //: KernelConfig
+  kernelName: 'ComputeExtremaFreak',
+  backendName: 'webgl',
+  kernelFunc: computeExtremaFreak, // as {} as KernelFunc,
+}

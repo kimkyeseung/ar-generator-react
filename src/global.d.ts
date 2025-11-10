@@ -1,4 +1,4 @@
-declare module 'aframe';
+declare module 'aframe'
 
 declare module 'mind-ar/dist/mindar-image-three.prod.js' {
   import type { Group } from 'three'
@@ -15,7 +15,8 @@ declare module 'mind-ar/dist/mindar-image-three.prod.js' {
 
 declare module 'mind-ar/src/image-target' {
   type CompilerBase = import('./lib/image-target/compiler-base').CompilerBase
-  type CompileTrackArgs = import('./lib/image-target/compiler-base').CompileTrackArgs
+  type CompileTrackArgs =
+    import('./lib/image-target/compiler-base').CompileTrackArgs
   type CompilerDataEntry =
     import('./lib/image-target/compiler-base').CompilerDataEntry
   type ProgressCallback =
@@ -25,7 +26,7 @@ declare module 'mind-ar/src/image-target' {
   type ModelViewTransform = [
     ModelViewTransformRow,
     ModelViewTransformRow,
-    ModelViewTransformRow
+    ModelViewTransformRow,
   ]
 
   type WorldMatrix = Float32Array | number[]
@@ -83,24 +84,24 @@ declare module 'mind-ar/src/image-target' {
     dispose(): void
 
     dummyRun(
-      input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement,
+      input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
     ): void
 
     getProjectionMatrix(): WorldMatrix
 
     getWorldMatrix(
       modelViewTransform: ModelViewTransform,
-      targetIndex: number,
+      targetIndex: number
     ): WorldMatrix
 
     processVideo(
-      input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement,
+      input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
     ): void
 
     stopProcessVideo(): void
 
     detect(
-      input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement,
+      input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
     ): Promise<{
       featurePoints: unknown
       debugExtra: unknown
@@ -108,7 +109,7 @@ declare module 'mind-ar/src/image-target' {
 
     match(
       featurePoints: unknown,
-      targetIndex: number,
+      targetIndex: number
     ): Promise<{
       modelViewTransform: ModelViewTransform | null
       debugExtra: unknown
@@ -117,12 +118,12 @@ declare module 'mind-ar/src/image-target' {
     track(
       input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement,
       modelViewTransform: ModelViewTransform,
-      targetIndex: number,
+      targetIndex: number
     ): Promise<TrackResult>
 
     trackUpdate(
       modelViewTransform: ModelViewTransform,
-      trackFeatures: TrackPoints,
+      trackFeatures: TrackPoints
     ): Promise<ModelViewTransform | null>
   }
 
@@ -135,7 +136,7 @@ declare module 'mind-ar/src/image-target' {
 
     compileImageTargets(
       images: HTMLImageElement[],
-      progressCallback: ProgressCallback,
+      progressCallback: ProgressCallback
     ): Promise<CompilerDataEntry[]>
 
     exportData(): Uint8Array
@@ -167,13 +168,13 @@ declare module 'mind-ar/dist/mindar-image-aframe.prod.js'
 
 declare namespace JSX {
   interface IntrinsicElements {
-    'a-scene': any;
-    'a-assets': any;
-    'a-asset-item': any;
-    'a-camera': any;
-    'a-entity': any;
-    'a-plane': any;
-    'a-gltf-model': any;
-    'a-video': any;
+    'a-scene': any
+    'a-assets': any
+    'a-asset-item': any
+    'a-camera': any
+    'a-entity': any
+    'a-plane': any
+    'a-gltf-model': any
+    'a-video': any
   }
 }

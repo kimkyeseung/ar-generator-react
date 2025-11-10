@@ -2,7 +2,6 @@
 
 <img src="https://hiukim.github.io/mind-ar-js-doc/assets/images/multi-targets-demo-8b5fc868f6b0847a9818e8bf0ba2c1c3.gif" height="250"><img src="https://hiukim.github.io/mind-ar-js-doc/assets/images/interactive-demo-1ab348a381cbd808f4d52c8750524d11.gif" height="250"><img src="https://hiukim.github.io/mind-ar-js-doc/assets/images/face-tryon-demo-369c4ba701f1df2099ecf05c27f0c944.gif" height="250">
 
-
 MindAR is a web augmented reality library. Highlighted features include:
 
 :star: Support Image tracking and Face tracking. For Location or Fiducial-Markers Tracking, checkout [AR.js](https://github.com/AR-js-org/AR.js)
@@ -118,9 +117,9 @@ Official Documentation: https://hiukim.github.io/mind-ar-js-doc
 
 More examples can be found here: https://hiukim.github.io/mind-ar-js-doc/examples/summary
 
-
 # Quick Start
-Learn how to build the Basic example above in 5 minutes with a plain text editor! 
+
+Learn how to build the Basic example above in 5 minutes with a plain text editor!
 
 Quick Start Guide: https://hiukim.github.io/mind-ar-js-doc/quick-start/overview
 
@@ -152,13 +151,15 @@ To give you a quick idea, this is the complete source code for the Basic example
 ```
 
 # Target Images Compiler
-You can compile your own target images right on the browser using this friendly Compiler tools. If you don't know what it is, go through the Quick Start guide 
+
+You can compile your own target images right on the browser using this friendly Compiler tools. If you don't know what it is, go through the Quick Start guide
 
 https://hiukim.github.io/mind-ar-js-doc/tools/compile
 
 <img src="https://hiukim.github.io/mind-ar-js-doc/assets/images/step2-9f3c4dcb8a2e60766d86f950d06929ea.png" width="300"/>
 
 # Roadmaps
+
 1. Supports more augmented reality features, like Hand Tracking, Body Tracking and Plane Tracking
 
 2. Research on different state-of-the-arts algorithms to improve tracking accuracy and performance
@@ -166,6 +167,7 @@ https://hiukim.github.io/mind-ar-js-doc/tools/compile
 3. More educational references.
 
 # Contributions
+
 I personally don't come from a strong computer vision background, and I'm having a hard time improving the tracking accuracy. I could really use some help from computer vision expert. Please reach out and discuss.
 
 Also welcome javascript experts to help with the non-engine part, like improving the APIs and so.
@@ -189,7 +191,7 @@ run `> npm run build`. the build will be generated in `dist` folder
 
 To develop threeJS version, run `> npm run watch`. This will observe the file changes in `src` folder and continuously build the artefacts in `dist-dev`.
 
-To develop AFRAME version, you will need to run `>npm run build-dev` everytime you make changes. The `--watch` parameter currently failed to automatically generate `mindar-XXX-aframe.js`. 
+To develop AFRAME version, you will need to run `>npm run build-dev` everytime you make changes. The `--watch` parameter currently failed to automatically generate `mindar-XXX-aframe.js`.
 
 All the examples in the `examples` folder is configured to use this development build, so you can open those examples in browser to start debugging or development.
 
@@ -200,12 +202,13 @@ For example, you can install this chrome plugin to start a local server: `https:
 You most likely would want to test on mobile device as well. In that case, it's better if you could setup your development environment to be able to share your localhost webserver to your mobile devices. If you have difficulties doing that, perhaps behind a firewall, then you could use something like `ngrok` (https://ngrok.com/) to tunnel the request. But this is not an ideal solution, because the development build of MindAR is not small (>10Mb), and tunneling with free version of `ngrok` could be slow.
 
 #### webgl backend
-This library utilize tensorflowjs (https://github.com/tensorflow/tfjs) for webgl backend. Yes, tensorflow is a machine learning library, but we didn't use it for machine learning! :) Tensorflowjs has a very solid webgl engine which allows us to write general purpose GPU application (in this case, our AR application). 
+
+This library utilize tensorflowjs (https://github.com/tensorflow/tfjs) for webgl backend. Yes, tensorflow is a machine learning library, but we didn't use it for machine learning! :) Tensorflowjs has a very solid webgl engine which allows us to write general purpose GPU application (in this case, our AR application).
 
 The core detection and tracking algorithm is written with custom operations in tensorflowjs. They are like shaders program. It might looks intimidating at first, but it's actually not that difficult to understand.
 
 # Credits
+
 The computer vision idea is borrowed from artoolkit (i.e. https://github.com/artoolkitx/artoolkit5). Unfortunately, the library doesn't seems to be maintained anymore.
 
 Face Tracking is based on mediapipe face mesh model (i.e. https://google.github.io/mediapipe/solutions/face_mesh.html)
-

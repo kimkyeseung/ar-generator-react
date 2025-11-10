@@ -26,9 +26,15 @@ export class Compiler extends CompilerBase {
     return processCanvas
   }
 
-  compileTrack({ progressCallback, targetImages, basePercent }: CompileTrackArgs): Promise<unknown[]> {
+  compileTrack({
+    progressCallback,
+    targetImages,
+    basePercent,
+  }: CompileTrackArgs): Promise<unknown[]> {
     return new Promise((resolve, reject) => {
-      const worker = new Worker(new URL('./compiler.worker.js', import.meta.url))
+      const worker = new Worker(
+        new URL('./compiler.worker.js', import.meta.url)
+      )
 
       worker.onmessage = (event: MessageEvent<WorkerResponseMessage>) => {
         const { data } = event

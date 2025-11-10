@@ -1,120 +1,161 @@
-import { Matrix4, Vector3, Quaternion, Scene, WebGLRenderer, PerspectiveCamera, Group, sRGBEncoding } from "three";
-import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs'
+import {
+  Matrix4,
+  Vector3,
+  Quaternion,
+  Scene,
+  WebGLRenderer,
+  PerspectiveCamera,
+  Group,
+  sRGBEncoding,
+} from 'three'
 //import { CSS3DRenderer } from '../libs/CSS3DRenderer.js';
-import {CSS3DRenderer} from 'three/addons/renderers/CSS3DRenderer.js'
-import { Controller } from "./controller.js";
-import { UI } from "../ui/ui.js";
+import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js'
+import { UI } from '../ui/ui.js'
+import { Controller } from './controller.js'
 
-const cssScaleDownMatrix = new Matrix4();
-cssScaleDownMatrix.compose(new Vector3(), new Quaternion(), new Vector3(0.001, 0.001, 0.001));
+const cssScaleDownMatrix = new Matrix4()
+cssScaleDownMatrix.compose(
+  new Vector3(),
+  new Quaternion(),
+  new Vector3(0.001, 0.001, 0.001)
+)
 
 export class MindARThree {
   constructor({
-    container, imageTargetSrc, maxTrack, uiLoading = "yes", uiScanning = "yes", uiError = "yes",
-    filterMinCF = null, filterBeta = null, warmupTolerance = null, missTolerance = null
+    container,
+    imageTargetSrc,
+    maxTrack,
+    uiLoading = 'yes',
+    uiScanning = 'yes',
+    uiError = 'yes',
+    filterMinCF = null,
+    filterBeta = null,
+    warmupTolerance = null,
+    missTolerance = null,
   }) {
-    this.container = container;
-    this.imageTargetSrc = imageTargetSrc;
-    this.maxTrack = maxTrack;
-    this.filterMinCF = filterMinCF;
-    this.filterBeta = filterBeta;
-    this.warmupTolerance = warmupTolerance;
-    this.missTolerance = missTolerance;
-    this.ui = new UI({ uiLoading, uiScanning, uiError });
+    this.container = container
+    this.imageTargetSrc = imageTargetSrc
+    this.maxTrack = maxTrack
+    this.filterMinCF = filterMinCF
+    this.filterBeta = filterBeta
+    this.warmupTolerance = warmupTolerance
+    this.missTolerance = missTolerance
+    this.ui = new UI({ uiLoading, uiScanning, uiError })
 
-    this.scene = new Scene();
-    this.cssScene = new Scene();
-    this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
-    this.cssRenderer = new CSS3DRenderer({ antialias: true });
-    this.renderer.outputEncoding = sRGBEncoding;
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.camera = new PerspectiveCamera();
-    this.anchors = [];
+    this.scene = new Scene()
+    this.cssScene = new Scene()
+    this.renderer = new WebGLRenderer({ antialias: true, alpha: true })
+    this.cssRenderer = new CSS3DRenderer({ antialias: true })
+    this.renderer.outputEncoding = sRGBEncoding
+    this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.camera = new PerspectiveCamera()
+    this.anchors = []
 
-    this.renderer.domElement.style.position = 'absolute';
-    this.cssRenderer.domElement.style.position = 'absolute';
-    this.container.appendChild(this.renderer.domElement);
-    this.container.appendChild(this.cssRenderer.domElement);
+    this.renderer.domElement.style.position = 'absolute'
+    this.cssRenderer.domElement.style.position = 'absolute'
+    this.container.appendChild(this.renderer.domElement)
+    this.container.appendChild(this.cssRenderer.domElement)
 
-    window.addEventListener('resize', this.resize.bind(this));
+    window.addEventListener('resize', this.resize.bind(this))
   }
 
   async start() {
-    this.ui.showLoading();
-    await this._startVideo();
-    await this._startAR();
+    this.ui.showLoading()
+    await this._startVideo()
+    await this._startAR()
   }
 
   stop() {
-    this.controller.stopProcessVideo();
-    const tracks = this.video.srcObject.getTracks();
+    this.controller.stopProcessVideo()
+    const tracks = this.video.srcObject.getTracks()
     tracks.forEach(function (track) {
-      track.stop();
-    });
-    this.video.remove();
+      track.stop()
+    })
+    this.video.remove()
   }
 
   addAnchor(targetIndex) {
-    const group = new Group();
-    group.visible = false;
-    group.matrixAutoUpdate = false;
-    const anchor = { group, targetIndex, onTargetFound: null, onTargetLost: null, onTargetUpdate: null, css: false, visible: false };
-    this.anchors.push(anchor);
-    this.scene.add(group);
-    return anchor;
+    const group = new Group()
+    group.visible = false
+    group.matrixAutoUpdate = false
+    const anchor = {
+      group,
+      targetIndex,
+      onTargetFound: null,
+      onTargetLost: null,
+      onTargetUpdate: null,
+      css: false,
+      visible: false,
+    }
+    this.anchors.push(anchor)
+    this.scene.add(group)
+    return anchor
   }
 
   addCSSAnchor(targetIndex) {
-    const group = new Group();
-    group.visible = false;
-    group.matrixAutoUpdate = false;
-    const anchor = { group, targetIndex, onTargetFound: null, onTargetLost: null, onTargetUpdate: null, css: true, visible: false };
-    this.anchors.push(anchor);
-    this.cssScene.add(group);
-    return anchor;
+    const group = new Group()
+    group.visible = false
+    group.matrixAutoUpdate = false
+    const anchor = {
+      group,
+      targetIndex,
+      onTargetFound: null,
+      onTargetLost: null,
+      onTargetUpdate: null,
+      css: true,
+      visible: false,
+    }
+    this.anchors.push(anchor)
+    this.cssScene.add(group)
+    return anchor
   }
 
   _startVideo() {
     return new Promise((resolve, reject) => {
-      this.video = document.createElement('video');
+      this.video = document.createElement('video')
 
-      this.video.setAttribute('autoplay', '');
-      this.video.setAttribute('muted', '');
-      this.video.setAttribute('playsinline', '');
+      this.video.setAttribute('autoplay', '')
+      this.video.setAttribute('muted', '')
+      this.video.setAttribute('playsinline', '')
       this.video.style.position = 'absolute'
       this.video.style.top = '0px'
       this.video.style.left = '0px'
       this.video.style.zIndex = '-2'
-      this.container.appendChild(this.video);
+      this.container.appendChild(this.video)
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        this.ui.showCompatibility();
-        reject();
-        return;
+        this.ui.showCompatibility()
+        reject()
+        return
       }
 
-      navigator.mediaDevices.getUserMedia({
-        audio: false, video: {
-          facingMode: 'environment',
-        }
-      }).then((stream) => {
-        this.video.addEventListener('loadedmetadata', () => {
-          this.video.setAttribute('width', this.video.videoWidth);
-          this.video.setAttribute('height', this.video.videoHeight);
-          resolve();
-        });
-        this.video.srcObject = stream;
-      }).catch((err) => {
-        console.log("getUserMedia error", err);
-        reject();
-      });
-    });
+      navigator.mediaDevices
+        .getUserMedia({
+          audio: false,
+          video: {
+            facingMode: 'environment',
+          },
+        })
+        .then((stream) => {
+          this.video.addEventListener('loadedmetadata', () => {
+            this.video.setAttribute('width', this.video.videoWidth)
+            this.video.setAttribute('height', this.video.videoHeight)
+            resolve()
+          })
+          this.video.srcObject = stream
+        })
+        .catch((err) => {
+          console.log('getUserMedia error', err)
+          reject()
+        })
+    })
   }
 
   _startAR() {
     return new Promise(async (resolve, reject) => {
-      const video = this.video;
-      const container = this.container;
+      const video = this.video
+      const container = this.container
 
       this.controller = new Controller({
         inputWidth: video.videoWidth,
@@ -126,147 +167,151 @@ export class MindARThree {
         maxTrack: this.maxTrack,
         onUpdate: (data) => {
           if (data.type === 'updateMatrix') {
-            const { targetIndex, worldMatrix } = data;
+            const { targetIndex, worldMatrix } = data
 
             for (let i = 0; i < this.anchors.length; i++) {
               if (this.anchors[i].targetIndex === targetIndex) {
                 if (this.anchors[i].css) {
                   this.anchors[i].group.children.forEach((obj) => {
-                    obj.element.style.visibility = worldMatrix === null ? "hidden" : "visible";
-                  });
+                    obj.element.style.visibility =
+                      worldMatrix === null ? 'hidden' : 'visible'
+                  })
                 } else {
-                  this.anchors[i].group.visible = worldMatrix !== null;
+                  this.anchors[i].group.visible = worldMatrix !== null
                 }
 
                 if (worldMatrix !== null) {
-                  let m = new Matrix4();
-                  m.elements = [...worldMatrix];
-                  m.multiply(this.postMatrixs[targetIndex]);
+                  let m = new Matrix4()
+                  m.elements = [...worldMatrix]
+                  m.multiply(this.postMatrixs[targetIndex])
                   if (this.anchors[i].css) {
-                    m.multiply(cssScaleDownMatrix);
+                    m.multiply(cssScaleDownMatrix)
                   }
-                  this.anchors[i].group.matrix = m;
+                  this.anchors[i].group.matrix = m
                 }
 
                 if (this.anchors[i].visible && worldMatrix === null) {
-                  this.anchors[i].visible = false;
+                  this.anchors[i].visible = false
                   if (this.anchors[i].onTargetLost) {
-                    this.anchors[i].onTargetLost();
+                    this.anchors[i].onTargetLost()
                   }
                 }
 
                 if (!this.anchors[i].visible && worldMatrix !== null) {
-                  this.anchors[i].visible = true;
+                  this.anchors[i].visible = true
                   if (this.anchors[i].onTargetFound) {
-                    this.anchors[i].onTargetFound();
+                    this.anchors[i].onTargetFound()
                   }
                 }
-                
+
                 if (this.anchors[i].onTargetUpdate) {
-                  this.anchors[i].onTargetUpdate();
+                  this.anchors[i].onTargetUpdate()
                 }
               }
             }
 
             let isAnyVisible = this.anchors.reduce((acc, anchor) => {
-              return acc || anchor.visible;
-            }, false);
+              return acc || anchor.visible
+            }, false)
             if (isAnyVisible) {
-              this.ui.hideScanning();
+              this.ui.hideScanning()
             } else {
-              this.ui.showScanning();
+              this.ui.showScanning()
             }
           }
-        }
-      });
+        },
+      })
 
-      this.resize();
+      this.resize()
 
-      const { dimensions: imageTargetDimensions } = await this.controller.addImageTargets(this.imageTargetSrc);
+      const { dimensions: imageTargetDimensions } =
+        await this.controller.addImageTargets(this.imageTargetSrc)
 
-      this.postMatrixs = [];
+      this.postMatrixs = []
       for (let i = 0; i < imageTargetDimensions.length; i++) {
-        const position = new Vector3();
-        const quaternion = new Quaternion();
-        const scale = new Vector3();
-        const [markerWidth, markerHeight] = imageTargetDimensions[i];
-        position.x = markerWidth / 2;
-        position.y = markerWidth / 2 + (markerHeight - markerWidth) / 2;
-        scale.x = markerWidth;
-        scale.y = markerWidth;
-        scale.z = markerWidth;
-        const postMatrix = new Matrix4();
-        postMatrix.compose(position, quaternion, scale);
-        this.postMatrixs.push(postMatrix);
+        const position = new Vector3()
+        const quaternion = new Quaternion()
+        const scale = new Vector3()
+        const [markerWidth, markerHeight] = imageTargetDimensions[i]
+        position.x = markerWidth / 2
+        position.y = markerWidth / 2 + (markerHeight - markerWidth) / 2
+        scale.x = markerWidth
+        scale.y = markerWidth
+        scale.z = markerWidth
+        const postMatrix = new Matrix4()
+        postMatrix.compose(position, quaternion, scale)
+        this.postMatrixs.push(postMatrix)
       }
 
-      await this.controller.dummyRun(this.video);
-      this.ui.hideLoading();
-      this.ui.showScanning();
+      await this.controller.dummyRun(this.video)
+      this.ui.hideLoading()
+      this.ui.showScanning()
 
-      this.controller.processVideo(this.video);
-      resolve();
-    });
+      this.controller.processVideo(this.video)
+      resolve()
+    })
   }
 
   resize() {
-    const { renderer, cssRenderer, camera, container, video } = this;
-    if (!video) return;
+    const { renderer, cssRenderer, camera, container, video } = this
+    if (!video) return
 
-    let vw, vh; // display css width, height
-    const videoRatio = video.videoWidth / video.videoHeight;
-    const containerRatio = container.clientWidth / container.clientHeight;
+    let vw, vh // display css width, height
+    const videoRatio = video.videoWidth / video.videoHeight
+    const containerRatio = container.clientWidth / container.clientHeight
     if (videoRatio > containerRatio) {
-      vh = container.clientHeight;
-      vw = vh * videoRatio;
+      vh = container.clientHeight
+      vw = vh * videoRatio
     } else {
-      vw = container.clientWidth;
-      vh = vw / videoRatio;
+      vw = container.clientWidth
+      vh = vw / videoRatio
     }
 
-    const proj = this.controller.getProjectionMatrix();
-    const fov = 2 * Math.atan(1 / proj[5] / vh * container.clientHeight) * 180 / Math.PI; // vertical fov
-    const near = proj[14] / (proj[10] - 1.0);
-    const far = proj[14] / (proj[10] + 1.0);
-    const ratio = proj[5] / proj[0]; // (r-l) / (t-b)
-    camera.fov = fov;
-    camera.near = near;
-    camera.far = far;
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
+    const proj = this.controller.getProjectionMatrix()
+    const fov =
+      (2 * Math.atan((1 / proj[5] / vh) * container.clientHeight) * 180) /
+      Math.PI // vertical fov
+    const near = proj[14] / (proj[10] - 1.0)
+    const far = proj[14] / (proj[10] + 1.0)
+    const ratio = proj[5] / proj[0] // (r-l) / (t-b)
+    camera.fov = fov
+    camera.near = near
+    camera.far = far
+    camera.aspect = container.clientWidth / container.clientHeight
+    camera.updateProjectionMatrix()
 
-    video.style.top = (-(vh - container.clientHeight) / 2) + "px";
-    video.style.left = (-(vw - container.clientWidth) / 2) + "px";
-    video.style.width = vw + "px";
-    video.style.height = vh + "px";
+    video.style.top = -(vh - container.clientHeight) / 2 + 'px'
+    video.style.left = -(vw - container.clientWidth) / 2 + 'px'
+    video.style.width = vw + 'px'
+    video.style.height = vh + 'px'
 
-    const canvas = renderer.domElement;
-    const cssCanvas = cssRenderer.domElement;
+    const canvas = renderer.domElement
+    const cssCanvas = cssRenderer.domElement
 
-    canvas.style.position = 'absolute';
-    canvas.style.left = 0;
-    canvas.style.top = 0;
-    canvas.style.width = container.clientWidth + 'px';
-    canvas.style.height = container.clientHeight + 'px';
+    canvas.style.position = 'absolute'
+    canvas.style.left = 0
+    canvas.style.top = 0
+    canvas.style.width = container.clientWidth + 'px'
+    canvas.style.height = container.clientHeight + 'px'
 
-    cssCanvas.style.position = 'absolute';
-    cssCanvas.style.left = 0;
-    cssCanvas.style.top = 0;
-    cssCanvas.style.width = container.clientWidth + 'px';
-    cssCanvas.style.height = container.clientHeight + 'px';
+    cssCanvas.style.position = 'absolute'
+    cssCanvas.style.left = 0
+    cssCanvas.style.top = 0
+    cssCanvas.style.width = container.clientWidth + 'px'
+    cssCanvas.style.height = container.clientHeight + 'px'
 
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    cssRenderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setSize(container.clientWidth, container.clientHeight)
+    cssRenderer.setSize(container.clientWidth, container.clientHeight)
   }
 }
 
 if (!window.MINDAR) {
-  window.MINDAR = {};
+  window.MINDAR = {}
 }
 if (!window.MINDAR.IMAGE) {
-  window.MINDAR.IMAGE = {};
+  window.MINDAR.IMAGE = {}
 }
 
-window.MINDAR.IMAGE.MindARThree = MindARThree;
+window.MINDAR.IMAGE.MindARThree = MindARThree
 //window.MINDAR.IMAGE.THREE = THREE;
-window.MINDAR.IMAGE.tf = tf;
+window.MINDAR.IMAGE.tf = tf

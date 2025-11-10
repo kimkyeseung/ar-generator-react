@@ -28,7 +28,10 @@ export class CompilerBase {
 
   constructor()
 
-  compileImageTargets(images: HTMLImageElement[], progressCallback: ProgressCallback): Promise<CompilerDataEntry[]>
+  compileImageTargets(
+    images: HTMLImageElement[],
+    progressCallback: ProgressCallback
+  ): Promise<CompilerDataEntry[]>
 
   exportData(): Uint8Array
 

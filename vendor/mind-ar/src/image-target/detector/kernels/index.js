@@ -1,6 +1,2 @@
-import './webgl/index.js';
-import './cpu/index.js';
-
-
-
-
+import './cpu/index.js'
+import './webgl/index.js'

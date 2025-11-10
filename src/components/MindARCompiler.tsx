@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useRef, useCallback, FC } from 'react'
-import { Controller, useForm, type SubmitHandler } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-
+import { Controller, set, useForm, type SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Compiler } from '../lib/image-target/compiler'
+import { FileUpload } from './FileUpload'
 import { Button } from './ui/button'
 import { Progress } from './ui/progress'
-import { FileUpload } from './FileUpload'
 
 const fileUploadSchema = z.object({
   attachments: z
@@ -22,9 +21,14 @@ type FileUploadFormData = z.infer<typeof fileUploadSchema>
 
 interface Props {
   onCompileColplete: (target: ArrayBuffer) => void
+  onCompileStateChange?: (isCompiling: boolean) => void
 }
 
-const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
+const MindARCompiler: FC<Props> = ({
+  onCompileColplete,
+  onCompileStateChange,
+}) => {
+  const [isPending, setIsPending] = useState<boolean>(false)
   const {
     control,
     handleSubmit,
@@ -87,7 +91,7 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
       }
       ctx.putImageData(imageData, 0, 0)
     },
-    [],
+    []
   )
 
   const initialize = function () {
@@ -120,7 +124,7 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
         showImage(image, points2)
       }
     },
-    [showImage],
+    [showImage]
   )
 
   // 파일로부터 Image 객체를 로드하는 비동기 함수
@@ -133,36 +137,41 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
     })
   }
 
+  const emitCompileState = useCallback(
+    (state: boolean) => {
+      onCompileStateChange?.(state)
+    },
+    [onCompileStateChange]
+  )
+
   // 이미지 파일들을 컴파일하는 함수
   const compileFiles = useCallback(
     async (files: File[]) => {
-      const images = await Promise.all(files.map(loadImage))
+      emitCompileState(true)
+      try {
+        const images = await Promise.all(files.map(loadImage))
 
-      const startTime = performance.now()
-      // const dataList =
-      await compilerRef.current.compileImageTargets(
-        images,
-        (progressValue: number) => {
-          setProgress(progressValue)
-        },
-      )
-      console.log(
-        `Execution time (compile): ${performance.now() - startTime}ms`,
-      )
+        const startTime = performance.now()
+        await compilerRef.current.compileImageTargets(
+          images,
+          (progressValue: number) => {
+            setProgress(progressValue)
+          }
+        )
+        console.log(
+          `Execution time (compile): ${performance.now() - startTime}ms`
+        )
 
-      // if (containerRef.current) containerRef.current.innerHTML = '' // 이전 캔버스 초기화
-      // dataList.forEach(showData)
-
-      const exportedBuffer = compilerRef.current.exportData()
-      const arrayCopy = exportedBuffer.slice()
-      const arrayBuffer = arrayCopy.buffer
-      onCompileColplete(arrayBuffer)
-      setCompiledData(arrayBuffer)
+        const exportedBuffer = compilerRef.current.exportData()
+        const arrayCopy = exportedBuffer.slice()
+        const arrayBuffer = arrayCopy.buffer
+        onCompileColplete(arrayBuffer)
+        setCompiledData(arrayBuffer)
+      } finally {
+        emitCompileState(false)
+      }
     },
-    [
-      onCompileColplete,
-      // showData
-    ],
+    [emitCompileState, onCompileColplete]
   )
 
   // .mind 파일을 로드하는 함수
@@ -171,14 +180,14 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
       const reader = new FileReader()
       reader.onload = function () {
         const dataList = compilerRef.current.importData(
-          this.result as ArrayBuffer,
+          this.result as ArrayBuffer
         )
         if (containerRef.current) containerRef.current.innerHTML = '' // 이전 캔버스 초기화
         dataList.forEach(showData)
       }
       reader.readAsArrayBuffer(file)
     },
-    [showData],
+    [showData]
   )
 
   // 'Download' 버튼 클릭 핸들러
@@ -194,6 +203,7 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
 
   // 'Start' 버튼 클릭 핸들러
   const onSubmit: SubmitHandler<FileUploadFormData> = async (data) => {
+    setIsPending(true)
     const formData = new FormData()
     data.attachments.forEach((file) => {
       formData.append('files', file) // 'files'라는 키로 파일 추가
@@ -205,20 +215,21 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
     if (ext === 'mind') {
       loadMindFile(data.attachments[0])
     } else {
-      compileFiles(data.attachments)
+      await compileFiles(data.attachments)
     }
+    setIsPending(false)
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <Controller
         control={control}
-        name="attachments"
+        name='attachments'
         render={({ field }) => (
           <FileUpload
-            accept="image/*"
-            label="Target Image"
-            icon="image"
+            accept='image/*'
+            label='Target Image'
+            icon='image'
             isMultiple
             onFileSelect={(...args) => {
               initialize()
@@ -231,17 +242,24 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
       {progress !== 0 && progress !== 100 && <Progress value={progress} />}
 
       {compiledData && (
-        <Button onClick={handleDownload} disabled={!compiledData} type="button">
-          Download
-        </Button>
+        <div className='flex justify-center p-2'>
+          <Button
+            onClick={handleDownload}
+            disabled={!compiledData}
+            type='button'
+          >
+            Download
+          </Button>
+        </div>
       )}
 
       {progress !== 100 && (
         <Button
-          type="submit"
-          disabled={!attachments || attachments.length === 0}
-          className="w-full mt-6"
-          size="lg"
+          type='submit'
+          // disabled={!attachments || attachments.length === 0}
+          disabled={isPending}
+          className='mt-6 w-full'
+          size='lg'
         >
           Upload target image
         </Button>
@@ -249,7 +267,7 @@ const MindARCompiler: FC<Props> = ({ onCompileColplete }) => {
 
       <div
         ref={containerRef}
-        id="container"
+        id='container'
         style={{
           display: 'flex',
           flexDirection: 'column',

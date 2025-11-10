@@ -1,10 +1,10 @@
-import { extract } from './extract.js';
+import { extract } from './extract.js'
 
 export const extractTrackingFeatures = (imageList, doneCallback) => {
-  const featureSets = [];
+  const featureSets = []
   for (let i = 0; i < imageList.length; i++) {
-    const image = imageList[i];
-    const points = extract(image);
+    const image = imageList[i]
+    const points = extract(image)
 
     const featureSet = {
       data: image.data,
@@ -12,10 +12,10 @@ export const extractTrackingFeatures = (imageList, doneCallback) => {
       width: image.width,
       height: image.height,
       points,
-    };
-    featureSets.push(featureSet);
+    }
+    featureSets.push(featureSet)
 
-    doneCallback(i);
+    doneCallback(i)
   }
-  return featureSets;
+  return featureSets
 }

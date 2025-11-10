@@ -1,16 +1,15 @@
-import {Controller} from './controller.js';
-import {UI} from '../ui/ui.js';
+import { UI } from '../ui/ui.js'
+import { Controller } from './controller.js'
 
 const e = {
-  Controller, 
-  UI
+  Controller,
+  UI,
 }
 
 if (!window.MINDAR) {
-  window.MINDAR = {};
+  window.MINDAR = {}
 }
 
-window.MINDAR.FACE = e;
+window.MINDAR.FACE = e
 
-
-export {Controller,UI}
+export { Controller, UI }

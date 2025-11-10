@@ -31,7 +31,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     if (!arSystem) return
 
     const targetEntity = sceneEl.querySelector<HTMLElement>(
-      '[mindar-image-target]',
+      '[mindar-image-target]'
     )
 
     const mindarVideoPlane =
@@ -74,7 +74,7 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
     const getCameraFeed = () => {
       if (!containerEl) return null
       const cameraFeed = Array.from(
-        containerEl.querySelectorAll<HTMLVideoElement>('video'),
+        containerEl.querySelectorAll<HTMLVideoElement>('video')
       ).find((videoEl) => !sceneEl.contains(videoEl))
       if (!cameraFeed) return null
       cameraFeed.classList.add('mindar-camera-feed') // 나중에 스타일링 할 수 있을 수도
@@ -215,43 +215,44 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
 
   return (
     <a-scene
-      className="h-full w-full"
+      className='h-full w-full'
       style={{ width: '100%', height: '100%' }}
       ref={sceneRef}
       mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`}
-      assettimeout="15000"
-      color-space="sRGB"
+      assettimeout='15000'
+      color-space='sRGB'
       embedded
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
+      renderer='colorManagement: true, physicallyCorrectLights'
+      vr-mode-ui='enabled: false'
+      device-orientation-permission-ui='enabled: false'
     >
       <a-assets>
         <video
-          id="ar-video"
+          id='ar-video'
           src={videoUrl}
           loop
-          crossOrigin="anonymous"
+          crossOrigin='anonymous'
           playsInline
-          webkit-playsinline="true"
+          webkit-playsinline='true'
           muted
-          preload="auto"
+          // preload="auto"
+          preload='metadata' // 전체 파일을 받지 않고 메타데이터만 받으라는 힌트
         ></video>
       </a-assets>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-camera position='0 0 0' look-controls='enabled: false'></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity mindar-image-target='targetIndex: 0'>
         <a-video
-          src="#ar-video"
-          position="0 0 0"
-          height="0.552"
-          width="1"
-          rotation="0 0 0"
-          loop="true"
-          muted="true"
-          autoplay="true"
-          playsinline="true"
+          src='#ar-video'
+          position='0 0 0'
+          height='0.552'
+          width='1'
+          rotation='0 0 0'
+          loop='true'
+          muted='true'
+          autoplay='true'
+          playsinline='true'
         ></a-video>
       </a-entity>
     </a-scene>

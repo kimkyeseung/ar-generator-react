@@ -33,7 +33,7 @@ export function FileUpload({
 
   const files = useMemo(
     () => (Array.isArray(file) ? file : file ? [file] : []),
-    [file],
+    [file]
   )
 
   const handleDrop = useCallback(
@@ -55,7 +55,7 @@ export function FileUpload({
         onFileSelect(droppedFiles[0])
       }
     },
-    [files, isMultiple, onFileSelect],
+    [files, isMultiple, onFileSelect]
   )
 
   const handleFileInput = useCallback(
@@ -74,7 +74,7 @@ export function FileUpload({
         onFileSelect(selectedFiles[0])
       }
     },
-    [files, isMultiple, onFileSelect],
+    [files, isMultiple, onFileSelect]
   )
 
   const handleRemove = useCallback(
@@ -87,71 +87,71 @@ export function FileUpload({
         onFileSelect([])
       }
     },
-    [files, isMultiple, onFileSelect],
+    [files, isMultiple, onFileSelect]
   )
 
   const Icon = icon === 'image' ? FileImage : Video
 
   return (
-    <div className="space-y-2">
-      <label className="block text-sm text-gray-700">{label}</label>
+    <div className='space-y-2'>
+      <label className='block text-sm text-gray-700'>{label}</label>
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`relative border-2 border-dashed rounded-lg p-8 transition-colors cursor-pointer ${
+        className={`relative cursor-pointer rounded-lg border-2 border-dashed p-8 transition-colors ${
           isDragging
             ? 'border-blue-500 bg-blue-50'
             : files.length > 0
-            ? 'border-green-500 bg-green-50'
-            : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+              ? 'border-green-500 bg-green-50'
+              : 'border-gray-300 bg-gray-50 hover:border-gray-400'
         }`}
       >
         <input
-          type="file"
+          type='file'
           accept={accept}
           onChange={handleFileInput}
           multiple={isMultiple}
           ref={inputRef}
-          className="hidden"
+          className='hidden'
         />
 
         {files.length > 0 ? (
-          <div className="flex flex-col gap-3">
+          <div className='flex flex-col gap-3'>
             {files.map((item) => (
               <div
                 key={item.name}
-                className="flex items-center justify-between rounded-lg bg-white/80 p-3 shadow-sm"
+                className='flex items-center justify-between rounded-lg bg-white/80 p-3 shadow-sm'
               >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-6 h-6 text-green-600" />
+                <div className='flex items-center gap-3'>
+                  <Icon className='h-6 w-6 text-green-600' />
                   <div>
-                    <p className="text-gray-900 text-sm font-medium">
+                    <p className='text-sm font-medium text-gray-900'>
                       {item.name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className='text-xs text-gray-500'>
                       {(item.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleRemove(item.name)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className='rounded-full p-2 transition-colors hover:bg-gray-100'
                 >
-                  <X className="w-4 h-4 text-gray-600" />
+                  <X className='h-4 w-4 text-gray-600' />
                 </button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <Upload className="w-10 h-10 text-gray-400" />
+          <div className='flex flex-col items-center gap-2 text-center'>
+            <Upload className='h-10 w-10 text-gray-400' />
             <div>
-              <p className="text-gray-700">
+              <p className='text-gray-700'>
                 드래그 앤 드롭 또는 클릭하여 파일 선택
               </p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className='mt-1 text-sm text-gray-500'>
                 {accept.includes('image') ? '이미지 파일' : '비디오 파일'}만
                 가능합니다
               </p>

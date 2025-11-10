@@ -1,0 +1,63 @@
+import { Sparkles } from 'lucide-react'
+import { Button } from '../ui/button'
+import { Progress } from '../ui/progress'
+import StatusCallout from './StatusCallout'
+
+type PublishSectionProps = {
+  canPublish: boolean
+  onPublish: () => void
+  progress: number
+  isUploading: boolean
+  isCompiling: boolean
+  uploadError: string | null
+}
+
+export default function PublishSection({
+  canPublish,
+  onPublish,
+  progress,
+  isUploading,
+  isCompiling,
+  uploadError,
+}: PublishSectionProps) {
+  const isDisabled = !canPublish || isUploading || isCompiling
+  const buttonLabel = isUploading
+    ? '업로드 중...'
+    : isCompiling
+      ? '타겟 변환 완료 후 진행'
+      : 'Publish'
+
+  return (
+    <div className='space-y-4 pt-2'>
+      <Button
+        onClick={onPublish}
+        disabled={isDisabled}
+        className='w-full'
+        size='lg'
+      >
+        <Sparkles className='mr-2 h-5 w-5' />
+        {buttonLabel}
+      </Button>
+
+      {isCompiling && (
+        <StatusCallout message='타겟 이미지를 .mind 파일로 변환 중입니다. 완료되면 자동으로 버튼이 활성화됩니다.' />
+      )}
+
+      {isUploading && (
+        <StatusCallout message='영상과 타겟 파일을 업로드하는 중입니다. 잠시만 기다려주세요.' />
+      )}
+
+      {progress > 0 && (
+        <div className='space-y-1'>
+          <div className='flex items-center justify-between text-xs text-gray-500'>
+            <span>업로드 진행률</span>
+            <span>{progress}%</span>
+          </div>
+          <Progress value={progress} />
+        </div>
+      )}
+
+      {uploadError && <StatusCallout message={uploadError} variant='error' />}
+    </div>
+  )
+}

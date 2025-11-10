@@ -1,5 +1,3 @@
-import { MathBackendWebGL } from '@tensorflow/tfjs-backend-webgl'
-
 const cache = {}
 function GetProgram(image, targetImage) {
   const targetImageWidth = targetImage.shape[1]

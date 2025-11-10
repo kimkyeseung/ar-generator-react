@@ -52,14 +52,22 @@ class CompilerBase {
       const percentPerImage = 50.0 / targetImages.length
       let percent = 0.0
       this.data = []
+
+      const createMatchingProgressHandler = (increment) => {
+        return () => {
+          percent += increment
+          progressCallback(percent)
+        }
+      }
+
       for (let i = 0; i < targetImages.length; i++) {
         const targetImage = targetImages[i]
         const imageList = buildImageList(targetImage)
         const percentPerAction = percentPerImage / imageList.length
-        const matchingData = await _extractMatchingFeatures(imageList, () => {
-          percent += percentPerAction
-          progressCallback(percent)
-        })
+        const matchingData = await _extractMatchingFeatures(
+          imageList,
+          createMatchingProgressHandler(percentPerAction)
+        )
         this.data.push({
           targetImage: targetImage,
           imageList: imageList,

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, FC } from 'react'
 import { z } from 'zod'
-import { Controller, set, useForm, type SubmitHandler } from 'react-hook-form'
+import { Controller, useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Compiler } from '../lib/image-target/compiler'
 import { FileUpload } from './FileUpload'
@@ -29,16 +29,10 @@ const MindARCompiler: FC<Props> = ({
   onCompileStateChange,
 }) => {
   const [isPending, setIsPending] = useState<boolean>(false)
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-    watch,
-  } = useForm<FileUploadFormData>({
+  const { control, handleSubmit } = useForm<FileUploadFormData>({
     resolver: zodResolver(fileUploadSchema),
     defaultValues: { attachments: [] },
   })
-  const attachments = watch('attachments')
 
   // 상태 변수들
   const [progress, setProgress] = useState<number>(0)

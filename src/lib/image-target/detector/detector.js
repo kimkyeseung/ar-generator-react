@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 // result should be similar to previou
 // improve freka descriptors computation
 import * as tf from '@tensorflow/tfjs'
@@ -7,26 +8,11 @@ import './kernels/webgl/index.js'
 const PYRAMID_MIN_SIZE = 8
 const PYRAMID_MAX_OCTAVE = 5
 
-const LAPLACIAN_THRESHOLD = 3.0
-const LAPLACIAN_SQR_THRESHOLD = LAPLACIAN_THRESHOLD * LAPLACIAN_THRESHOLD
-const EDGE_THRESHOLD = 4.0
-const EDGE_HESSIAN_THRESHOLD =
-  ((EDGE_THRESHOLD + 1) * (EDGE_THRESHOLD + 1)) / EDGE_THRESHOLD
-
 const NUM_BUCKETS_PER_DIMENSION = 10
 const MAX_FEATURES_PER_BUCKET = 5
-const NUM_BUCKETS = NUM_BUCKETS_PER_DIMENSION * NUM_BUCKETS_PER_DIMENSION
-// total max feature points = NUM_BUCKETS * MAX_FEATURES_PER_BUCKET
-
-const ORIENTATION_NUM_BINS = 36
-const ORIENTATION_SMOOTHING_ITERATIONS = 5
 
 const ORIENTATION_GAUSSIAN_EXPANSION_FACTOR = 3.0
 const ORIENTATION_REGION_EXPANSION_FACTOR = 1.5
-const FREAK_EXPANSION_FACTOR = 7.0
-
-const FREAK_CONPARISON_COUNT =
-  ((FREAKPOINTS.length - 1) * FREAKPOINTS.length) / 2 // 666
 
 class Detector {
   constructor(width, height, debugMode = false) {
@@ -225,7 +211,6 @@ class Detector {
 
     // encode 8 bits into one number
     // trying to encode 16 bits give wrong result in iOS. may integer precision issue
-    const descriptorCount = Math.ceil(FREAK_CONPARISON_COUNT / 8)
     /*
 		if (!this.kernelCaches.computeFreakDescriptors) {
 			const kernel = {
@@ -359,15 +344,13 @@ class Detector {
       /* const [program] = this.kernelCaches._computeExtremaFreak;
 			const result = this._compileAndRun(program, [...gaussianImagesT, prunedExtremas, prunedExtremasAngles, freakPointsT]);
 			return result; */
-      return tf
-        .engine()
-        .runKernel('ComputeExtremaFreak', {
-          gaussianImagesT,
-          prunedExtremas,
-          prunedExtremasAngles,
-          freakPointsT,
-          pyramidImagesLength: pyramidImagesT.length,
-        })
+      return tf.engine().runKernel('ComputeExtremaFreak', {
+        gaussianImagesT,
+        prunedExtremas,
+        prunedExtremasAngles,
+        freakPointsT,
+        pyramidImagesLength: pyramidImagesT.length,
+      })
     })
   }
   /**
@@ -449,8 +432,6 @@ class Detector {
    * @returns
    */
   _computeOrientationHistograms(prunedExtremasT, pyramidImagesT) {
-    const oneOver2PI = 0.159154943091895
-
     const gaussianImagesT = []
     for (let i = 1; i < pyramidImagesT.length; i++) {
       gaussianImagesT.push(pyramidImagesT[i][1])
@@ -601,14 +582,12 @@ class Detector {
 			const result1 = this._compileAndRun(program1, [...gaussianImagesT, prunedExtremasT, radialPropertiesT]);
 			const result2 = this._compileAndRun(program2, [result1]); 
 			return result2;*/
-      return tf
-        .engine()
-        .runKernel('ComputeOrientationHistograms', {
-          gaussianImagesT,
-          prunedExtremasT,
-          radialPropertiesT,
-          pyramidImagesLength: pyramidImagesT.length,
-        })
+      return tf.engine().runKernel('ComputeOrientationHistograms', {
+        gaussianImagesT,
+        prunedExtremasT,
+        radialPropertiesT,
+        pyramidImagesLength: pyramidImagesT.length,
+      })
     })
   }
 
@@ -697,12 +676,10 @@ class Detector {
       //const program = this.kernelCaches.computeLocalization[0];
       //const prunedExtremasT = tf.tensor(prunedExtremasList, [prunedExtremasList.length, prunedExtremasList[0].length], 'int32');
 
-      const pixelsT = tf
-        .engine()
-        .runKernel('ComputeLocalization', {
-          prunedExtremasList,
-          dogPyramidImagesT,
-        }) //this._compileAndRun(program, [...dogPyramidImagesT.slice(1), prunedExtremasT]);
+      const pixelsT = tf.engine().runKernel('ComputeLocalization', {
+        prunedExtremasList,
+        dogPyramidImagesT,
+      }) //this._compileAndRun(program, [...dogPyramidImagesT.slice(1), prunedExtremasT]);
       const pixels = pixelsT.arraySync()
 
       const result = []
@@ -836,11 +813,9 @@ class Detector {
       for (let k = 0; k < extremasResultsT.length; k++) {
         //const program = reductionKernels[k];
         //const reducedT = this._compileAndRun(program, [extremasResultsT[k]]);
-        const reducedT = tf
-          .engine()
-          .runKernel('ExtremaReduction', {
-            extremasResultT: extremasResultsT[k],
-          })
+        const reducedT = tf.engine().runKernel('ExtremaReduction', {
+          extremasResultT: extremasResultsT[k],
+        })
         const octave = k + 1 // extrema starts from second octave
 
         const reduced = reducedT.arraySync()

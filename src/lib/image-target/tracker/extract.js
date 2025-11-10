@@ -23,7 +23,7 @@ const OCCUPANCY_SIZE = (24 * 2) / 3
  * @param {int} options.height image height
  */
 const extract = (image) => {
-  const { data: imageData, width, height, scale } = image
+  const { data: imageData, width, height } = image
 
   // Step 1 - filter out interesting points. Interesting points have strong pixel value changed across neighbours
   const isPixelSelected = [width * height]
@@ -64,7 +64,6 @@ const extract = (image) => {
   const dValueHist = new Uint32Array(1000) // histogram of dvalue scaled to [0, 1000)
   for (let i = 0; i < 1000; i++) dValueHist[i] = 0
   const neighbourOffsets = [-1, 1, -width, width]
-  let allCount = 0
   for (let i = 1; i < width - 1; i++) {
     for (let j = 1; j < height - 1; j++) {
       let pos = i + width * j
@@ -80,7 +79,6 @@ const extract = (image) => {
         if (k > 999) k = 999 // k>999 should not happen if computaiton is correction
         if (k < 0) k = 0 // k<0 should not happen if computaiton is correction
         dValueHist[k] += 1
-        allCount += 1
         isPixelSelected[pos] = true
       }
     }
@@ -202,7 +200,7 @@ const _selectFeature = (options) => {
     imageDataCumsum,
     imageDataSqrCumsum,
   } = options
-  const { data: imageData, width, height, scale } = image
+  const { data: imageData, width, height } = image
 
   //console.log("params: ", templateSize, templateSize, occSize, maxSimThresh, minSimThresh, sdThresh);
 
@@ -418,6 +416,7 @@ const _getSimilarity = (options) => {
   sxy -= templateAverage * sx
 
   let vlen2 = sxx - (sx * sx) / (templateWidth * templateWidth)
+  // eslint-disable-next-line eqeqeq
   if (vlen2 == 0) return null
   vlen2 = Math.sqrt(vlen2)
 

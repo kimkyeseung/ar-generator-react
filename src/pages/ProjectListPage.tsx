@@ -63,7 +63,7 @@ export default function ProjectListPage() {
           <HeroHeader />
 
           <div className='flex justify-between items-center'>
-            <h2 className='text-2xl font-bold text-white'>내 프로젝트</h2>
+            <h2 className='text-2xl font-bold text-gray-800'>내 프로젝트</h2>
             <Button
               onClick={() => navigate('/create')}
               className='bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
@@ -74,12 +74,12 @@ export default function ProjectListPage() {
 
           {isLoading ? (
             <div className='text-center py-12'>
-              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto'></div>
-              <p className='text-white/70 mt-4'>로딩 중...</p>
+              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto'></div>
+              <p className='text-gray-600 mt-4'>로딩 중...</p>
             </div>
           ) : error ? (
-            <Card className='p-8 text-center bg-red-500/10 border-red-500/30'>
-              <p className='text-red-400'>{error}</p>
+            <Card className='p-8 text-center bg-red-50 border-red-200'>
+              <p className='text-red-600'>{error}</p>
               <Button
                 onClick={fetchProjects}
                 variant='outline'
@@ -89,12 +89,12 @@ export default function ProjectListPage() {
               </Button>
             </Card>
           ) : projects.length === 0 ? (
-            <Card className='p-12 text-center bg-white/5 border-white/10'>
+            <Card className='p-12 text-center bg-white shadow-lg border-gray-200'>
               <div className='text-6xl mb-4'>🎨</div>
-              <h3 className='text-xl font-semibold text-white mb-2'>
+              <h3 className='text-xl font-semibold text-gray-800 mb-2'>
                 아직 프로젝트가 없습니다
               </h3>
-              <p className='text-white/60 mb-6'>
+              <p className='text-gray-500 mb-6'>
                 첫 번째 AR 프로젝트를 만들어보세요!
               </p>
               <Button
@@ -109,18 +109,18 @@ export default function ProjectListPage() {
               {projects.map((project) => (
                 <Card
                   key={project.id}
-                  className='p-6 bg-white/5 border-white/10 hover:bg-white/10 transition-colors'
+                  className='p-6 bg-white shadow-md border-gray-200 hover:shadow-lg transition-shadow'
                 >
                   <div className='flex items-center justify-between'>
                     <div className='flex-1'>
-                      <h3 className='text-lg font-semibold text-white'>
+                      <h3 className='text-lg font-semibold text-gray-800'>
                         {project.title || '제목 없음'}
                       </h3>
-                      <p className='text-white/50 text-sm mt-1'>
+                      <p className='text-gray-400 text-sm mt-1'>
                         생성일: {formatDate(project.createdAt)}
                       </p>
                       {project.description && (
-                        <p className='text-white/70 text-sm mt-2'>
+                        <p className='text-gray-600 text-sm mt-2'>
                           {project.description}
                         </p>
                       )}
@@ -130,7 +130,7 @@ export default function ProjectListPage() {
                         variant='outline'
                         size='sm'
                         onClick={() => navigate(`/result/qr/${project.folderId}`)}
-                        className='text-white border-white/30 hover:bg-white/10'
+                        className='text-purple-600 border-purple-300 hover:bg-purple-50'
                       >
                         QR 보기
                       </Button>
@@ -138,7 +138,7 @@ export default function ProjectListPage() {
                         variant='outline'
                         size='sm'
                         onClick={() => navigate(`/result/${project.folderId}`)}
-                        className='text-white border-white/30 hover:bg-white/10'
+                        className='text-indigo-600 border-indigo-300 hover:bg-indigo-50'
                       >
                         AR 보기
                       </Button>
@@ -146,7 +146,7 @@ export default function ProjectListPage() {
                         variant='outline'
                         size='sm'
                         onClick={() => handleDelete(project.id)}
-                        className='text-red-400 border-red-400/30 hover:bg-red-500/10'
+                        className='text-red-500 border-red-300 hover:bg-red-50'
                       >
                         삭제
                       </Button>

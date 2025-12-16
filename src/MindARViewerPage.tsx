@@ -51,8 +51,16 @@ export default function MindARViewerPage() {
 
   if (!isReady) return <p>Loading AR assets...</p>
 
-  const mediaWidth = fileIds?.width ?? 1
-  const mediaHeight = fileIds?.height ?? 1
+  // width/height가 픽셀 단위로 저장된 경우(>10) 비율로 변환
+  let mediaWidth = fileIds?.width ?? 1
+  let mediaHeight = fileIds?.height ?? 1
+
+  if (mediaWidth > 10 || mediaHeight > 10) {
+    // 이전 버전에서 픽셀 단위로 저장된 데이터 처리
+    const aspectRatio = mediaHeight / mediaWidth
+    mediaWidth = 1
+    mediaHeight = aspectRatio
+  }
 
   return (
     <section className="relative flex min-h-[100dvh] w-full">

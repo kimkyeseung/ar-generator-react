@@ -22,13 +22,12 @@ export default function App() {
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
+  const [targetAspectRatio, setTargetAspectRatio] = useState<number>(1)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isCompiling, setIsCompiling] = useState(false)
-  const [mediaWidth, setMediaWidth] = useState<number>(1)
-  const [mediaHeight, setMediaHeight] = useState<number>(1)
 
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
     setVideoError(null)
@@ -41,17 +40,6 @@ export default function App() {
         setVideoFile(null)
         return
       }
-
-      // 비디오 메타데이터에서 width, height 추출
-      const video = document.createElement('video')
-      video.preload = 'metadata'
-      video.onloadedmetadata = () => {
-        setMediaWidth(video.videoWidth)
-        setMediaHeight(video.videoHeight)
-        URL.revokeObjectURL(video.src)
-      }
-      video.src = URL.createObjectURL(file)
-
       setVideoFile(file)
     }
 
@@ -80,8 +68,9 @@ export default function App() {
     const blob = new Blob([targetFile], { type: 'application/octet-stream' })
     formData.append('target', blob, 'targets.mind')
     formData.append('video', videoFile)
-    formData.append('width', mediaWidth.toString())
-    formData.append('height', mediaHeight.toString())
+    // 타겟 이미지 비율 전송 (width=1 고정, height=종횡비)
+    formData.append('width', '1')
+    formData.append('height', targetAspectRatio.toString())
 
     try {
       const res = await uploadWithProgress(formData)
@@ -135,8 +124,9 @@ export default function App() {
     }
   }
 
-  const handleComplieComplete = (target: ArrayBuffer) => {
+  const handleComplieComplete = (target: ArrayBuffer, aspectRatio: number) => {
     setTargetFile(target)
+    setTargetAspectRatio(aspectRatio)
     setStep(2)
   }
 
@@ -168,10 +158,6 @@ export default function App() {
               onFileSelect={handleVideoSelect}
               limitMb={MAX_VIDEO_SIZE_MB}
               videoError={videoError}
-              mediaWidth={mediaWidth}
-              mediaHeight={mediaHeight}
-              onWidthChange={setMediaWidth}
-              onHeightChange={setMediaHeight}
             />
 
             <PublishSection

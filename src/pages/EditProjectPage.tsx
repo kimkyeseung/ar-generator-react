@@ -28,8 +28,8 @@ export default function EditProjectPage() {
   const [title, setTitle] = useState('')
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
-  const [targetAspectRatio, setTargetAspectRatio] = useState<number>(1)
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // null이면 기존 비율 유지
   const [videoError, setVideoError] = useState<string | null>(null)
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
@@ -53,7 +53,7 @@ export default function EditProjectPage() {
         const data: Project = await res.json()
         setProject(data)
         setTitle(data.title || '')
-        setTargetAspectRatio(data.height || 1)
+        // 비디오 비율은 기존 프로젝트의 height를 사용 (videoAspectRatio가 null이면)
         if (data.chromaKeyColor) {
           setUseChromaKey(true)
           setChromaKeyColor(data.chromaKeyColor)
@@ -77,14 +77,27 @@ export default function EditProjectPage() {
           `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
         )
         setVideoFile(null)
+        setVideoAspectRatio(null)
         return
       }
+
+      // 비디오의 실제 비율 계산
+      const videoElement = document.createElement('video')
+      videoElement.preload = 'metadata'
+      videoElement.onloadedmetadata = () => {
+        const ratio = videoElement.videoHeight / videoElement.videoWidth
+        setVideoAspectRatio(ratio)
+        URL.revokeObjectURL(videoElement.src)
+      }
+      videoElement.src = URL.createObjectURL(file)
+
       setVideoFile(file)
     }
 
     if (Array.isArray(input)) {
       if (input.length === 0) {
         setVideoFile(null)
+        setVideoAspectRatio(null)
         return
       }
       processVideo(input[0])
@@ -93,6 +106,7 @@ export default function EditProjectPage() {
 
     if (!input) {
       setVideoFile(null)
+      setVideoAspectRatio(null)
       return
     }
 
@@ -110,12 +124,12 @@ export default function EditProjectPage() {
 
   const handleComplieComplete = (
     target: ArrayBuffer,
-    aspectRatio: number,
+    _aspectRatio: number,
     originalImage: File
   ) => {
     setTargetFile(target)
     setTargetImageFile(originalImage)
-    setTargetAspectRatio(aspectRatio)
+    // 비디오 비율을 사용하므로 타겟 이미지 비율은 무시
   }
 
   const canSave =
@@ -136,7 +150,9 @@ export default function EditProjectPage() {
     // 메타데이터
     formData.append('title', title)
     formData.append('width', '1')
-    formData.append('height', targetAspectRatio.toString())
+    // 새 비디오가 선택되면 새 비율 사용, 아니면 기존 비율 유지
+    const heightValue = videoAspectRatio ?? project?.height ?? 1
+    formData.append('height', heightValue.toString())
     formData.append('chromaKeyColor', useChromaKey ? chromaKeyColor : '')
 
     // 파일 (변경된 경우에만)

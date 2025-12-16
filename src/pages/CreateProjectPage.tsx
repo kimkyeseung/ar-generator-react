@@ -29,8 +29,8 @@ export default function CreateProjectPage() {
   const navigate = useNavigate()
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
-  const [targetAspectRatio, setTargetAspectRatio] = useState<number>(1)
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number>(1)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -49,14 +49,27 @@ export default function CreateProjectPage() {
           `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
         )
         setVideoFile(null)
+        setVideoAspectRatio(1)
         return
       }
+
+      // 비디오의 실제 비율 계산
+      const videoElement = document.createElement('video')
+      videoElement.preload = 'metadata'
+      videoElement.onloadedmetadata = () => {
+        const ratio = videoElement.videoHeight / videoElement.videoWidth
+        setVideoAspectRatio(ratio)
+        URL.revokeObjectURL(videoElement.src)
+      }
+      videoElement.src = URL.createObjectURL(file)
+
       setVideoFile(file)
     }
 
     if (Array.isArray(input)) {
       if (input.length === 0) {
         setVideoFile(null)
+        setVideoAspectRatio(1)
         return
       }
       processVideo(input[0])
@@ -65,6 +78,7 @@ export default function CreateProjectPage() {
 
     if (!input) {
       setVideoFile(null)
+      setVideoAspectRatio(1)
       return
     }
 
@@ -99,9 +113,9 @@ export default function CreateProjectPage() {
     if (targetImageFile) {
       formData.append('targetImage', targetImageFile)
     }
-    // 타겟 이미지 비율 전송 (width=1 고정, height=종횡비)
+    // 비디오 비율 전송 (width=1 고정, height=종횡비)
     formData.append('width', '1')
-    formData.append('height', targetAspectRatio.toString())
+    formData.append('height', videoAspectRatio.toString())
     if (title) {
       formData.append('title', title)
     }
@@ -162,10 +176,10 @@ export default function CreateProjectPage() {
     }
   }
 
-  const handleComplieComplete = (target: ArrayBuffer, aspectRatio: number, originalImage: File) => {
+  const handleComplieComplete = (target: ArrayBuffer, _aspectRatio: number, originalImage: File) => {
     setTargetFile(target)
     setTargetImageFile(originalImage)
-    setTargetAspectRatio(aspectRatio)
+    // 비디오 비율을 사용하므로 타겟 이미지 비율은 무시
     setStep(2)
   }
 

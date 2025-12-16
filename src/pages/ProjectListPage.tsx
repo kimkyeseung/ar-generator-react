@@ -143,6 +143,14 @@ export default function ProjectListPage() {
                       <Button
                         variant='outline'
                         size='sm'
+                        onClick={() => navigate(`/edit/${project.id}`)}
+                        className='text-gray-600 border-gray-300 hover:bg-gray-50'
+                      >
+                        편집
+                      </Button>
+                      <Button
+                        variant='outline'
+                        size='sm'
                         onClick={() => navigate(`/result/qr/${project.folderId}`)}
                         className='text-purple-600 border-purple-300 hover:bg-purple-50'
                       >

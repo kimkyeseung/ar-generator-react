@@ -7,7 +7,12 @@ const API_URL = process.env.REACT_APP_API_URL
 async function fetchArFiles(folderId: string) {
   const res = await fetch(`${API_URL}/ar-files/${folderId}`)
   if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
-  return res.json() as Promise<{ mindFileId: string; videoFileId: string }>
+  return res.json() as Promise<{
+    mindFileId: string
+    videoFileId: string
+    width?: number
+    height?: number
+  }>
 }
 
 async function fetchBlobUrlFromFileId(fileId: string) {
@@ -46,10 +51,18 @@ export default function MindARViewerPage() {
 
   if (!isReady) return <p>Loading AR assets...</p>
 
+  const mediaWidth = fileIds?.width ?? 1
+  const mediaHeight = fileIds?.height ?? 1
+
   return (
     <section className="relative flex min-h-[100dvh] w-full">
       <div className="absolute inset-0">
-        <MindARViewer mindUrl={mindUrl} videoUrl={videoUrl} />
+        <MindARViewer
+          mindUrl={mindUrl}
+          videoUrl={videoUrl}
+          width={mediaWidth}
+          height={mediaHeight}
+        />
       </div>
     </section>
   )

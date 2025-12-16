@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import MindARCompiler from './MindARCompiler'
-import HeroHeader from './home/HeroHeader'
-import InfoFooter from './home/InfoFooter'
-import PageBackground from './home/PageBackground'
-import PublishSection from './home/PublishSection'
-import UploadCard from './home/UploadCard'
-import VideoUploadSection from './home/VideoUploadSection'
+import MindARCompiler from '../components/MindARCompiler'
+import HeroHeader from '../components/home/HeroHeader'
+import InfoFooter from '../components/home/InfoFooter'
+import PageBackground from '../components/home/PageBackground'
+import PublishSection from '../components/home/PublishSection'
+import UploadCard from '../components/home/UploadCard'
+import VideoUploadSection from '../components/home/VideoUploadSection'
+import { Button } from '../components/ui/button'
 
 const stepMessageMap = {
   1: 'Step 1. 타겟 이미지를 업로드해주세요.',
@@ -17,7 +18,7 @@ const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
 
-export default function App() {
+export default function CreateProjectPage() {
   const [step, setStep] = useState<1 | 2>(1)
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
@@ -29,6 +30,7 @@ export default function App() {
   const [isCompiling, setIsCompiling] = useState(false)
   const [mediaWidth, setMediaWidth] = useState<number>(1)
   const [mediaHeight, setMediaHeight] = useState<number>(1)
+  const [title, setTitle] = useState<string>('')
 
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
     setVideoError(null)
@@ -82,6 +84,9 @@ export default function App() {
     formData.append('video', videoFile)
     formData.append('width', mediaWidth.toString())
     formData.append('height', mediaHeight.toString())
+    if (title) {
+      formData.append('title', title)
+    }
 
     try {
       const res = await uploadWithProgress(formData)
@@ -151,12 +156,36 @@ export default function App() {
     <PageBackground>
       <div className='container mx-auto px-4 py-12'>
         <div className='mx-auto max-w-2xl space-y-10'>
+          <div className='flex items-center justify-between'>
+            <Button
+              variant='ghost'
+              onClick={() => navigate('/')}
+              className='text-white/70 hover:text-white hover:bg-white/10'
+            >
+              ← 목록으로
+            </Button>
+          </div>
+
           <HeroHeader />
 
           <UploadCard
             stepMessage={stepMessageMap[step]}
             status={workflowStatus}
           >
+            {/* 프로젝트 제목 입력 */}
+            <div className='mb-6'>
+              <label className='block text-sm font-medium text-white/70 mb-2'>
+                프로젝트 제목 (선택)
+              </label>
+              <input
+                type='text'
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder='프로젝트 제목을 입력하세요'
+                className='w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500'
+              />
+            </div>
+
             <MindARCompiler
               onCompileColplete={handleComplieComplete}
               onCompileStateChange={setIsCompiling}

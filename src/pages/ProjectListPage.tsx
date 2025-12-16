@@ -58,15 +58,15 @@ export default function ProjectListPage() {
 
   return (
     <PageBackground>
-      <div className='container mx-auto px-4 py-12'>
-        <div className='mx-auto max-w-4xl space-y-8'>
+      <div className='container mx-auto px-4 py-6 sm:py-12'>
+        <div className='mx-auto max-w-4xl space-y-6 sm:space-y-8'>
           <HeroHeader />
 
-          <div className='flex justify-between items-center'>
-            <h2 className='text-2xl font-bold text-gray-800'>내 프로젝트</h2>
+          <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3'>
+            <h2 className='text-xl sm:text-2xl font-bold text-gray-800'>내 프로젝트</h2>
             <Button
               onClick={() => navigate('/create')}
-              className='bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+              className='w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
             >
               + 새 프로젝트 만들기
             </Button>
@@ -105,46 +105,68 @@ export default function ProjectListPage() {
               </Button>
             </Card>
           ) : (
-            <div className='grid gap-4'>
+            <div className='grid gap-3 sm:gap-4'>
               {projects.map((project) => (
                 <Card
                   key={project.id}
-                  className='p-6 bg-white shadow-md border-gray-200 hover:shadow-lg transition-shadow'
+                  className='p-4 sm:p-6 bg-white shadow-md border-gray-200 hover:shadow-lg transition-shadow'
                 >
-                  <div className='flex items-center justify-between'>
-                    {/* 썸네일 이미지 */}
-                    <div className='flex-shrink-0 mr-4'>
-                      {project.targetImageFileId ? (
-                        <img
-                          src={`${API_URL}/file/${project.targetImageFileId}`}
-                          alt='타겟 이미지'
-                          className='w-20 h-20 object-cover rounded-lg border border-gray-200'
-                        />
-                      ) : (
-                        <div className='w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200'>
-                          <span className='text-2xl'>🎯</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className='flex-1'>
-                      <h3 className='text-lg font-semibold text-gray-800'>
-                        {project.title || '제목 없음'}
-                      </h3>
-                      <p className='text-gray-400 text-sm mt-1'>
-                        생성일: {formatDate(project.createdAt)}
-                      </p>
-                      {project.description && (
-                        <p className='text-gray-600 text-sm mt-2'>
-                          {project.description}
+                  <div className='flex flex-col sm:flex-row sm:items-center gap-4'>
+                    {/* 썸네일 + 정보 영역 */}
+                    <div className='flex items-start sm:items-center gap-3 sm:gap-4 flex-1'>
+                      {/* 썸네일 이미지 */}
+                      <div className='flex-shrink-0'>
+                        {project.targetImageFileId ? (
+                          <img
+                            src={`${API_URL}/file/${project.targetImageFileId}`}
+                            alt='타겟 이미지'
+                            className='w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200'
+                          />
+                        ) : (
+                          <div className='w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200'>
+                            <span className='text-xl sm:text-2xl'>🎯</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* 프로젝트 정보 */}
+                      <div className='flex-1 min-w-0'>
+                        <h3 className='text-base sm:text-lg font-semibold text-gray-800 truncate'>
+                          {project.title || '제목 없음'}
+                        </h3>
+                        <p className='text-gray-400 text-xs sm:text-sm mt-0.5'>
+                          {formatDate(project.createdAt)}
                         </p>
-                      )}
+                        {/* 뱃지들 */}
+                        <div className='flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2'>
+                          {project.height && (
+                            <span className='text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full whitespace-nowrap'>
+                              {project.height > 1 ? '세로' : project.height < 1 ? '가로' : '정방형'}
+                            </span>
+                          )}
+                          {project.chromaKeyColor && (
+                            <span className='text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-green-100 text-green-700 rounded-full flex items-center gap-1'>
+                              <span
+                                className='w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border border-green-300'
+                                style={{ backgroundColor: project.chromaKeyColor }}
+                              />
+                              크로마키
+                            </span>
+                          )}
+                        </div>
+                        {project.description && (
+                          <p className='text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2'>
+                            {project.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className='flex gap-2 ml-4'>
+                    {/* 버튼 영역 */}
+                    <div className='flex flex-wrap sm:flex-nowrap gap-2 sm:ml-4'>
                       <Button
                         variant='outline'
                         size='sm'
                         onClick={() => navigate(`/edit/${project.id}`)}
-                        className='text-gray-600 border-gray-300 hover:bg-gray-50'
+                        className='flex-1 sm:flex-none text-xs sm:text-sm text-gray-600 border-gray-300 hover:bg-gray-50'
                       >
                         편집
                       </Button>
@@ -152,23 +174,23 @@ export default function ProjectListPage() {
                         variant='outline'
                         size='sm'
                         onClick={() => navigate(`/result/qr/${project.folderId}`)}
-                        className='text-purple-600 border-purple-300 hover:bg-purple-50'
+                        className='flex-1 sm:flex-none text-xs sm:text-sm text-purple-600 border-purple-300 hover:bg-purple-50'
                       >
-                        QR 보기
+                        QR
                       </Button>
                       <Button
                         variant='outline'
                         size='sm'
                         onClick={() => navigate(`/result/${project.folderId}`)}
-                        className='text-indigo-600 border-indigo-300 hover:bg-indigo-50'
+                        className='flex-1 sm:flex-none text-xs sm:text-sm text-indigo-600 border-indigo-300 hover:bg-indigo-50'
                       >
-                        AR 보기
+                        AR
                       </Button>
                       <Button
                         variant='outline'
                         size='sm'
                         onClick={() => handleDelete(project.id)}
-                        className='text-red-500 border-red-300 hover:bg-red-50'
+                        className='flex-1 sm:flex-none text-xs sm:text-sm text-red-500 border-red-300 hover:bg-red-50'
                       >
                         삭제
                       </Button>

@@ -58,7 +58,7 @@ export default function VideoUploadSection({
               step={0.1}
               value={mediaWidth}
               onChange={(e) => onWidthChange(parseFloat(e.target.value) || 1)}
-              className='w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
+              className='w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
             />
           </div>
           <span className='text-slate-400'>×</span>
@@ -73,7 +73,7 @@ export default function VideoUploadSection({
               step={0.1}
               value={mediaHeight}
               onChange={(e) => onHeightChange(parseFloat(e.target.value) || 1)}
-              className='w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
+              className='w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
             />
           </div>
         </div>

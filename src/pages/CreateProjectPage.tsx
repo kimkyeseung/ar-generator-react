@@ -18,11 +18,17 @@ const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
 
+// 유효한 hex 색상인지 검증
+function isValidHexColor(color: string): boolean {
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)
+}
+
 export default function CreateProjectPage() {
   const [step, setStep] = useState<1 | 2>(1)
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
+  const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
   const [targetAspectRatio, setTargetAspectRatio] = useState<number>(1)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoError, setVideoError] = useState<string | null>(null)
@@ -30,6 +36,9 @@ export default function CreateProjectPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isCompiling, setIsCompiling] = useState(false)
   const [title, setTitle] = useState<string>('')
+  const [useChromaKey, setUseChromaKey] = useState(false)
+  const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
+  const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
 
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
     setVideoError(null)
@@ -62,19 +71,43 @@ export default function CreateProjectPage() {
     processVideo(input)
   }, [])
 
-  const canPublish = targetFile !== null && videoFile !== null
+  const canPublish = targetFile !== null && videoFile !== null && (!useChromaKey || isValidHexColor(chromaKeyColor))
+
+  const handleChromaKeyColorChange = (color: string) => {
+    setChromaKeyColor(color)
+    if (color && !isValidHexColor(color)) {
+      setChromaKeyError('유효한 HEX 색상을 입력하세요 (예: #00FF00)')
+    } else {
+      setChromaKeyError(null)
+    }
+  }
 
   const handlePublish = async () => {
     if (!canPublish || isUploading || isCompiling) return
+
+    // 크로마키 색상 validation
+    if (useChromaKey && !isValidHexColor(chromaKeyColor)) {
+      setChromaKeyError('유효한 HEX 색상을 입력하세요 (예: #00FF00)')
+      return
+    }
+
     const formData = new FormData()
     const blob = new Blob([targetFile], { type: 'application/octet-stream' })
     formData.append('target', blob, 'targets.mind')
     formData.append('video', videoFile)
+    // 원본 타겟 이미지 추가 (썸네일용)
+    if (targetImageFile) {
+      formData.append('targetImage', targetImageFile)
+    }
     // 타겟 이미지 비율 전송 (width=1 고정, height=종횡비)
     formData.append('width', '1')
     formData.append('height', targetAspectRatio.toString())
     if (title) {
       formData.append('title', title)
+    }
+    // 크로마키 색상 전송
+    if (useChromaKey && chromaKeyColor) {
+      formData.append('chromaKeyColor', chromaKeyColor)
     }
 
     try {
@@ -129,8 +162,9 @@ export default function CreateProjectPage() {
     }
   }
 
-  const handleComplieComplete = (target: ArrayBuffer, aspectRatio: number) => {
+  const handleComplieComplete = (target: ArrayBuffer, aspectRatio: number, originalImage: File) => {
     setTargetFile(target)
+    setTargetImageFile(originalImage)
     setTargetAspectRatio(aspectRatio)
     setStep(2)
   }
@@ -187,6 +221,11 @@ export default function CreateProjectPage() {
               onFileSelect={handleVideoSelect}
               limitMb={MAX_VIDEO_SIZE_MB}
               videoError={videoError}
+              useChromaKey={useChromaKey}
+              onUseChromaKeyChange={setUseChromaKey}
+              chromaKeyColor={chromaKeyColor}
+              onChromaKeyColorChange={handleChromaKeyColorChange}
+              chromaKeyError={chromaKeyError}
             />
 
             <PublishSection

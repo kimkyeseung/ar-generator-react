@@ -4,6 +4,7 @@ import 'mind-ar/dist/mindar-image-aframe.prod.js'
 
 declare const DeviceMotionEvent: any
 declare const DeviceOrientationEvent: any
+declare const AFRAME: any
 
 type MindARScene = HTMLElement & {
   systems: {
@@ -19,6 +20,53 @@ interface Props {
   videoUrl: string
   width?: number
   height?: number
+  chromaKeyColor?: string
+}
+
+// HEX 색상을 RGB 배열로 변환 (0~1 범위)
+function hexToRgb(hex: string): [number, number, number] {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (result) {
+    return [
+      parseInt(result[1], 16) / 255,
+      parseInt(result[2], 16) / 255,
+      parseInt(result[3], 16) / 255,
+    ]
+  }
+  return [0, 1, 0] // 기본값: 녹색
+}
+
+// 크로마키 쉐이더를 모듈 로드 시점에 미리 등록 (렌더링 전에 실행됨)
+if (typeof AFRAME !== 'undefined' && !AFRAME.shaders['chromakey']) {
+  AFRAME.registerShader('chromakey', {
+    schema: {
+      src: { type: 'map' },
+      color: { type: 'vec3', default: { x: 0, y: 1, z: 0 } },
+      similarity: { type: 'number', default: 0.4 },
+      smoothness: { type: 'number', default: 0.08 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D src;
+      uniform vec3 color;
+      uniform float similarity;
+      uniform float smoothness;
+      varying vec2 vUv;
+      void main() {
+        vec4 texColor = texture2D(src, vUv);
+        float diff = length(texColor.rgb - color);
+        float alpha = smoothstep(similarity, similarity + smoothness, diff);
+        gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+      }
+    `,
+    transparent: true,
+  })
 }
 
 const MindARViewer: React.FC<Props> = ({
@@ -26,6 +74,7 @@ const MindARViewer: React.FC<Props> = ({
   videoUrl,
   width = 1,
   height = 1,
+  chromaKeyColor,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
 
@@ -34,8 +83,8 @@ const MindARViewer: React.FC<Props> = ({
     if (!sceneEl) return
     const containerEl = sceneEl.parentElement as HTMLElement | null
 
-    const arSystem = sceneEl.systems['mindar-image-system']
-    if (!arSystem) return
+    // arSystem은 renderstart 이벤트 시점에 사용 가능
+    let arSystem: { start: () => void; stop: () => void } | null = null
 
     const targetEntity = sceneEl.querySelector<HTMLElement>(
       '[mindar-image-target]'
@@ -171,7 +220,11 @@ const MindARViewer: React.FC<Props> = ({
 
     /** ---------- 렌더 시작 시 ---------- **/
     const handleRenderStart = () => {
-      arSystem.start()
+      // renderstart 시점에 arSystem 가져오기
+      arSystem = sceneEl.systems['mindar-image-system'] ?? null
+      if (arSystem) {
+        arSystem.start()
+      }
       ensureVideoPlayback()
       styleCameraFeed()
     }
@@ -181,7 +234,9 @@ const MindARViewer: React.FC<Props> = ({
     /** ---------- cleanup ---------- **/
     return () => {
       sceneEl.removeEventListener('renderstart', handleRenderStart)
-      arSystem.stop()
+      if (arSystem) {
+        arSystem.stop()
+      }
       observer?.disconnect()
       window.removeEventListener('resize', styleCameraFeed)
       targetEntity?.removeEventListener('targetFound', handleTargetFound)
@@ -189,7 +244,7 @@ const MindARViewer: React.FC<Props> = ({
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
     }
-  }, [width, height])
+  }, [width, height, chromaKeyColor])
 
   return (
     <a-scene
@@ -213,25 +268,34 @@ const MindARViewer: React.FC<Props> = ({
           playsInline
           webkit-playsinline='true'
           muted
-          // preload="auto"
-          preload='metadata' // 전체 파일을 받지 않고 메타데이터만 받으라는 힌트
+          preload='auto'
         ></video>
       </a-assets>
 
       <a-camera position='0 0 0' look-controls='enabled: false'></a-camera>
 
       <a-entity mindar-image-target='targetIndex: 0'>
-        <a-video
-          src='#ar-video'
-          position='0 0 0'
-          height={height.toString()}
-          width={width.toString()}
-          rotation='0 0 0'
-          loop='true'
-          muted='true'
-          autoplay='true'
-          playsinline='true'
-        ></a-video>
+        {chromaKeyColor ? (
+          <a-plane
+            position='0 0 0'
+            height={height.toString()}
+            width={width.toString()}
+            rotation='0 0 0'
+            material={`shader: chromakey; src: #ar-video; color: ${hexToRgb(chromaKeyColor).join(' ')}; transparent: true;`}
+          ></a-plane>
+        ) : (
+          <a-video
+            src='#ar-video'
+            position='0 0 0'
+            height={height.toString()}
+            width={width.toString()}
+            rotation='0 0 0'
+            loop='true'
+            muted='true'
+            autoplay='true'
+            playsinline='true'
+          ></a-video>
+        )}
       </a-entity>
     </a-scene>
   )

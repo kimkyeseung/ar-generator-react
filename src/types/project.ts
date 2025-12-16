@@ -3,10 +3,12 @@ export interface Project {
   folderId: string
   videoFileId: string
   targetFileId: string
+  targetImageFileId: string | null
   width: number | null
   height: number | null
   title: string | null
   description: string | null
+  chromaKeyColor: string | null
   createdAt: string
   updatedAt: string
 }

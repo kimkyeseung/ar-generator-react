@@ -112,6 +112,20 @@ export default function ProjectListPage() {
                   className='p-6 bg-white shadow-md border-gray-200 hover:shadow-lg transition-shadow'
                 >
                   <div className='flex items-center justify-between'>
+                    {/* 썸네일 이미지 */}
+                    <div className='flex-shrink-0 mr-4'>
+                      {project.targetImageFileId ? (
+                        <img
+                          src={`${API_URL}/file/${project.targetImageFileId}`}
+                          alt='타겟 이미지'
+                          className='w-20 h-20 object-cover rounded-lg border border-gray-200'
+                        />
+                      ) : (
+                        <div className='w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200'>
+                          <span className='text-2xl'>🎯</span>
+                        </div>
+                      )}
+                    </div>
                     <div className='flex-1'>
                       <h3 className='text-lg font-semibold text-gray-800'>
                         {project.title || '제목 없음'}

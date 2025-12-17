@@ -147,11 +147,21 @@ const MindARViewer: React.FC<Props> = ({
       console.log('[MindAR] targetFound')
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (video) {
-        // 타겟 인식 시 muted 해제 (사용자 제스처 이후에만 작동)
-        video.muted = false
-        void video.play().catch((e) => {
-          console.warn('[MindAR] targetFound -> play() blocked', e)
-        })
+        // iOS에서는 먼저 muted 상태로 재생 시도 후 unmute
+        video.currentTime = 0
+        video.muted = true
+        video.play()
+          .then(() => {
+            console.log('[MindAR] Video playing, attempting to unmute...')
+            // 재생 성공 후 음소거 해제 시도
+            video.muted = false
+          })
+          .catch((e) => {
+            console.warn('[MindAR] targetFound -> play() blocked', e)
+            // 재생 실패 시 muted 상태로라도 재생 시도
+            video.muted = true
+            video.play().catch(() => {})
+          })
       }
     }
 
@@ -258,11 +268,19 @@ const MindARViewer: React.FC<Props> = ({
       await requestIOSPermissions()
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (video) {
-        // 사용자 제스처 후 muted 해제하여 소리 재생
-        video.muted = false
-        void video.play().catch((e) => {
-          console.warn('[MindAR] manual play blocked', e)
-        })
+        // iOS: 먼저 muted 상태로 재생 시작하여 재생 권한 확보
+        video.muted = true
+        video.play()
+          .then(() => {
+            console.log('[MindAR] User gesture: video started, unmuting...')
+            video.muted = false
+            // 재생 후 일시정지 (타겟 인식 시 다시 재생)
+            video.pause()
+            video.currentTime = 0
+          })
+          .catch((e) => {
+            console.warn('[MindAR] manual play blocked', e)
+          })
       }
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)

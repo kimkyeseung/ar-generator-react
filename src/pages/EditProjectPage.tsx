@@ -290,7 +290,8 @@ export default function EditProjectPage() {
                       src={`${API_URL}/file/${project.videoFileId}`}
                       className='w-32 h-32 object-cover rounded-lg border border-gray-200'
                       controls
-                      muted
+                      playsInline
+                      webkit-playsinline='true'
                       preload='metadata'
                     />
                     <span className='text-xs text-gray-500 mt-1'>현재 비디오</span>

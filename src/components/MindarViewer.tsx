@@ -146,6 +146,8 @@ const MindARViewer: React.FC<Props> = ({
       console.log('[MindAR] targetFound')
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (video) {
+        // 타겟 인식 시 muted 해제 (사용자 제스처 이후에만 작동)
+        video.muted = false
         void video.play().catch((e) => {
           console.warn('[MindAR] targetFound -> play() blocked', e)
         })
@@ -255,6 +257,8 @@ const MindARViewer: React.FC<Props> = ({
       await requestIOSPermissions()
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (video) {
+        // 사용자 제스처 후 muted 해제하여 소리 재생
+        video.muted = false
         void video.play().catch((e) => {
           console.warn('[MindAR] manual play blocked', e)
         })

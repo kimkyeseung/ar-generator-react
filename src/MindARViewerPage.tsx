@@ -7,7 +7,12 @@ const API_URL = process.env.REACT_APP_API_URL
 async function fetchArFiles(folderId: string) {
   const res = await fetch(`${API_URL}/ar-files/${folderId}`)
   if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
-  return res.json() as Promise<{ mindFileId: string; videoFileId: string }>
+  return res.json() as Promise<{
+    mindFileId: string
+    videoFileId: string
+    targetImageFileId?: string
+    chromaKeyColor?: string
+  }>
 }
 
 async function fetchBlobUrlFromFileId(fileId: string) {
@@ -41,15 +46,32 @@ export default function MindARViewerPage() {
     enabled: !!fileIds,
   })
 
+  const { data: targetImageUrl, isLoading: isTargetImageLoading } = useQuery({
+    queryKey: ['targetImageUrl', fileIds?.targetImageFileId],
+    queryFn: () => fetchBlobUrlFromFileId(fileIds!.targetImageFileId!),
+    enabled: !!fileIds?.targetImageFileId,
+  })
+
   const isReady =
-    !isIdsLoading && !isMindLoading && !isVideoLoading && mindUrl && videoUrl
+    !isIdsLoading &&
+    !isMindLoading &&
+    !isVideoLoading &&
+    !isTargetImageLoading &&
+    mindUrl &&
+    videoUrl &&
+    targetImageUrl
 
   if (!isReady) return <p>Loading AR assets...</p>
 
   return (
     <section className="relative flex min-h-[100dvh] w-full">
       <div className="absolute inset-0">
-        <MindARViewer mindUrl={mindUrl} videoUrl={videoUrl} />
+        <MindARViewer
+          mindUrl={mindUrl}
+          videoUrl={videoUrl}
+          targetImageUrl={targetImageUrl}
+          chromaKeyColor={fileIds?.chromaKeyColor}
+        />
       </div>
     </section>
   )

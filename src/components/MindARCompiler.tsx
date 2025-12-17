@@ -20,7 +20,7 @@ const fileUploadSchema = z.object({
 type FileUploadFormData = z.infer<typeof fileUploadSchema>
 
 interface Props {
-  onCompileColplete: (target: ArrayBuffer) => void
+  onCompileColplete: (target: ArrayBuffer, originalImage: File) => void
   onCompileStateChange?: (isCompiling: boolean) => void
 }
 
@@ -29,10 +29,12 @@ const MindARCompiler: FC<Props> = ({
   onCompileStateChange,
 }) => {
   const [isPending, setIsPending] = useState<boolean>(false)
-  const { control, handleSubmit } = useForm<FileUploadFormData>({
+  const { control, handleSubmit, watch } = useForm<FileUploadFormData>({
     resolver: zodResolver(fileUploadSchema),
     defaultValues: { attachments: [] },
   })
+
+  const attachments = watch('attachments')
 
   // 상태 변수들
   const [progress, setProgress] = useState<number>(0)
@@ -159,7 +161,8 @@ const MindARCompiler: FC<Props> = ({
         const exportedBuffer = compilerRef.current.exportData()
         const arrayCopy = exportedBuffer.slice()
         const arrayBuffer = arrayCopy.buffer
-        onCompileColplete(arrayBuffer)
+        // 원본 이미지 파일도 함께 전달
+        onCompileColplete(arrayBuffer, files[0])
         setCompiledData(arrayBuffer)
       } finally {
         emitCompileState(false)
@@ -250,8 +253,7 @@ const MindARCompiler: FC<Props> = ({
       {progress !== 100 && (
         <Button
           type='submit'
-          // disabled={!attachments || attachments.length === 0}
-          disabled={isPending}
+          disabled={isPending || !attachments || attachments.length === 0}
           className='mt-6 w-full'
           size='lg'
         >

@@ -8,6 +8,16 @@ type VideoUploadSectionProps = {
   onFileSelect: (file: File | File[] | null) => void
   limitMb: number
   videoError: string | null
+  useChromaKey: boolean
+  onUseChromaKeyChange: (value: boolean) => void
+  chromaKeyColor: string
+  onChromaKeyColorChange: (value: string) => void
+  chromaKeyError: string | null
+}
+
+// 유효한 hex 색상인지 검증
+function isValidHexColor(color: string): boolean {
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)
 }
 
 export default function VideoUploadSection({
@@ -16,6 +26,11 @@ export default function VideoUploadSection({
   onFileSelect,
   limitMb,
   videoError,
+  useChromaKey,
+  onUseChromaKeyChange,
+  chromaKeyColor,
+  onChromaKeyColorChange,
+  chromaKeyError,
 }: VideoUploadSectionProps) {
   if (!isTargetReady) {
     return (
@@ -23,8 +38,16 @@ export default function VideoUploadSection({
     )
   }
 
+  const handleColorChange = (value: string) => {
+    // # 없으면 추가
+    if (value && !value.startsWith('#')) {
+      value = '#' + value
+    }
+    onChromaKeyColorChange(value)
+  }
+
   return (
-    <div className='space-y-2'>
+    <div className='space-y-4'>
       <FileUpload
         accept='video/*'
         label='Video Content'
@@ -33,6 +56,56 @@ export default function VideoUploadSection({
         file={videoFile}
       />
       <VideoLimitNotice limitMb={limitMb} />
+
+      {/* 크로마키 설정 */}
+      <div className='rounded-lg border border-gray-200 bg-gray-50 p-4'>
+        <div className='flex items-center gap-3'>
+          <input
+            type='checkbox'
+            id='use-chroma-key'
+            checked={useChromaKey}
+            onChange={(e) => onUseChromaKeyChange(e.target.checked)}
+            className='h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500'
+          />
+          <label htmlFor='use-chroma-key' className='text-sm font-medium text-gray-700'>
+            크로마키 적용
+          </label>
+        </div>
+
+        {useChromaKey && (
+          <div className='mt-4 space-y-3'>
+            <div className='flex items-center gap-3'>
+              <label htmlFor='chroma-color' className='text-sm text-gray-600 whitespace-nowrap'>
+                크로마키 색상
+              </label>
+              <div className='flex flex-1 items-center gap-2'>
+                <input
+                  type='color'
+                  id='chroma-color-picker'
+                  value={isValidHexColor(chromaKeyColor) ? chromaKeyColor : '#00FF00'}
+                  onChange={(e) => onChromaKeyColorChange(e.target.value)}
+                  className='h-10 w-12 cursor-pointer rounded border border-gray-300'
+                />
+                <input
+                  type='text'
+                  id='chroma-color'
+                  value={chromaKeyColor}
+                  onChange={(e) => handleColorChange(e.target.value)}
+                  placeholder='#00FF00'
+                  className='flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500'
+                />
+              </div>
+            </div>
+            <p className='text-xs text-gray-500'>
+              영상에서 제거할 배경 색상을 선택하세요 (예: 그린스크린 #00FF00)
+            </p>
+            {chromaKeyError && (
+              <p className='text-xs text-red-500'>{chromaKeyError}</p>
+            )}
+          </div>
+        )}
+      </div>
+
       {videoError && <StatusCallout message={videoError} variant='error' />}
     </div>
   )

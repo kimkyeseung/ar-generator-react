@@ -4,6 +4,7 @@ import 'mind-ar/dist/mindar-image-aframe.prod.js'
 
 declare const DeviceMotionEvent: any
 declare const DeviceOrientationEvent: any
+declare const AFRAME: any
 
 type MindARScene = HTMLElement & {
   systems: {
@@ -17,37 +18,128 @@ type MindARScene = HTMLElement & {
 interface Props {
   mindUrl: string
   videoUrl: string
+  targetImageUrl: string
+  chromaKeyColor?: string
 }
 
-const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
+// 크로마키 컴포넌트를 모듈 로드 시점에 미리 등록
+if (typeof AFRAME !== 'undefined' && !AFRAME.components['chromakey-material']) {
+  AFRAME.registerComponent('chromakey-material', {
+    schema: {
+      src: { type: 'selector' },
+      color: { type: 'color', default: '#00FF00' },
+      similarity: { type: 'number', default: 0.4 },
+      smoothness: { type: 'number', default: 0.08 },
+    },
+    init: function () {
+      const videoEl = this.data.src as HTMLVideoElement | null
+      if (!videoEl) return
+
+      // Three.js VideoTexture 생성
+      const THREE = AFRAME.THREE
+      const texture = new THREE.VideoTexture(videoEl)
+      texture.minFilter = THREE.LinearFilter
+      texture.magFilter = THREE.LinearFilter
+      texture.format = THREE.RGBAFormat
+
+      // 크로마키 색상을 RGB로 변환 (0~1 범위)
+      const color = new THREE.Color(this.data.color)
+
+      // ShaderMaterial 생성
+      this.material = new THREE.ShaderMaterial({
+        uniforms: {
+          src: { value: texture },
+          color: { value: new THREE.Vector3(color.r, color.g, color.b) },
+          similarity: { value: this.data.similarity },
+          smoothness: { value: this.data.smoothness },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D src;
+          uniform vec3 color;
+          uniform float similarity;
+          uniform float smoothness;
+          varying vec2 vUv;
+          void main() {
+            vec4 texColor = texture2D(src, vUv);
+            float diff = length(texColor.rgb - color);
+            float alpha = smoothstep(similarity, similarity + smoothness, diff);
+            gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+          }
+        `,
+        transparent: true,
+        side: THREE.DoubleSide,
+      })
+
+      // mesh에 material 적용
+      const mesh = this.el.getObject3D('mesh')
+      if (mesh && 'material' in mesh) {
+        ;(mesh as { material: unknown }).material = this.material
+      }
+    },
+    tick: function () {
+      // 매 프레임마다 비디오 텍스처 갱신
+      if (this.material && this.material.uniforms.src.value) {
+        this.material.uniforms.src.value.needsUpdate = true
+      }
+    },
+    remove: function () {
+      if (this.material) {
+        this.material.dispose()
+      }
+    },
+  })
+}
+
+const MindARViewer: React.FC<Props> = ({
+  mindUrl,
+  videoUrl,
+  targetImageUrl,
+  chromaKeyColor,
+}) => {
   const sceneRef = useRef<MindARScene | null>(null)
+  const isRestartingRef = useRef(false)
 
   useEffect(() => {
     const sceneEl = sceneRef.current
     if (!sceneEl) return
     const containerEl = sceneEl.parentElement as HTMLElement | null
 
-    const arSystem = sceneEl.systems['mindar-image-system']
-    if (!arSystem) return
+    // arSystem은 renderstart 이벤트 시점에 사용 가능
+    let arSystem: { start: () => void; stop: () => void } | null = null
 
     const targetEntity = sceneEl.querySelector<HTMLElement>(
       '[mindar-image-target]'
     )
 
-    const mindarVideoPlane =
-      sceneEl.querySelector<HTMLElement>('a-video[src="#ar-video"]') ?? null
+    // 타겟 이미지 비율로 비디오 plane 크기 설정
+    const updateVideoPlaneFromTargetImage = () => {
+      // a-video 또는 a-plane (크로마키) 중 하나를 찾음
+      const videoPlane =
+        sceneEl.querySelector<HTMLElement>('a-video[src="#ar-video"]') ??
+        sceneEl.querySelector<HTMLElement>('a-plane') ??
+        null
 
-    const updateVideoPlaneAspect = () => {
-      if (!mindarVideoPlane) return
-      const videoElement = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-      if (!videoElement) return
-      const { videoWidth, videoHeight } = videoElement
-      if (!videoWidth || !videoHeight) return
+      if (!videoPlane || !targetImageUrl) return
 
-      const planeWidth = 1
-      const planeHeight = (videoHeight / videoWidth) * planeWidth
-      mindarVideoPlane.setAttribute('width', planeWidth.toString())
-      mindarVideoPlane.setAttribute('height', planeHeight.toString())
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const { width: imgWidth, height: imgHeight } = img
+        if (!imgWidth || !imgHeight) return
+
+        const planeWidth = 1
+        const planeHeight = (imgHeight / imgWidth) * planeWidth
+        videoPlane.setAttribute('width', planeWidth.toString())
+        videoPlane.setAttribute('height', planeHeight.toString())
+      }
+      img.src = targetImageUrl
     }
 
     /** ---------- 타겟 이벤트 ---------- **/
@@ -55,9 +147,21 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       console.log('[MindAR] targetFound')
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (video) {
-        void video.play().catch((e) => {
-          console.warn('[MindAR] targetFound -> play() blocked', e)
-        })
+        // iOS에서는 먼저 muted 상태로 재생 시도 후 unmute
+        video.currentTime = 0
+        video.muted = true
+        video.play()
+          .then(() => {
+            console.log('[MindAR] Video playing, attempting to unmute...')
+            // 재생 성공 후 음소거 해제 시도
+            video.muted = false
+          })
+          .catch((e) => {
+            console.warn('[MindAR] targetFound -> play() blocked', e)
+            // 재생 실패 시 muted 상태로라도 재생 시도
+            video.muted = true
+            video.play().catch(() => {})
+          })
       }
     }
 
@@ -139,19 +243,6 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       }
     }
 
-    const videoMetadataHandler = () => {
-      updateVideoPlaneAspect()
-    }
-
-    const videoElement = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-    videoElement?.addEventListener('loadedmetadata', videoMetadataHandler)
-    if (
-      videoElement &&
-      videoElement.readyState >= HTMLMediaElement.HAVE_METADATA
-    ) {
-      updateVideoPlaneAspect()
-    }
-
     /** ---------- iOS 권한 요청 + 최초 제스처 처리 ---------- **/
     const requestIOSPermissions = async () => {
       try {
@@ -177,9 +268,19 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
       await requestIOSPermissions()
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (video) {
-        void video.play().catch((e) => {
-          console.warn('[MindAR] manual play blocked', e)
-        })
+        // iOS: 먼저 muted 상태로 재생 시작하여 재생 권한 확보
+        video.muted = true
+        video.play()
+          .then(() => {
+            console.log('[MindAR] User gesture: video started, unmuting...')
+            video.muted = false
+            // 재생 후 일시정지 (타겟 인식 시 다시 재생)
+            video.pause()
+            video.currentTime = 0
+          })
+          .catch((e) => {
+            console.warn('[MindAR] manual play blocked', e)
+          })
       }
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
@@ -191,27 +292,96 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
 
     /** ---------- 렌더 시작 시 ---------- **/
     const handleRenderStart = () => {
-      arSystem.start()
+      // renderstart 시점에 arSystem 가져오기
+      arSystem = sceneEl.systems['mindar-image-system'] ?? null
+      if (arSystem) {
+        arSystem.start()
+      }
       ensureVideoPlayback()
-      updateVideoPlaneAspect()
       styleCameraFeed()
+      updateVideoPlaneFromTargetImage()
     }
 
     sceneEl.addEventListener('renderstart', handleRenderStart)
 
+    /** ---------- 탭 전환 시 카메라 재시작 ---------- **/
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        if (isRestartingRef.current) {
+          console.log('[MindAR] Already restarting, skipping...')
+          return
+        }
+        isRestartingRef.current = true
+        console.log('[MindAR] Tab became visible, restarting AR system...')
+
+        if (arSystem) {
+          try {
+            // MindAR 내부 상태 확인 후 stop 호출
+            try {
+              arSystem.stop()
+            } catch (stopErr) {
+              console.warn('[MindAR] arSystem.stop() failed (may already be stopped):', stopErr)
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 500))
+
+            console.log('[MindAR] Calling arSystem.start()...')
+            arSystem.start()
+            console.log('[MindAR] arSystem.start() called')
+
+            // 카메라 피드가 나타날 때까지 대기
+            await new Promise((resolve) => setTimeout(resolve, 1500))
+            styleCameraFeed()
+            console.log('[MindAR] AR system restart completed')
+          } catch (e) {
+            console.error('[MindAR] Failed to restart AR system', e)
+          } finally {
+            isRestartingRef.current = false
+          }
+        } else {
+          console.warn('[MindAR] arSystem is null, cannot restart')
+          isRestartingRef.current = false
+        }
+      } else {
+        console.log('[MindAR] Tab became hidden')
+        // 탭이 숨겨지면 AR 비디오 일시정지 및 음소거
+        const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+        if (video) {
+          video.pause()
+          video.muted = true
+          console.log('[MindAR] Video paused and muted')
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     /** ---------- cleanup ---------- **/
     return () => {
+      console.log('[MindAR] Cleanup called, isRestarting:', isRestartingRef.current)
       sceneEl.removeEventListener('renderstart', handleRenderStart)
-      arSystem.stop()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+
+      // 재시작 중이면 stop() 호출 건너뛰기
+      if (arSystem && !isRestartingRef.current) {
+        try {
+          arSystem.stop()
+          console.log('[MindAR] Cleanup: arSystem.stop() called')
+        } catch (e) {
+          console.warn('[MindAR] cleanup arSystem.stop() failed:', e)
+        }
+      } else if (isRestartingRef.current) {
+        console.log('[MindAR] Cleanup: skipping stop() because restart in progress')
+      }
+
       observer?.disconnect()
       window.removeEventListener('resize', styleCameraFeed)
       targetEntity?.removeEventListener('targetFound', handleTargetFound)
       targetEntity?.removeEventListener('targetLost', handleTargetLost)
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
-      videoElement?.removeEventListener('loadedmetadata', videoMetadataHandler)
     }
-  }, [])
+  }, [targetImageUrl, chromaKeyColor])
 
   return (
     <a-scene
@@ -235,25 +405,35 @@ const MindARViewer: React.FC<Props> = ({ mindUrl, videoUrl }) => {
           playsInline
           webkit-playsinline='true'
           muted
-          // preload="auto"
-          preload='metadata' // 전체 파일을 받지 않고 메타데이터만 받으라는 힌트
+          preload='auto'
+          autoPlay
         ></video>
       </a-assets>
 
       <a-camera position='0 0 0' look-controls='enabled: false'></a-camera>
 
       <a-entity mindar-image-target='targetIndex: 0'>
-        <a-video
-          src='#ar-video'
-          position='0 0 0'
-          height='0.552'
-          width='1'
-          rotation='0 0 0'
-          loop='true'
-          muted='true'
-          autoplay='true'
-          playsinline='true'
-        ></a-video>
+        {chromaKeyColor ? (
+          <a-plane
+            position='0 0 0'
+            height='1'
+            width='1'
+            rotation='0 0 0'
+            chromakey-material={`src: #ar-video; color: ${chromaKeyColor}`}
+          ></a-plane>
+        ) : (
+          <a-video
+            src='#ar-video'
+            position='0 0 0'
+            height='1'
+            width='1'
+            rotation='0 0 0'
+            loop='true'
+            muted='true'
+            autoplay='true'
+            playsinline='true'
+          ></a-video>
+        )}
       </a-entity>
     </a-scene>
   )

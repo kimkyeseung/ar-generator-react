@@ -1,24 +1,17 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import MindARCompiler from './MindARCompiler'
-import HeroHeader from './home/HeroHeader'
-import InfoFooter from './home/InfoFooter'
-import PageBackground from './home/PageBackground'
-import PublishSection from './home/PublishSection'
-import StepIndicator from './home/StepIndicator'
-import UploadCard from './home/UploadCard'
-import VideoUploadSection from './home/VideoUploadSection'
-
-const STEPS = [
-  { label: '타겟 업로드', description: '이미지 파일' },
-  { label: '영상 업로드', description: '비디오 파일' },
-  { label: '배포', description: 'QR 생성' },
-]
+import MindARCompiler from '../components/MindARCompiler'
+import HeroHeader from '../components/home/HeroHeader'
+import InfoFooter from '../components/home/InfoFooter'
+import PageBackground from '../components/home/PageBackground'
+import PublishSection from '../components/home/PublishSection'
+import UploadCard from '../components/home/UploadCard'
+import VideoUploadSection from '../components/home/VideoUploadSection'
+import { Button } from '../components/ui/button'
 
 const stepMessageMap = {
   1: 'Step 1. 타겟 이미지를 업로드해주세요.',
   2: 'Step 2. 타겟에 재생될 영상을 업로드해주세요',
-  3: 'Step 3. 배포 준비가 완료되었습니다.',
 }
 
 const API_URL = process.env.REACT_APP_API_URL
@@ -30,16 +23,19 @@ function isValidHexColor(color: string): boolean {
   return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)
 }
 
-export default function App() {
+export default function CreateProjectPage() {
+  const [step, setStep] = useState<1 | 2>(1)
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number>(1)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isCompiling, setIsCompiling] = useState(false)
+  const [title, setTitle] = useState<string>('')
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
@@ -47,37 +43,46 @@ export default function App() {
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
     setVideoError(null)
 
-    if (Array.isArray(input)) {
-      if (input.length === 0) {
-        setVideoFile(null)
-        return
-      }
-      const candidate = input[0]
-      if (candidate.size > MAX_VIDEO_SIZE_BYTES) {
+    const processVideo = (file: File) => {
+      if (file.size > MAX_VIDEO_SIZE_BYTES) {
         setVideoError(
           `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
         )
         setVideoFile(null)
+        setVideoAspectRatio(1)
         return
       }
-      setVideoFile(candidate)
+
+      // 비디오의 실제 비율 계산
+      const videoElement = document.createElement('video')
+      videoElement.preload = 'metadata'
+      videoElement.onloadedmetadata = () => {
+        const ratio = videoElement.videoHeight / videoElement.videoWidth
+        setVideoAspectRatio(ratio)
+        URL.revokeObjectURL(videoElement.src)
+      }
+      videoElement.src = URL.createObjectURL(file)
+
+      setVideoFile(file)
+    }
+
+    if (Array.isArray(input)) {
+      if (input.length === 0) {
+        setVideoFile(null)
+        setVideoAspectRatio(1)
+        return
+      }
+      processVideo(input[0])
       return
     }
 
     if (!input) {
       setVideoFile(null)
+      setVideoAspectRatio(1)
       return
     }
 
-    if (input.size > MAX_VIDEO_SIZE_BYTES) {
-      setVideoError(
-        `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
-      )
-      setVideoFile(null)
-      return
-    }
-
-    setVideoFile(input)
+    processVideo(input)
   }, [])
 
   const canPublish = targetFile !== null && videoFile !== null && (!useChromaKey || isValidHexColor(chromaKeyColor))
@@ -104,9 +109,15 @@ export default function App() {
     const blob = new Blob([targetFile], { type: 'application/octet-stream' })
     formData.append('target', blob, 'targets.mind')
     formData.append('video', videoFile)
-    // 원본 타겟 이미지 추가 (비율 계산용)
+    // 원본 타겟 이미지 추가 (썸네일용)
     if (targetImageFile) {
       formData.append('targetImage', targetImageFile)
+    }
+    // 비디오 비율 전송 (width=1 고정, height=종횡비)
+    formData.append('width', '1')
+    formData.append('height', videoAspectRatio.toString())
+    if (title) {
+      formData.append('title', title)
     }
     // 크로마키 색상 전송
     if (useChromaKey && chromaKeyColor) {
@@ -168,37 +179,50 @@ export default function App() {
   const handleComplieComplete = (target: ArrayBuffer, originalImage: File) => {
     setTargetFile(target)
     setTargetImageFile(originalImage)
+    setStep(2)
   }
 
-  // 현재 스텝 계산
-  const currentStep = useMemo(() => {
-    if (!targetFile) return 1
-    if (!videoFile) return 2
-    return 3
-  }, [targetFile, videoFile])
-
-  // 상태 텍스트와 타입
-  const { workflowStatus, statusType } = useMemo(() => {
-    if (isCompiling) return { workflowStatus: '타겟 변환 중', statusType: 'compiling' as const }
-    if (isUploading) return { workflowStatus: '업로드 중', statusType: 'uploading' as const }
-    if (uploadError) return { workflowStatus: '오류 발생', statusType: 'error' as const }
-    if (canPublish) return { workflowStatus: '배포 준비 완료', statusType: 'ready' as const }
-    return { workflowStatus: '업로드를 진행해주세요', statusType: 'idle' as const }
-  }, [canPublish, isCompiling, isUploading, uploadError])
+  const workflowStatus = useMemo(() => {
+    if (isCompiling) return '타겟 변환 중'
+    if (isUploading) return '업로드 중'
+    if (canPublish) return '배포 준비 완료'
+    return '업로드를 진행해주세요'
+  }, [canPublish, isCompiling, isUploading])
 
   return (
     <PageBackground>
       <div className='container mx-auto px-4 py-12'>
         <div className='mx-auto max-w-2xl space-y-10'>
+          <div className='flex items-center justify-between'>
+            <Button
+              variant='ghost'
+              onClick={() => navigate('/')}
+              className='text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            >
+              ← 목록으로
+            </Button>
+          </div>
+
           <HeroHeader />
 
-          <StepIndicator steps={STEPS} currentStep={currentStep} />
-
           <UploadCard
-            stepMessage={stepMessageMap[currentStep as 1 | 2 | 3]}
+            stepMessage={stepMessageMap[step]}
             status={workflowStatus}
-            statusType={statusType}
           >
+            {/* 프로젝트 제목 입력 */}
+            <div className='mb-6'>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                프로젝트 제목 (선택)
+              </label>
+              <input
+                type='text'
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder='프로젝트 제목을 입력하세요'
+                className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              />
+            </div>
+
             <MindARCompiler
               onCompileColplete={handleComplieComplete}
               onCompileStateChange={setIsCompiling}

@@ -22,49 +22,78 @@ interface Props {
   chromaKeyColor?: string
 }
 
-// HEX 색상을 RGB 배열로 변환 (0~1 범위)
-function hexToRgb(hex: string): [number, number, number] {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  if (result) {
-    return [
-      parseInt(result[1], 16) / 255,
-      parseInt(result[2], 16) / 255,
-      parseInt(result[3], 16) / 255,
-    ]
-  }
-  return [0, 1, 0] // 기본값: 녹색
-}
-
-// 크로마키 쉐이더를 모듈 로드 시점에 미리 등록 (렌더링 전에 실행됨)
-if (typeof AFRAME !== 'undefined' && !AFRAME.shaders['chromakey']) {
-  AFRAME.registerShader('chromakey', {
+// 크로마키 컴포넌트를 모듈 로드 시점에 미리 등록
+if (typeof AFRAME !== 'undefined' && !AFRAME.components['chromakey-material']) {
+  AFRAME.registerComponent('chromakey-material', {
     schema: {
-      src: { type: 'map' },
-      color: { type: 'vec3', default: { x: 0, y: 1, z: 0 } },
+      src: { type: 'selector' },
+      color: { type: 'color', default: '#00FF00' },
       similarity: { type: 'number', default: 0.4 },
       smoothness: { type: 'number', default: 0.08 },
     },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    init: function () {
+      const videoEl = this.data.src as HTMLVideoElement | null
+      if (!videoEl) return
+
+      // Three.js VideoTexture 생성
+      const THREE = AFRAME.THREE
+      const texture = new THREE.VideoTexture(videoEl)
+      texture.minFilter = THREE.LinearFilter
+      texture.magFilter = THREE.LinearFilter
+      texture.format = THREE.RGBAFormat
+
+      // 크로마키 색상을 RGB로 변환 (0~1 범위)
+      const color = new THREE.Color(this.data.color)
+
+      // ShaderMaterial 생성
+      this.material = new THREE.ShaderMaterial({
+        uniforms: {
+          src: { value: texture },
+          color: { value: new THREE.Vector3(color.r, color.g, color.b) },
+          similarity: { value: this.data.similarity },
+          smoothness: { value: this.data.smoothness },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D src;
+          uniform vec3 color;
+          uniform float similarity;
+          uniform float smoothness;
+          varying vec2 vUv;
+          void main() {
+            vec4 texColor = texture2D(src, vUv);
+            float diff = length(texColor.rgb - color);
+            float alpha = smoothstep(similarity, similarity + smoothness, diff);
+            gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+          }
+        `,
+        transparent: true,
+        side: THREE.DoubleSide,
+      })
+
+      // mesh에 material 적용
+      const mesh = this.el.getObject3D('mesh')
+      if (mesh && 'material' in mesh) {
+        ;(mesh as { material: unknown }).material = this.material
       }
-    `,
-    fragmentShader: `
-      uniform sampler2D src;
-      uniform vec3 color;
-      uniform float similarity;
-      uniform float smoothness;
-      varying vec2 vUv;
-      void main() {
-        vec4 texColor = texture2D(src, vUv);
-        float diff = length(texColor.rgb - color);
-        float alpha = smoothstep(similarity, similarity + smoothness, diff);
-        gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
+    },
+    tick: function () {
+      // 매 프레임마다 비디오 텍스처 갱신
+      if (this.material && this.material.uniforms.src.value) {
+        this.material.uniforms.src.value.needsUpdate = true
       }
-    `,
-    transparent: true,
+    },
+    remove: function () {
+      if (this.material) {
+        this.material.dispose()
+      }
+    },
   })
 }
 
@@ -290,6 +319,7 @@ const MindARViewer: React.FC<Props> = ({
           webkit-playsinline='true'
           muted
           preload='auto'
+          autoPlay
         ></video>
       </a-assets>
 
@@ -302,7 +332,7 @@ const MindARViewer: React.FC<Props> = ({
             height='1'
             width='1'
             rotation='0 0 0'
-            material={`shader: chromakey; src: #ar-video; color: ${hexToRgb(chromaKeyColor).join(' ')}; transparent: true;`}
+            chromakey-material={`src: #ar-video; color: ${chromaKeyColor}`}
           ></a-plane>
         ) : (
           <a-video

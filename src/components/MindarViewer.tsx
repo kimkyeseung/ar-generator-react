@@ -1,10 +1,37 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import 'aframe'
 import 'mind-ar/dist/mindar-image-aframe.prod.js'
 
 declare const DeviceMotionEvent: any
 declare const DeviceOrientationEvent: any
 declare const AFRAME: any
+
+// 스피커 아이콘 컴포넌트
+const SpeakerIcon: React.FC<{ muted: boolean }> = ({ muted }) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    {muted ? (
+      <>
+        <line x1="23" y1="9" x2="17" y2="15" />
+        <line x1="17" y1="9" x2="23" y2="15" />
+      </>
+    ) : (
+      <>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      </>
+    )}
+  </svg>
+)
 
 type MindARScene = HTMLElement & {
   systems: {
@@ -97,6 +124,13 @@ if (typeof AFRAME !== 'undefined' && !AFRAME.components['chromakey-material']) {
   })
 }
 
+// iOS 감지
+const isIOS = () => {
+  if (typeof navigator === 'undefined') return false
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
 const MindARViewer: React.FC<Props> = ({
   mindUrl,
   videoUrl,
@@ -105,6 +139,41 @@ const MindARViewer: React.FC<Props> = ({
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
   const isRestartingRef = useRef(false)
+  // iOS는 muted 기본값, Android는 unmuted 기본값
+  const [isMuted, setIsMuted] = useState(isIOS())
+
+  // 스피커 버튼 클릭 핸들러
+  const handleToggleMute = useCallback(async () => {
+    const sceneEl = sceneRef.current
+    if (!sceneEl) return
+
+    const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+    if (!video) return
+
+    const newMutedState = !isMuted
+
+    if (!newMutedState) {
+      // unmute 시도 - 사용자 제스처이므로 재생 가능
+      try {
+        video.muted = false
+        // 비디오가 일시정지 상태면 재생
+        if (video.paused) {
+          await video.play()
+        }
+        setIsMuted(false)
+        console.log('[MindAR] Sound enabled')
+      } catch (e) {
+        console.warn('[MindAR] Failed to unmute:', e)
+        // 실패하면 muted 상태 유지
+        video.muted = true
+      }
+    } else {
+      // mute
+      video.muted = true
+      setIsMuted(true)
+      console.log('[MindAR] Sound disabled')
+    }
+  }, [isMuted])
 
   useEffect(() => {
     const sceneEl = sceneRef.current
@@ -148,40 +217,14 @@ const MindARViewer: React.FC<Props> = ({
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (!video) return
 
-      // 비디오 준비 상태 확인
-      const waitForVideoReady = (): Promise<void> => {
-        return new Promise((resolve) => {
-          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-            resolve()
-          } else {
-            video.addEventListener('canplay', () => resolve(), { once: true })
-            // 타임아웃 설정
-            setTimeout(resolve, 1000)
-          }
-        })
-      }
-
       try {
         // 비디오 시작 위치로 이동
         video.currentTime = 0
-
-        // iOS: currentTime 설정 후 약간의 지연 필요
-        await new Promise((resolve) => setTimeout(resolve, 50))
-        await waitForVideoReady()
-
-        // muted 상태로 재생 시작
-        video.muted = true
+        // 현재 mute 상태 유지하며 재생
         await video.play()
-        console.log('[MindAR] Video playing (muted)')
-
-        // 재생 성공 후 unmute (약간의 지연 추가)
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        video.muted = false
-        console.log('[MindAR] Video unmuted')
+        console.log('[MindAR] Video playing')
       } catch (e) {
         console.warn('[MindAR] targetFound -> play() error', e)
-        // 실패 시 muted로라도 재생 시도
-        video.muted = true
         video.play().catch(() => {})
       }
     }
@@ -287,39 +330,6 @@ const MindARViewer: React.FC<Props> = ({
 
     const handleUserGesture = async () => {
       await requestIOSPermissions()
-      const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-      if (video) {
-        try {
-          // iOS: 비디오 웜업 - 재생 권한 확보를 위해 여러 번 play/pause
-          video.muted = true
-
-          // 첫 번째 재생 시도
-          await video.play()
-          console.log('[MindAR] User gesture: first play success')
-
-          // 잠시 재생 후 정지
-          await new Promise((resolve) => setTimeout(resolve, 200))
-          video.pause()
-          video.currentTime = 0
-
-          // 두 번째 재생 시도 (iOS 웜업)
-          await new Promise((resolve) => setTimeout(resolve, 100))
-          await video.play()
-          console.log('[MindAR] User gesture: second play success')
-
-          // unmute 테스트
-          video.muted = false
-          await new Promise((resolve) => setTimeout(resolve, 100))
-
-          // 최종 정지 및 리셋
-          video.pause()
-          video.currentTime = 0
-          video.muted = true
-          console.log('[MindAR] User gesture: video warmed up and ready')
-        } catch (e) {
-          console.warn('[MindAR] manual play blocked', e)
-        }
-      }
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
     }
@@ -422,58 +432,69 @@ const MindARViewer: React.FC<Props> = ({
   }, [targetImageUrl, chromaKeyColor])
 
   return (
-    <a-scene
-      className='h-full w-full'
-      style={{ width: '100%', height: '100%' }}
-      ref={sceneRef}
-      mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`}
-      assettimeout='15000'
-      color-space='sRGB'
-      embedded
-      renderer='colorManagement: true, physicallyCorrectLights'
-      vr-mode-ui='enabled: false'
-      device-orientation-permission-ui='enabled: false'
-    >
-      <a-assets>
-        <video
-          id='ar-video'
-          src={videoUrl}
-          loop
-          crossOrigin='anonymous'
-          playsInline
-          webkit-playsinline='true'
-          muted
-          preload='auto'
-          autoPlay
-        ></video>
-      </a-assets>
+    <>
+      {/* 스피커 토글 버튼 */}
+      <button
+        onClick={handleToggleMute}
+        className="fixed top-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-black/70 active:scale-95"
+        aria-label={isMuted ? '소리 켜기' : '소리 끄기'}
+      >
+        <SpeakerIcon muted={isMuted} />
+      </button>
 
-      <a-camera position='0 0 0' look-controls='enabled: false'></a-camera>
+      <a-scene
+        className='h-full w-full'
+        style={{ width: '100%', height: '100%' }}
+        ref={sceneRef}
+        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`}
+        assettimeout='15000'
+        color-space='sRGB'
+        embedded
+        renderer='colorManagement: true, physicallyCorrectLights'
+        vr-mode-ui='enabled: false'
+        device-orientation-permission-ui='enabled: false'
+      >
+        <a-assets>
+          <video
+            id='ar-video'
+            src={videoUrl}
+            loop
+            crossOrigin='anonymous'
+            playsInline
+            webkit-playsinline='true'
+            muted={isMuted}
+            preload='auto'
+            autoPlay
+          ></video>
+        </a-assets>
 
-      <a-entity mindar-image-target='targetIndex: 0'>
-        {chromaKeyColor ? (
-          <a-plane
-            position='0 0 0'
-            height='1'
-            width='1'
-            rotation='0 0 0'
-            chromakey-material={`src: #ar-video; color: ${chromaKeyColor}`}
-          ></a-plane>
-        ) : (
-          <a-video
-            src='#ar-video'
-            position='0 0 0'
-            height='1'
-            width='1'
-            rotation='0 0 0'
-            loop='true'
-            muted='true'
-            autoplay='true'
-            playsinline='true'
-          ></a-video>
-        )}
-      </a-entity>
-    </a-scene>
+        <a-camera position='0 0 0' look-controls='enabled: false'></a-camera>
+
+        <a-entity mindar-image-target='targetIndex: 0'>
+          {chromaKeyColor ? (
+            <a-plane
+              position='0 0 0'
+              height='1'
+              width='1'
+              rotation='0 0 0'
+              chromakey-material={`src: #ar-video; color: ${chromaKeyColor}`}
+            ></a-plane>
+          ) : (
+            <a-video
+              src='#ar-video'
+              position='0 0 0'
+              height='1'
+              width='1'
+              rotation='0 0 0'
+              loop='true'
+              muted={isMuted ? 'true' : 'false'}
+              autoplay='true'
+              playsinline='true'
+            ></a-video>
+          )}
+        </a-entity>
+      </a-scene>
+    </>
   )
 }
 

@@ -104,6 +104,7 @@ const MindARViewer: React.FC<Props> = ({
   chromaKeyColor,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
+  const isRestartingRef = useRef(false)
 
   useEffect(() => {
     const sceneEl = sceneRef.current
@@ -286,15 +287,51 @@ const MindARViewer: React.FC<Props> = ({
     sceneEl.addEventListener('renderstart', handleRenderStart)
 
     /** ---------- 탭 전환 시 카메라 재시작 ---------- **/
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
-        // 탭이 다시 보일 때 MindAR 시스템 재시작
+        if (isRestartingRef.current) {
+          console.log('[MindAR] Already restarting, skipping...')
+          return
+        }
+        isRestartingRef.current = true
+        console.log('[MindAR] Tab became visible, restarting AR system...')
+
         if (arSystem) {
-          arSystem.stop()
-          setTimeout(() => {
-            arSystem?.start()
+          try {
+            // MindAR 내부 상태 확인 후 stop 호출
+            try {
+              arSystem.stop()
+            } catch (stopErr) {
+              console.warn('[MindAR] arSystem.stop() failed (may already be stopped):', stopErr)
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 500))
+
+            console.log('[MindAR] Calling arSystem.start()...')
+            arSystem.start()
+            console.log('[MindAR] arSystem.start() called')
+
+            // 카메라 피드가 나타날 때까지 대기
+            await new Promise((resolve) => setTimeout(resolve, 1500))
             styleCameraFeed()
-          }, 100)
+            console.log('[MindAR] AR system restart completed')
+          } catch (e) {
+            console.error('[MindAR] Failed to restart AR system', e)
+          } finally {
+            isRestartingRef.current = false
+          }
+        } else {
+          console.warn('[MindAR] arSystem is null, cannot restart')
+          isRestartingRef.current = false
+        }
+      } else {
+        console.log('[MindAR] Tab became hidden')
+        // 탭이 숨겨지면 AR 비디오 일시정지 및 음소거
+        const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+        if (video) {
+          video.pause()
+          video.muted = true
+          console.log('[MindAR] Video paused and muted')
         }
       }
     }
@@ -303,11 +340,22 @@ const MindARViewer: React.FC<Props> = ({
 
     /** ---------- cleanup ---------- **/
     return () => {
+      console.log('[MindAR] Cleanup called, isRestarting:', isRestartingRef.current)
       sceneEl.removeEventListener('renderstart', handleRenderStart)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      if (arSystem) {
-        arSystem.stop()
+
+      // 재시작 중이면 stop() 호출 건너뛰기
+      if (arSystem && !isRestartingRef.current) {
+        try {
+          arSystem.stop()
+          console.log('[MindAR] Cleanup: arSystem.stop() called')
+        } catch (e) {
+          console.warn('[MindAR] cleanup arSystem.stop() failed:', e)
+        }
+      } else if (isRestartingRef.current) {
+        console.log('[MindAR] Cleanup: skipping stop() because restart in progress')
       }
+
       observer?.disconnect()
       window.removeEventListener('resize', styleCameraFeed)
       targetEntity?.removeEventListener('targetFound', handleTargetFound)

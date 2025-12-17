@@ -122,11 +122,7 @@ export default function EditProjectPage() {
     }
   }
 
-  const handleComplieComplete = (
-    target: ArrayBuffer,
-    _aspectRatio: number,
-    originalImage: File
-  ) => {
+  const handleComplieComplete = (target: ArrayBuffer, originalImage: File) => {
     setTargetFile(target)
     setTargetImageFile(originalImage)
     // 비디오 비율을 사용하므로 타겟 이미지 비율은 무시

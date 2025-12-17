@@ -28,7 +28,6 @@ export default function App() {
   const navigate = useNavigate()
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
-  const [targetAspectRatio, setTargetAspectRatio] = useState<number>(1)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -41,23 +40,20 @@ export default function App() {
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
     setVideoError(null)
 
-    const processVideo = (file: File) => {
-      if (file.size > MAX_VIDEO_SIZE_BYTES) {
+    if (Array.isArray(input)) {
+      if (input.length === 0) {
+        setVideoFile(null)
+        return
+      }
+      const candidate = input[0]
+      if (candidate.size > MAX_VIDEO_SIZE_BYTES) {
         setVideoError(
           `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
         )
         setVideoFile(null)
         return
       }
-      setVideoFile(file)
-    }
-
-    if (Array.isArray(input)) {
-      if (input.length === 0) {
-        setVideoFile(null)
-        return
-      }
-      processVideo(input[0])
+      setVideoFile(candidate)
       return
     }
 
@@ -66,7 +62,15 @@ export default function App() {
       return
     }
 
-    processVideo(input)
+    if (input.size > MAX_VIDEO_SIZE_BYTES) {
+      setVideoError(
+        `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
+      )
+      setVideoFile(null)
+      return
+    }
+
+    setVideoFile(input)
   }, [])
 
   const canPublish = targetFile !== null && videoFile !== null && (!useChromaKey || isValidHexColor(chromaKeyColor))
@@ -93,13 +97,10 @@ export default function App() {
     const blob = new Blob([targetFile], { type: 'application/octet-stream' })
     formData.append('target', blob, 'targets.mind')
     formData.append('video', videoFile)
-    // 원본 타겟 이미지 추가 (썸네일용)
+    // 원본 타겟 이미지 추가 (비율 계산용)
     if (targetImageFile) {
       formData.append('targetImage', targetImageFile)
     }
-    // 타겟 이미지 비율 전송 (width=1 고정, height=종횡비)
-    formData.append('width', '1')
-    formData.append('height', targetAspectRatio.toString())
     // 크로마키 색상 전송
     if (useChromaKey && chromaKeyColor) {
       formData.append('chromaKeyColor', chromaKeyColor)
@@ -157,10 +158,9 @@ export default function App() {
     }
   }
 
-  const handleComplieComplete = (target: ArrayBuffer, aspectRatio: number, originalImage: File) => {
+  const handleComplieComplete = (target: ArrayBuffer, originalImage: File) => {
     setTargetFile(target)
     setTargetImageFile(originalImage)
-    setTargetAspectRatio(aspectRatio)
     setStep(2)
   }
 

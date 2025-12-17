@@ -18,8 +18,7 @@ type MindARScene = HTMLElement & {
 interface Props {
   mindUrl: string
   videoUrl: string
-  width?: number
-  height?: number
+  targetImageUrl: string
   chromaKeyColor?: string
 }
 
@@ -72,8 +71,7 @@ if (typeof AFRAME !== 'undefined' && !AFRAME.shaders['chromakey']) {
 const MindARViewer: React.FC<Props> = ({
   mindUrl,
   videoUrl,
-  width = 1,
-  height = 1,
+  targetImageUrl,
   chromaKeyColor,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
@@ -90,7 +88,29 @@ const MindARViewer: React.FC<Props> = ({
       '[mindar-image-target]'
     )
 
-    // width/height가 props로 전달되므로 자동 비율 조정은 불필요
+    // 타겟 이미지 비율로 비디오 plane 크기 설정
+    const updateVideoPlaneFromTargetImage = () => {
+      // a-video 또는 a-plane (크로마키) 중 하나를 찾음
+      const videoPlane =
+        sceneEl.querySelector<HTMLElement>('a-video[src="#ar-video"]') ??
+        sceneEl.querySelector<HTMLElement>('a-plane') ??
+        null
+
+      if (!videoPlane || !targetImageUrl) return
+
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const { width: imgWidth, height: imgHeight } = img
+        if (!imgWidth || !imgHeight) return
+
+        const planeWidth = 1
+        const planeHeight = (imgHeight / imgWidth) * planeWidth
+        videoPlane.setAttribute('width', planeWidth.toString())
+        videoPlane.setAttribute('height', planeHeight.toString())
+      }
+      img.src = targetImageUrl
+    }
 
     /** ---------- 타겟 이벤트 ---------- **/
     const handleTargetFound = () => {
@@ -227,6 +247,7 @@ const MindARViewer: React.FC<Props> = ({
       }
       ensureVideoPlayback()
       styleCameraFeed()
+      updateVideoPlaneFromTargetImage()
     }
 
     sceneEl.addEventListener('renderstart', handleRenderStart)
@@ -244,7 +265,7 @@ const MindARViewer: React.FC<Props> = ({
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
     }
-  }, [width, height, chromaKeyColor])
+  }, [targetImageUrl, chromaKeyColor])
 
   return (
     <a-scene
@@ -278,8 +299,8 @@ const MindARViewer: React.FC<Props> = ({
         {chromaKeyColor ? (
           <a-plane
             position='0 0 0'
-            height={height.toString()}
-            width={width.toString()}
+            height='1'
+            width='1'
             rotation='0 0 0'
             material={`shader: chromakey; src: #ar-video; color: ${hexToRgb(chromaKeyColor).join(' ')}; transparent: true;`}
           ></a-plane>
@@ -287,8 +308,8 @@ const MindARViewer: React.FC<Props> = ({
           <a-video
             src='#ar-video'
             position='0 0 0'
-            height={height.toString()}
-            width={width.toString()}
+            height='1'
+            width='1'
             rotation='0 0 0'
             loop='true'
             muted='true'

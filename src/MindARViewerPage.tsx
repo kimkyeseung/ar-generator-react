@@ -10,8 +10,7 @@ async function fetchArFiles(folderId: string) {
   return res.json() as Promise<{
     mindFileId: string
     videoFileId: string
-    width?: number
-    height?: number
+    targetImageFileId?: string
     chromaKeyColor?: string
   }>
 }
@@ -47,21 +46,22 @@ export default function MindARViewerPage() {
     enabled: !!fileIds,
   })
 
+  const { data: targetImageUrl, isLoading: isTargetImageLoading } = useQuery({
+    queryKey: ['targetImageUrl', fileIds?.targetImageFileId],
+    queryFn: () => fetchBlobUrlFromFileId(fileIds!.targetImageFileId!),
+    enabled: !!fileIds?.targetImageFileId,
+  })
+
   const isReady =
-    !isIdsLoading && !isMindLoading && !isVideoLoading && mindUrl && videoUrl
+    !isIdsLoading &&
+    !isMindLoading &&
+    !isVideoLoading &&
+    !isTargetImageLoading &&
+    mindUrl &&
+    videoUrl &&
+    targetImageUrl
 
   if (!isReady) return <p>Loading AR assets...</p>
-
-  // width/height가 픽셀 단위로 저장된 경우(>10) 비율로 변환
-  let mediaWidth = fileIds?.width ?? 1
-  let mediaHeight = fileIds?.height ?? 1
-
-  if (mediaWidth > 10 || mediaHeight > 10) {
-    // 이전 버전에서 픽셀 단위로 저장된 데이터 처리
-    const aspectRatio = mediaHeight / mediaWidth
-    mediaWidth = 1
-    mediaHeight = aspectRatio
-  }
 
   return (
     <section className="relative flex min-h-[100dvh] w-full">
@@ -69,8 +69,7 @@ export default function MindARViewerPage() {
         <MindARViewer
           mindUrl={mindUrl}
           videoUrl={videoUrl}
-          width={mediaWidth}
-          height={mediaHeight}
+          targetImageUrl={targetImageUrl}
           chromaKeyColor={fileIds?.chromaKeyColor}
         />
       </div>

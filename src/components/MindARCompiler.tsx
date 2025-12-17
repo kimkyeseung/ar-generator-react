@@ -20,7 +20,7 @@ const fileUploadSchema = z.object({
 type FileUploadFormData = z.infer<typeof fileUploadSchema>
 
 interface Props {
-  onCompileColplete: (target: ArrayBuffer, aspectRatio: number, originalImage: File) => void
+  onCompileColplete: (target: ArrayBuffer, originalImage: File) => void
   onCompileStateChange?: (isCompiling: boolean) => void
 }
 
@@ -145,10 +145,6 @@ const MindARCompiler: FC<Props> = ({
       try {
         const images = await Promise.all(files.map(loadImage))
 
-        // 첫 번째 이미지의 종횡비 계산 (타겟 이미지 기준)
-        const firstImage = images[0]
-        const aspectRatio = firstImage.height / firstImage.width
-
         const startTime = performance.now()
         await compilerRef.current.compileImageTargets(
           images,
@@ -164,7 +160,7 @@ const MindARCompiler: FC<Props> = ({
         const arrayCopy = exportedBuffer.slice()
         const arrayBuffer = arrayCopy.buffer
         // 원본 이미지 파일도 함께 전달
-        onCompileColplete(arrayBuffer, aspectRatio, files[0])
+        onCompileColplete(arrayBuffer, files[0])
         setCompiledData(arrayBuffer)
       } finally {
         emitCompileState(false)

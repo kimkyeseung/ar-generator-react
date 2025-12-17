@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import HeroHeader from '../components/home/HeroHeader'
+import PageBackground from '../components/home/PageBackground'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
-import PageBackground from '../components/home/PageBackground'
-import HeroHeader from '../components/home/HeroHeader'
 import { Project } from '../types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
@@ -26,9 +26,7 @@ export default function ProjectListPage() {
       const data = await res.json()
       setProjects(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : '오류가 발생했습니다.'
-      )
+      setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
     } finally {
       setIsLoading(false)
     }
@@ -62,23 +60,25 @@ export default function ProjectListPage() {
         <div className='mx-auto max-w-4xl space-y-6 sm:space-y-8'>
           <HeroHeader />
 
-          <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3'>
-            <h2 className='text-xl sm:text-2xl font-bold text-gray-800'>내 프로젝트</h2>
+          <div className='flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center'>
+            <h2 className='text-xl font-bold text-gray-800 sm:text-2xl'>
+              내 프로젝트
+            </h2>
             <Button
               onClick={() => navigate('/create')}
-              className='w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+              className='w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 sm:w-auto'
             >
               + 새 프로젝트 만들기
             </Button>
           </div>
 
           {isLoading ? (
-            <div className='text-center py-12'>
-              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto'></div>
-              <p className='text-gray-600 mt-4'>로딩 중...</p>
+            <div className='py-12 text-center'>
+              <div className='mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-purple-600'></div>
+              <p className='mt-4 text-gray-600'>로딩 중...</p>
             </div>
           ) : error ? (
-            <Card className='p-8 text-center bg-red-50 border-red-200'>
+            <Card className='border-red-200 bg-red-50 p-8 text-center'>
               <p className='text-red-600'>{error}</p>
               <Button
                 onClick={fetchProjects}
@@ -89,12 +89,12 @@ export default function ProjectListPage() {
               </Button>
             </Card>
           ) : projects.length === 0 ? (
-            <Card className='p-12 text-center bg-white shadow-lg border-gray-200'>
-              <div className='text-6xl mb-4'>🎨</div>
-              <h3 className='text-xl font-semibold text-gray-800 mb-2'>
+            <Card className='border-gray-200 bg-white p-12 text-center shadow-lg'>
+              <div className='mb-4 text-6xl'>🎨</div>
+              <h3 className='mb-2 text-xl font-semibold text-gray-800'>
                 아직 프로젝트가 없습니다
               </h3>
-              <p className='text-gray-500 mb-6'>
+              <p className='mb-6 text-gray-500'>
                 첫 번째 AR 프로젝트를 만들어보세요!
               </p>
               <Button
@@ -109,72 +109,86 @@ export default function ProjectListPage() {
               {projects.map((project) => (
                 <Card
                   key={project.id}
-                  className='p-4 sm:p-6 bg-white shadow-md border-gray-200 hover:shadow-lg transition-shadow'
+                  className='border-gray-200 bg-white p-4 shadow-md transition-shadow hover:shadow-lg sm:p-6'
                 >
-                  <div className='flex flex-col sm:flex-row sm:items-center gap-4'>
+                  <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
                     {/* 썸네일 + 정보 영역 */}
-                    <div className='flex items-start sm:items-center gap-3 sm:gap-4 flex-1'>
-                      {/* 썸네일 이미지 */}
+                    <div className='flex flex-1 items-start gap-3 sm:items-center sm:gap-4'>
+                      {/* 타겟 이미지 썸네일 */}
                       <div className='flex-shrink-0'>
                         {project.targetImageFileId ? (
                           <img
                             src={`${API_URL}/file/${project.targetImageFileId}`}
                             alt='타겟 이미지'
-                            className='w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200'
+                            className='h-16 w-16 rounded-lg border border-gray-200 object-cover sm:h-20 sm:w-20'
                           />
                         ) : (
-                          <div className='w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200'>
+                          <div className='flex h-16 w-16 items-center justify-center rounded-lg border border-gray-200 bg-gray-100 sm:h-20 sm:w-20'>
                             <span className='text-xl sm:text-2xl'>🎯</span>
                           </div>
                         )}
                       </div>
+                      {/* 비디오 썸네일 */}
+                      <div className='flex-shrink-0'>
+                        {project.videoFileId ? (
+                          <video
+                            src={`${API_URL}/file/${project.videoFileId}`}
+                            className='h-16 w-16 rounded-lg border border-gray-200 object-cover sm:h-20 sm:w-20'
+                            muted
+                            preload='metadata'
+                          />
+                        ) : (
+                          <div className='flex h-16 w-16 items-center justify-center rounded-lg border border-gray-200 bg-gray-100 sm:h-20 sm:w-20'>
+                            <span className='text-xl sm:text-2xl'>🎬</span>
+                          </div>
+                        )}
+                      </div>
                       {/* 프로젝트 정보 */}
-                      <div className='flex-1 min-w-0'>
-                        <h3 className='text-base sm:text-lg font-semibold text-gray-800 truncate'>
+                      <div className='min-w-0 flex-1'>
+                        <h3 className='truncate text-base font-semibold text-gray-800 sm:text-lg'>
                           {project.title || '제목 없음'}
                         </h3>
-                        <p className='text-gray-400 text-xs sm:text-sm mt-0.5'>
+                        <p className='mt-0.5 text-xs text-gray-400 sm:text-sm'>
                           {formatDate(project.createdAt)}
                         </p>
                         {/* 뱃지들 */}
-                        <div className='flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2'>
-                          {project.height && (
-                            <span className='text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full whitespace-nowrap'>
-                              {project.height > 1 ? '세로' : project.height < 1 ? '가로' : '정방형'}
-                            </span>
-                          )}
+                        <div className='mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2'>
                           {project.chromaKeyColor && (
-                            <span className='text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-green-100 text-green-700 rounded-full flex items-center gap-1'>
+                            <span className='flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] text-green-700 sm:px-2 sm:text-xs'>
                               <span
-                                className='w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border border-green-300'
-                                style={{ backgroundColor: project.chromaKeyColor }}
+                                className='h-2.5 w-2.5 rounded-full border border-green-300 sm:h-3 sm:w-3'
+                                style={{
+                                  backgroundColor: project.chromaKeyColor,
+                                }}
                               />
                               크로마키
                             </span>
                           )}
                         </div>
                         {project.description && (
-                          <p className='text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2'>
+                          <p className='mt-2 line-clamp-2 text-xs text-gray-600 sm:text-sm'>
                             {project.description}
                           </p>
                         )}
                       </div>
                     </div>
                     {/* 버튼 영역 */}
-                    <div className='flex flex-wrap sm:flex-nowrap gap-2 sm:ml-4'>
+                    <div className='flex flex-wrap gap-2 sm:ml-4 sm:flex-nowrap'>
                       <Button
                         variant='outline'
                         size='sm'
                         onClick={() => navigate(`/edit/${project.id}`)}
-                        className='flex-1 sm:flex-none text-xs sm:text-sm text-gray-600 border-gray-300 hover:bg-gray-50'
+                        className='flex-1 border-gray-300 text-xs text-gray-600 hover:bg-gray-50 sm:flex-none sm:text-sm'
                       >
                         편집
                       </Button>
                       <Button
                         variant='outline'
                         size='sm'
-                        onClick={() => navigate(`/result/qr/${project.folderId}`)}
-                        className='flex-1 sm:flex-none text-xs sm:text-sm text-purple-600 border-purple-300 hover:bg-purple-50'
+                        onClick={() =>
+                          navigate(`/result/qr/${project.folderId}`)
+                        }
+                        className='flex-1 border-purple-300 text-xs text-purple-600 hover:bg-purple-50 sm:flex-none sm:text-sm'
                       >
                         QR
                       </Button>
@@ -182,7 +196,7 @@ export default function ProjectListPage() {
                         variant='outline'
                         size='sm'
                         onClick={() => navigate(`/result/${project.folderId}`)}
-                        className='flex-1 sm:flex-none text-xs sm:text-sm text-indigo-600 border-indigo-300 hover:bg-indigo-50'
+                        className='flex-1 border-indigo-300 text-xs text-indigo-600 hover:bg-indigo-50 sm:flex-none sm:text-sm'
                       >
                         AR
                       </Button>
@@ -190,7 +204,7 @@ export default function ProjectListPage() {
                         variant='outline'
                         size='sm'
                         onClick={() => handleDelete(project.id)}
-                        className='flex-1 sm:flex-none text-xs sm:text-sm text-red-500 border-red-300 hover:bg-red-50'
+                        className='flex-1 border-red-300 text-xs text-red-500 hover:bg-red-50 sm:flex-none sm:text-sm'
                       >
                         삭제
                       </Button>

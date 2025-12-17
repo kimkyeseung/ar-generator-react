@@ -266,19 +266,38 @@ export default function EditProjectPage() {
               />
             </div>
 
-            {/* 현재 타겟 이미지 표시 */}
-            {project.targetImageFileId && !targetImageFile && (
-              <div className='mb-6'>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  현재 타겟 이미지
-                </label>
-                <img
-                  src={`${API_URL}/file/${project.targetImageFileId}`}
-                  alt='현재 타겟 이미지'
-                  className='w-32 h-32 object-cover rounded-lg border border-gray-200'
-                />
+            {/* 현재 에셋 미리보기 (타겟 이미지 + 비디오) */}
+            <div className='mb-6'>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                현재 에셋
+              </label>
+              <div className='flex gap-4 flex-wrap'>
+                {/* 현재 타겟 이미지 */}
+                {project.targetImageFileId && !targetImageFile && (
+                  <div className='flex flex-col items-center'>
+                    <img
+                      src={`${API_URL}/file/${project.targetImageFileId}`}
+                      alt='현재 타겟 이미지'
+                      className='w-32 h-32 object-cover rounded-lg border border-gray-200'
+                    />
+                    <span className='text-xs text-gray-500 mt-1'>타겟 이미지</span>
+                  </div>
+                )}
+                {/* 현재 비디오 미리보기 */}
+                {project.videoFileId && !videoFile && (
+                  <div className='flex flex-col items-center'>
+                    <video
+                      src={`${API_URL}/file/${project.videoFileId}`}
+                      className='w-32 h-32 object-cover rounded-lg border border-gray-200'
+                      controls
+                      muted
+                      preload='metadata'
+                    />
+                    <span className='text-xs text-gray-500 mt-1'>현재 비디오</span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* 타겟 이미지 변경 */}
             <div className='mb-6'>

@@ -281,9 +281,26 @@ const MindARViewer: React.FC<Props> = ({
 
     sceneEl.addEventListener('renderstart', handleRenderStart)
 
+    /** ---------- 탭 전환 시 카메라 재시작 ---------- **/
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // 탭이 다시 보일 때 MindAR 시스템 재시작
+        if (arSystem) {
+          arSystem.stop()
+          setTimeout(() => {
+            arSystem?.start()
+            styleCameraFeed()
+          }, 100)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     /** ---------- cleanup ---------- **/
     return () => {
       sceneEl.removeEventListener('renderstart', handleRenderStart)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (arSystem) {
         arSystem.stop()
       }

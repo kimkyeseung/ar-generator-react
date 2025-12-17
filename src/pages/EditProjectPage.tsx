@@ -355,7 +355,7 @@ export default function EditProjectPage() {
                 <Button
                   variant='outline'
                   onClick={() => navigate('/')}
-                  className='flex-1'
+                  className='flex-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                   disabled={isUploading}
                 >
                   취소

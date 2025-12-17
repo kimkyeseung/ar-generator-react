@@ -143,25 +143,46 @@ const MindARViewer: React.FC<Props> = ({
     }
 
     /** ---------- 타겟 이벤트 ---------- **/
-    const handleTargetFound = () => {
+    const handleTargetFound = async () => {
       console.log('[MindAR] targetFound')
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-      if (video) {
-        // iOS에서는 먼저 muted 상태로 재생 시도 후 unmute
+      if (!video) return
+
+      // 비디오 준비 상태 확인
+      const waitForVideoReady = (): Promise<void> => {
+        return new Promise((resolve) => {
+          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            resolve()
+          } else {
+            video.addEventListener('canplay', () => resolve(), { once: true })
+            // 타임아웃 설정
+            setTimeout(resolve, 1000)
+          }
+        })
+      }
+
+      try {
+        // 비디오 시작 위치로 이동
         video.currentTime = 0
+
+        // iOS: currentTime 설정 후 약간의 지연 필요
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        await waitForVideoReady()
+
+        // muted 상태로 재생 시작
         video.muted = true
-        video.play()
-          .then(() => {
-            console.log('[MindAR] Video playing, attempting to unmute...')
-            // 재생 성공 후 음소거 해제 시도
-            video.muted = false
-          })
-          .catch((e) => {
-            console.warn('[MindAR] targetFound -> play() blocked', e)
-            // 재생 실패 시 muted 상태로라도 재생 시도
-            video.muted = true
-            video.play().catch(() => {})
-          })
+        await video.play()
+        console.log('[MindAR] Video playing (muted)')
+
+        // 재생 성공 후 unmute (약간의 지연 추가)
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        video.muted = false
+        console.log('[MindAR] Video unmuted')
+      } catch (e) {
+        console.warn('[MindAR] targetFound -> play() error', e)
+        // 실패 시 muted로라도 재생 시도
+        video.muted = true
+        video.play().catch(() => {})
       }
     }
 
@@ -268,19 +289,36 @@ const MindARViewer: React.FC<Props> = ({
       await requestIOSPermissions()
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (video) {
-        // iOS: 먼저 muted 상태로 재생 시작하여 재생 권한 확보
-        video.muted = true
-        video.play()
-          .then(() => {
-            console.log('[MindAR] User gesture: video started, unmuting...')
-            video.muted = false
-            // 재생 후 일시정지 (타겟 인식 시 다시 재생)
-            video.pause()
-            video.currentTime = 0
-          })
-          .catch((e) => {
-            console.warn('[MindAR] manual play blocked', e)
-          })
+        try {
+          // iOS: 비디오 웜업 - 재생 권한 확보를 위해 여러 번 play/pause
+          video.muted = true
+
+          // 첫 번째 재생 시도
+          await video.play()
+          console.log('[MindAR] User gesture: first play success')
+
+          // 잠시 재생 후 정지
+          await new Promise((resolve) => setTimeout(resolve, 200))
+          video.pause()
+          video.currentTime = 0
+
+          // 두 번째 재생 시도 (iOS 웜업)
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          await video.play()
+          console.log('[MindAR] User gesture: second play success')
+
+          // unmute 테스트
+          video.muted = false
+          await new Promise((resolve) => setTimeout(resolve, 100))
+
+          // 최종 정지 및 리셋
+          video.pause()
+          video.currentTime = 0
+          video.muted = true
+          console.log('[MindAR] User gesture: video warmed up and ready')
+        } catch (e) {
+          console.warn('[MindAR] manual play blocked', e)
+        }
       }
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)

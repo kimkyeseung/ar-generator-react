@@ -141,6 +141,7 @@ const MindARViewer: React.FC<Props> = ({
   const isRestartingRef = useRef(false)
   // iOS는 muted 기본값, Android는 unmuted 기본값
   const [isMuted, setIsMuted] = useState(isIOS())
+  const [isLoading, setIsLoading] = useState(true)
 
   // 스피커 버튼 클릭 핸들러
   const handleToggleMute = useCallback(async () => {
@@ -348,6 +349,8 @@ const MindARViewer: React.FC<Props> = ({
       ensureVideoPlayback()
       styleCameraFeed()
       updateVideoPlaneFromTargetImage()
+      // 로딩 완료
+      setIsLoading(false)
     }
 
     sceneEl.addEventListener('renderstart', handleRenderStart)
@@ -433,10 +436,26 @@ const MindARViewer: React.FC<Props> = ({
 
   return (
     <>
+      {/* 커스텀 로딩 화면 */}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
+          <div className="mb-6">
+            <img
+              src={targetImageUrl}
+              alt="타겟 이미지"
+              className="h-40 w-40 rounded-xl border-4 border-white/30 object-cover shadow-2xl"
+            />
+          </div>
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
+          <p className="text-lg font-medium text-white">AR 준비 중...</p>
+          <p className="mt-2 text-sm text-white/70">카메라 권한을 허용해주세요</p>
+        </div>
+      )}
+
       {/* 스피커 토글 버튼 */}
       <button
         onClick={handleToggleMute}
-        className="fixed top-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-black/70 active:scale-95"
+        className="fixed top-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-black/70 active:scale-95"
         aria-label={isMuted ? '소리 켜기' : '소리 끄기'}
       >
         <SpeakerIcon muted={isMuted} />

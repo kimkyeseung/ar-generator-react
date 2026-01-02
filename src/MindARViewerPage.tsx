@@ -12,6 +12,7 @@ async function fetchArFiles(folderId: string) {
     videoFileId: string
     targetImageFileId?: string
     chromaKeyColor?: string
+    flatView?: boolean
   }>
 }
 
@@ -71,6 +72,7 @@ export default function MindARViewerPage() {
           videoUrl={videoUrl}
           targetImageUrl={targetImageUrl}
           chromaKeyColor={fileIds?.chromaKeyColor}
+          flatView={fileIds?.flatView}
         />
       </div>
     </section>

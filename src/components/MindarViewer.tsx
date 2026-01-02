@@ -47,6 +47,35 @@ interface Props {
   videoUrl: string
   targetImageUrl: string
   chromaKeyColor?: string
+  flatView?: boolean
+}
+
+// billboard 컴포넌트를 모듈 로드 시점에 미리 등록 (flatView용)
+if (typeof AFRAME !== 'undefined' && !AFRAME.components['billboard']) {
+  AFRAME.registerComponent('billboard', {
+    tick: function () {
+      const camera = this.el.sceneEl?.camera
+      if (!camera) return
+
+      const object3D = this.el.object3D
+      if (!object3D) return
+
+      // 카메라의 world quaternion을 가져와서 적용
+      const cameraWorldQuaternion = new AFRAME.THREE.Quaternion()
+      camera.getWorldQuaternion(cameraWorldQuaternion)
+
+      // 부모의 world quaternion을 역으로 적용하여 로컬 회전 계산
+      const parent = object3D.parent
+      if (parent) {
+        const parentWorldQuaternion = new AFRAME.THREE.Quaternion()
+        parent.getWorldQuaternion(parentWorldQuaternion)
+        parentWorldQuaternion.invert()
+        cameraWorldQuaternion.premultiply(parentWorldQuaternion)
+      }
+
+      object3D.quaternion.copy(cameraWorldQuaternion)
+    },
+  })
 }
 
 // 크로마키 컴포넌트를 모듈 로드 시점에 미리 등록
@@ -136,6 +165,7 @@ const MindARViewer: React.FC<Props> = ({
   videoUrl,
   targetImageUrl,
   chromaKeyColor,
+  flatView,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
   const isRestartingRef = useRef(false)
@@ -432,7 +462,7 @@ const MindARViewer: React.FC<Props> = ({
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
     }
-  }, [targetImageUrl, chromaKeyColor])
+  }, [targetImageUrl, chromaKeyColor, flatView])
 
   return (
     <>
@@ -497,6 +527,7 @@ const MindARViewer: React.FC<Props> = ({
               width='1'
               rotation='0 0 0'
               chromakey-material={`src: #ar-video; color: ${chromaKeyColor}`}
+              {...(flatView ? { billboard: '' } : {})}
             ></a-plane>
           ) : (
             <a-video
@@ -509,6 +540,7 @@ const MindARViewer: React.FC<Props> = ({
               muted={isMuted ? 'true' : 'false'}
               autoplay='true'
               playsinline='true'
+              {...(flatView ? { billboard: '' } : {})}
             ></a-video>
           )}
         </a-entity>

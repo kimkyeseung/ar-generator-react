@@ -34,6 +34,7 @@ export default function EditProjectPage() {
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
+  const [flatView, setFlatView] = useState(false)
 
   // Upload state
   const [progress, setProgress] = useState(0)
@@ -57,6 +58,9 @@ export default function EditProjectPage() {
         if (data.chromaKeyColor) {
           setUseChromaKey(true)
           setChromaKeyColor(data.chromaKeyColor)
+        }
+        if (data.flatView) {
+          setFlatView(data.flatView)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
@@ -150,6 +154,7 @@ export default function EditProjectPage() {
     const heightValue = videoAspectRatio ?? project?.height ?? 1
     formData.append('height', heightValue.toString())
     formData.append('chromaKeyColor', useChromaKey ? chromaKeyColor : '')
+    formData.append('flatView', flatView ? 'true' : 'false')
 
     // 파일 (변경된 경우에만)
     if (targetFile) {
@@ -327,6 +332,8 @@ export default function EditProjectPage() {
                 chromaKeyColor={chromaKeyColor}
                 onChromaKeyColorChange={handleChromaKeyColorChange}
                 chromaKeyError={chromaKeyError}
+                flatView={flatView}
+                onFlatViewChange={setFlatView}
               />
             </div>
 

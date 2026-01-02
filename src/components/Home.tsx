@@ -43,6 +43,7 @@ export default function App() {
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
+  const [flatView, setFlatView] = useState(false)
 
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
     setVideoError(null)
@@ -111,6 +112,10 @@ export default function App() {
     // 크로마키 색상 전송
     if (useChromaKey && chromaKeyColor) {
       formData.append('chromaKeyColor', chromaKeyColor)
+    }
+    // 정면 고정 옵션 전송
+    if (flatView) {
+      formData.append('flatView', 'true')
     }
 
     try {
@@ -215,6 +220,8 @@ export default function App() {
               chromaKeyColor={chromaKeyColor}
               onChromaKeyColorChange={handleChromaKeyColorChange}
               chromaKeyError={chromaKeyError}
+              flatView={flatView}
+              onFlatViewChange={setFlatView}
             />
 
             <PublishSection

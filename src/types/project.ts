@@ -9,6 +9,7 @@ export interface Project {
   title: string | null
   description: string | null
   chromaKeyColor: string | null
+  flatView: boolean
   createdAt: string
   updatedAt: string
 }

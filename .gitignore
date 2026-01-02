@@ -24,3 +24,4 @@ yarn-error.log*
 
 *.swp
 vendor/mind-ar/node_modules/canvas/build/
+playwright-report/\ntest-results/

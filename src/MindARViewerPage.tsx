@@ -4,23 +4,45 @@ import { useQuery } from '@tanstack/react-query'
 
 const API_URL = process.env.REACT_APP_API_URL
 
-async function fetchArFiles(folderId: string) {
-  const res = await fetch(`${API_URL}/ar-files/${folderId}`)
-  if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
-  return res.json() as Promise<{
-    mindFileId: string
-    videoFileId: string
-    targetImageFileId?: string
-    chromaKeyColor?: string
-    flatView?: boolean
-  }>
+interface ArFilesResponse {
+  mindFileId: string
+  videoFileId: string
+  targetImageFileId?: string
+  chromaKeyColor?: string
+  flatView?: boolean
 }
 
-async function fetchBlobUrlFromFileId(fileId: string) {
+interface ArAssets {
+  mindUrl: string
+  videoUrl: string
+  targetImageUrl: string
+}
+
+async function fetchArFiles(folderId: string): Promise<ArFilesResponse> {
+  const res = await fetch(`${API_URL}/ar-files/${folderId}`)
+  if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
+  return res.json()
+}
+
+async function fetchBlobUrlFromFileId(fileId: string): Promise<string> {
   const res = await fetch(`${API_URL}/file/${fileId}`)
   if (!res.ok) throw new Error('파일을 불러오지 못했습니다.')
   const blob = await res.blob()
   return URL.createObjectURL(blob)
+}
+
+// 모든 에셋을 병렬로 로드
+async function fetchAllAssets(fileIds: ArFilesResponse): Promise<ArAssets> {
+  const [mindUrl, videoUrl, targetImageUrl] = await Promise.all([
+    fetchBlobUrlFromFileId(fileIds.mindFileId),
+    // 비디오는 스트리밍 URL 사용 (메모리 절약 + 빠른 재생 시작)
+    Promise.resolve(`${API_URL}/stream/${fileIds.videoFileId}`),
+    fileIds.targetImageFileId
+      ? fetchBlobUrlFromFileId(fileIds.targetImageFileId)
+      : Promise.resolve(''),
+  ])
+
+  return { mindUrl, videoUrl, targetImageUrl }
 }
 
 export default function MindARViewerPage() {
@@ -30,37 +52,20 @@ export default function MindARViewerPage() {
     throw new Error('folderId가 없습니다.')
   }
 
+  // Step 1: AR 파일 메타데이터 로드
   const { data: fileIds, isLoading: isIdsLoading } = useQuery({
     queryKey: ['arFiles', folderId],
     queryFn: () => fetchArFiles(folderId),
   })
 
-  const { data: mindUrl, isLoading: isMindLoading } = useQuery({
-    queryKey: ['mindUrl', fileIds?.mindFileId],
-    queryFn: () => fetchBlobUrlFromFileId(fileIds!.mindFileId),
+  // Step 2: 모든 에셋을 병렬로 로드 (순차 로딩 대신)
+  const { data: assets, isLoading: isAssetsLoading } = useQuery({
+    queryKey: ['arAssets', fileIds?.mindFileId, fileIds?.videoFileId],
+    queryFn: () => fetchAllAssets(fileIds!),
     enabled: !!fileIds,
   })
 
-  const { data: videoUrl, isLoading: isVideoLoading } = useQuery({
-    queryKey: ['videoUrl', fileIds?.videoFileId],
-    queryFn: () => fetchBlobUrlFromFileId(fileIds!.videoFileId),
-    enabled: !!fileIds,
-  })
-
-  const { data: targetImageUrl, isLoading: isTargetImageLoading } = useQuery({
-    queryKey: ['targetImageUrl', fileIds?.targetImageFileId],
-    queryFn: () => fetchBlobUrlFromFileId(fileIds!.targetImageFileId!),
-    enabled: !!fileIds?.targetImageFileId,
-  })
-
-  const isReady =
-    !isIdsLoading &&
-    !isMindLoading &&
-    !isVideoLoading &&
-    !isTargetImageLoading &&
-    mindUrl &&
-    videoUrl &&
-    targetImageUrl
+  const isReady = !isIdsLoading && !isAssetsLoading && assets
 
   if (!isReady) return <p>Loading AR assets...</p>
 
@@ -68,9 +73,9 @@ export default function MindARViewerPage() {
     <section className="relative flex min-h-[100dvh] w-full">
       <div className="absolute inset-0">
         <MindARViewer
-          mindUrl={mindUrl}
-          videoUrl={videoUrl}
-          targetImageUrl={targetImageUrl}
+          mindUrl={assets.mindUrl}
+          videoUrl={assets.videoUrl}
+          targetImageUrl={assets.targetImageUrl}
           chromaKeyColor={fileIds?.chromaKeyColor}
           flatView={fileIds?.flatView}
         />

@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
 import { FFmpeg } from '@ffmpeg/ffmpeg'
-import { fetchFile, toBlobURL } from '@ffmpeg/util'
 
 interface CompressionResult {
   previewFile: File
@@ -11,6 +10,13 @@ interface CompressionProgress {
   stage: 'loading' | 'compressing' | 'done' | 'error'
   progress: number // 0-100
   message: string
+}
+
+// URL을 fetch하여 Blob URL로 변환 (CORS 우회)
+async function fetchToBlobURL(url: string, mimeType: string): Promise<string> {
+  const response = await fetch(url)
+  const blob = await response.blob()
+  return URL.createObjectURL(new Blob([blob], { type: mimeType }))
 }
 
 export function useVideoCompressor() {
@@ -41,11 +47,11 @@ export function useVideoCompressor() {
       })
     })
 
-    // CDN에서 ffmpeg core 로드
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
+    // CDN에서 ffmpeg core 로드 (UMD 버전 사용 - ESM 모듈 문제 회피)
+    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd'
     await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      coreURL: await fetchToBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await fetchToBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
     })
 
     loadedRef.current = true
@@ -66,7 +72,8 @@ export function useVideoCompressor() {
         // 입력 파일 쓰기
         const inputName = 'input.mp4'
         const outputName = 'preview.mp4'
-        await ffmpeg.writeFile(inputName, await fetchFile(videoFile))
+        const arrayBuffer = await videoFile.arrayBuffer()
+        await ffmpeg.writeFile(inputName, new Uint8Array(arrayBuffer))
 
         // 저화질 압축 (빠른 로딩용)
         // -vf scale=480:-2: 가로 480px, 세로는 비율 유지 (짝수)

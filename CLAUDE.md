@@ -31,10 +31,17 @@ src/
 ├── components/
 │   ├── MindARCompiler.tsx    # 이미지 → .mind 파일 컴파일
 │   ├── MindarViewer.tsx      # AR 뷰어 (MindAR + A-Frame)
+│   ├── PasswordModal.tsx     # 관리자 비밀번호 입력 모달
 │   ├── Home.tsx              # 메인 업로드 페이지
 │   └── VideoUploadSection.tsx # 비디오 업로드 UI
+├── pages/
+│   ├── CreateProjectPage.tsx # 프로젝트 생성 페이지
+│   ├── EditProjectPage.tsx   # 프로젝트 편집 페이지
+│   └── ProjectListPage.tsx   # 프로젝트 목록 페이지
 ├── hooks/
 │   └── useVideoCompressor.ts # ffmpeg.wasm 비디오 압축 훅
+├── lib/
+│   └── image-target/         # 커스텀 MindAR 라이브러리 (카메라 해상도 수정)
 ├── MindARViewerPage.tsx      # AR 뷰어 페이지
 └── App.tsx                   # 라우팅
 vendor/
@@ -89,6 +96,8 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 - 타겟 이미지 비율이 AR 오버레이에 보존됨
 - MindAR 컴파일은 클라이언트에서 실행 (서버 부하 없음)
 - ffmpeg.wasm은 UMD 빌드 사용 (ESM 모듈 문제 회피)
+- 카메라 해상도: 1920x1080 (Full HD) - `src/lib/image-target/aframe.js`에서 설정
+- 프로젝트 생성/편집/삭제 시 관리자 비밀번호 필요 (`X-Admin-Password` 헤더)
 
 ## Testing
 

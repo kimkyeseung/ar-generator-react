@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HeroHeader from '../components/home/HeroHeader'
 import PageBackground from '../components/home/PageBackground'
+import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Project } from '../types/project'
@@ -13,6 +14,12 @@ export default function ProjectListPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 삭제 관련 상태
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProjects()
@@ -32,17 +39,46 @@ export default function ProjectListPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('정말 삭제하시겠습니까?')) return
+  // 삭제 버튼 클릭 시 비밀번호 모달 열기
+  const handleDeleteClick = (id: string) => {
+    setDeleteTargetId(id)
+    setPasswordError(null)
+    setShowPasswordModal(true)
+  }
+
+  // 비밀번호 확인 후 실제 삭제
+  const handleDeleteWithPassword = async (password: string) => {
+    if (!deleteTargetId) return
 
     try {
-      const res = await fetch(`${API_URL}/projects/${id}`, {
+      setIsDeleting(true)
+      const res = await fetch(`${API_URL}/projects/${deleteTargetId}`, {
         method: 'DELETE',
+        headers: {
+          'X-Admin-Password': password,
+        },
       })
+
+      if (res.status === 401) {
+        setPasswordError('비밀번호가 올바르지 않습니다.')
+        return
+      }
+
       if (!res.ok) throw new Error('삭제에 실패했습니다.')
-      setProjects((prev) => prev.filter((p) => p.id !== id))
+
+      setProjects((prev) => prev.filter((p) => p.id !== deleteTargetId))
+      setShowPasswordModal(false)
+      setDeleteTargetId(null)
     } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.')
+      const errorMessage = err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.'
+      if (errorMessage.includes('401') || errorMessage.includes('비밀번호')) {
+        setPasswordError('비밀번호가 올바르지 않습니다.')
+      } else {
+        setShowPasswordModal(false)
+        alert(errorMessage)
+      }
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -203,7 +239,7 @@ export default function ProjectListPage() {
                       <Button
                         variant='outline'
                         size='sm'
-                        onClick={() => handleDelete(project.id)}
+                        onClick={() => handleDeleteClick(project.id)}
                         className='flex-1 border-red-300 text-xs text-red-500 hover:bg-red-50 sm:flex-none sm:text-sm'
                       >
                         삭제
@@ -216,6 +252,19 @@ export default function ProjectListPage() {
           )}
         </div>
       </div>
+
+      {/* 삭제 비밀번호 입력 모달 */}
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false)
+          setDeleteTargetId(null)
+          setPasswordError(null)
+        }}
+        onSubmit={handleDeleteWithPassword}
+        isLoading={isDeleting}
+        error={passwordError}
+      />
     </PageBackground>
   )
 }

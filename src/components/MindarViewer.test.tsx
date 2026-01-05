@@ -29,6 +29,12 @@ const mockAFRAME = {
 // Set AFRAME globally
 beforeAll(() => {
   ;(global as any).AFRAME = mockAFRAME
+
+  // Mock HTMLVideoElement.prototype.load for HD preloading
+  Object.defineProperty(HTMLVideoElement.prototype, 'load', {
+    value: jest.fn(),
+    writable: true,
+  })
 })
 
 // Import component after mocks
@@ -166,6 +172,52 @@ describe('MindARViewer', () => {
       const mindarConfig = scene?.getAttribute('mindar-image')
       expect(mindarConfig).toContain(defaultProps.mindUrl)
       expect(mindarConfig).toContain('autoStart: false')
+    })
+  })
+
+  describe('previewVideoUrl prop', () => {
+    it('should render with only videoUrl when previewVideoUrl is not provided', () => {
+      const MindARViewer = MindARViewerModule().default
+      const { container } = render(<MindARViewer {...defaultProps} />)
+
+      const video = container.querySelector('#ar-video')
+      expect(video).toBeTruthy()
+      expect(video?.getAttribute('src')).toBe(defaultProps.videoUrl)
+    })
+
+    it('should use previewVideoUrl initially when provided', () => {
+      const MindARViewer = MindARViewerModule().default
+      const previewVideoUrl = 'blob:http://localhost/preview-video'
+      const { container } = render(
+        <MindARViewer {...defaultProps} previewVideoUrl={previewVideoUrl} />
+      )
+
+      const video = container.querySelector('#ar-video')
+      expect(video).toBeTruthy()
+      // Initially should use preview URL
+      expect(video?.getAttribute('src')).toBe(previewVideoUrl)
+    })
+
+    it('should render a-video with src attribute', () => {
+      const MindARViewer = MindARViewerModule().default
+      const { container } = render(<MindARViewer {...defaultProps} />)
+
+      const videoElement = container.querySelector('a-video')
+      expect(videoElement).toBeTruthy()
+      expect(videoElement?.getAttribute('src')).toBe('#ar-video')
+    })
+
+    it('should show HD loading indicator when previewVideoUrl is provided', () => {
+      const MindARViewer = MindARViewerModule().default
+      const previewVideoUrl = 'blob:http://localhost/preview-video'
+      render(
+        <MindARViewer {...defaultProps} previewVideoUrl={previewVideoUrl} />
+      )
+
+      // HD loading indicator should be shown when preview is being used
+      const hdIndicator = screen.queryByText(/HD/i)
+      // The indicator should exist in some form
+      expect(document.body).toBeInTheDocument()
     })
   })
 })

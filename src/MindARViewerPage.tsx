@@ -1,6 +1,7 @@
 import MindARViewer from './components/MindarViewer'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 
 const API_URL = process.env.REACT_APP_API_URL
 
@@ -18,12 +19,7 @@ interface ArAssets {
   targetImageUrl: string
 }
 
-async function fetchArFiles(folderId: string): Promise<ArFilesResponse> {
-  const res = await fetch(`${API_URL}/ar-files/${folderId}`)
-  if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
-  return res.json()
-}
-
+// 단일 fetch + blob 변환
 async function fetchBlobUrlFromFileId(fileId: string): Promise<string> {
   const res = await fetch(`${API_URL}/file/${fileId}`)
   if (!res.ok) throw new Error('파일을 불러오지 못했습니다.')
@@ -31,18 +27,60 @@ async function fetchBlobUrlFromFileId(fileId: string): Promise<string> {
   return URL.createObjectURL(blob)
 }
 
-// 모든 에셋을 병렬로 로드
-async function fetchAllAssets(fileIds: ArFilesResponse): Promise<ArAssets> {
-  const [mindUrl, videoUrl, targetImageUrl] = await Promise.all([
+// 메타데이터 + 모든 에셋을 한 번에 로드 (병렬)
+async function fetchArDataAndAssets(folderId: string): Promise<{
+  fileIds: ArFilesResponse
+  assets: ArAssets
+}> {
+  // Step 1: 메타데이터 fetch
+  const res = await fetch(`${API_URL}/ar-files/${folderId}`)
+  if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
+  const fileIds: ArFilesResponse = await res.json()
+
+  // Step 2: 모든 에셋을 병렬 로드
+  const [mindUrl, targetImageUrl] = await Promise.all([
     fetchBlobUrlFromFileId(fileIds.mindFileId),
-    // 비디오는 스트리밍 URL 사용 (메모리 절약 + 빠른 재생 시작)
-    Promise.resolve(`${API_URL}/stream/${fileIds.videoFileId}`),
     fileIds.targetImageFileId
       ? fetchBlobUrlFromFileId(fileIds.targetImageFileId)
       : Promise.resolve(''),
   ])
 
-  return { mindUrl, videoUrl, targetImageUrl }
+  return {
+    fileIds,
+    assets: {
+      mindUrl,
+      videoUrl: `${API_URL}/stream/${fileIds.videoFileId}`,
+      targetImageUrl,
+    },
+  }
+}
+
+// 카메라 권한을 미리 요청
+function usePrefetchCamera() {
+  const [cameraReady, setCameraReady] = useState(false)
+
+  useEffect(() => {
+    let stream: MediaStream | null = null
+
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'environment' } })
+      .then((s) => {
+        stream = s
+        setCameraReady(true)
+        // 스트림은 MindAR이 다시 요청하므로 즉시 해제
+        stream.getTracks().forEach((t) => t.stop())
+      })
+      .catch(() => {
+        // 권한 거부해도 MindAR이 다시 요청함
+        setCameraReady(true)
+      })
+
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop())
+    }
+  }, [])
+
+  return cameraReady
 }
 
 export default function MindARViewerPage() {
@@ -52,32 +90,39 @@ export default function MindARViewerPage() {
     throw new Error('folderId가 없습니다.')
   }
 
-  // Step 1: AR 파일 메타데이터 로드
-  const { data: fileIds, isLoading: isIdsLoading } = useQuery({
-    queryKey: ['arFiles', folderId],
-    queryFn: () => fetchArFiles(folderId),
+  // 카메라 권한 미리 요청 (에셋 로딩과 병렬)
+  const cameraReady = usePrefetchCamera()
+
+  // 메타데이터 + 에셋을 한 번의 쿼리로 로드
+  const { data, isLoading } = useQuery({
+    queryKey: ['arData', folderId],
+    queryFn: () => fetchArDataAndAssets(folderId),
+    staleTime: 1000 * 60 * 5, // 5분간 캐시
   })
 
-  // Step 2: 모든 에셋을 병렬로 로드 (순차 로딩 대신)
-  const { data: assets, isLoading: isAssetsLoading } = useQuery({
-    queryKey: ['arAssets', fileIds?.mindFileId, fileIds?.videoFileId],
-    queryFn: () => fetchAllAssets(fileIds!),
-    enabled: !!fileIds,
-  })
+  // 에셋 + 카메라 모두 준비될 때까지 대기
+  const isReady = !isLoading && data && cameraReady
 
-  const isReady = !isIdsLoading && !isAssetsLoading && assets
-
-  if (!isReady) return <p>Loading AR assets...</p>
+  if (!isReady) {
+    return (
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
+        <div className="flex flex-col items-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
+          <p className="text-lg font-medium text-white">AR 준비 중...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <section className="relative flex min-h-[100dvh] w-full">
       <div className="absolute inset-0">
         <MindARViewer
-          mindUrl={assets.mindUrl}
-          videoUrl={assets.videoUrl}
-          targetImageUrl={assets.targetImageUrl}
-          chromaKeyColor={fileIds?.chromaKeyColor}
-          flatView={fileIds?.flatView}
+          mindUrl={data.assets.mindUrl}
+          videoUrl={data.assets.videoUrl}
+          targetImageUrl={data.assets.targetImageUrl}
+          chromaKeyColor={data.fileIds.chromaKeyColor}
+          flatView={data.fileIds.flatView}
         />
       </div>
     </section>

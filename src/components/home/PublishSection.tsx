@@ -9,6 +9,8 @@ type PublishSectionProps = {
   progress: number
   isUploading: boolean
   isCompiling: boolean
+  isCompressing?: boolean
+  compressionProgress?: number
   uploadError: string | null
 }
 
@@ -18,14 +20,18 @@ export default function PublishSection({
   progress,
   isUploading,
   isCompiling,
+  isCompressing = false,
+  compressionProgress = 0,
   uploadError,
 }: PublishSectionProps) {
-  const isDisabled = !canPublish || isUploading || isCompiling
+  const isDisabled = !canPublish || isUploading || isCompiling || isCompressing
   const buttonLabel = isUploading
     ? '업로드 중...'
-    : isCompiling
-      ? '타겟 변환 완료 후 진행'
-      : 'Publish'
+    : isCompressing
+      ? '영상 압축 완료 후 진행'
+      : isCompiling
+        ? '타겟 변환 완료 후 진행'
+        : 'Publish'
 
   return (
     <div className='space-y-4 pt-2'>
@@ -41,6 +47,17 @@ export default function PublishSection({
 
       {isCompiling && (
         <StatusCallout message='타겟 이미지를 .mind 파일로 변환 중입니다. 완료되면 자동으로 버튼이 활성화됩니다.' />
+      )}
+
+      {isCompressing && (
+        <div className='space-y-1'>
+          <StatusCallout message='빠른 로딩을 위해 영상을 압축하고 있습니다...' />
+          <div className='flex items-center justify-between text-xs text-gray-500'>
+            <span>압축 진행률</span>
+            <span>{compressionProgress}%</span>
+          </div>
+          <Progress value={compressionProgress} />
+        </div>
       )}
 
       {isUploading && (

@@ -8,6 +8,7 @@ import PublishSection from '../components/home/PublishSection'
 import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
 import { Button } from '../components/ui/button'
+import { useVideoCompressor } from '../hooks/useVideoCompressor'
 
 const stepMessageMap = {
   1: 'Step 1. 타겟 이미지를 업로드해주세요.',
@@ -30,21 +31,26 @@ export default function CreateProjectPage() {
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
   const [videoAspectRatio, setVideoAspectRatio] = useState<number>(1)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isCompiling, setIsCompiling] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
   const [title, setTitle] = useState<string>('')
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
 
-  const handleVideoSelect = useCallback((input: File | File[] | null) => {
-    setVideoError(null)
+  const { compressVideo, compressionProgress } = useVideoCompressor()
 
-    const processVideo = (file: File) => {
+  const handleVideoSelect = useCallback(async (input: File | File[] | null) => {
+    setVideoError(null)
+    setPreviewVideoFile(null)
+
+    const processVideo = async (file: File) => {
       if (file.size > MAX_VIDEO_SIZE_BYTES) {
         setVideoError(
           `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
@@ -65,6 +71,21 @@ export default function CreateProjectPage() {
       videoElement.src = URL.createObjectURL(file)
 
       setVideoFile(file)
+
+      // 저화질 프리뷰 영상 생성 (백그라운드에서)
+      setIsCompressing(true)
+      try {
+        const { previewFile } = await compressVideo(file)
+        setPreviewVideoFile(previewFile)
+        console.log(
+          `[Compressor] Preview: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB, Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+        )
+      } catch (err) {
+        console.warn('Preview compression failed, will upload without preview:', err)
+        // 압축 실패해도 원본은 사용 가능
+      } finally {
+        setIsCompressing(false)
+      }
     }
 
     if (Array.isArray(input)) {
@@ -73,7 +94,7 @@ export default function CreateProjectPage() {
         setVideoAspectRatio(1)
         return
       }
-      processVideo(input[0])
+      await processVideo(input[0])
       return
     }
 
@@ -83,8 +104,8 @@ export default function CreateProjectPage() {
       return
     }
 
-    processVideo(input)
-  }, [])
+    await processVideo(input)
+  }, [compressVideo])
 
   const canPublish = targetFile !== null && videoFile !== null && (!useChromaKey || isValidHexColor(chromaKeyColor))
 
@@ -98,7 +119,7 @@ export default function CreateProjectPage() {
   }
 
   const handlePublish = async () => {
-    if (!canPublish || isUploading || isCompiling) return
+    if (!canPublish || isUploading || isCompiling || isCompressing) return
 
     // 크로마키 색상 validation
     if (useChromaKey && !isValidHexColor(chromaKeyColor)) {
@@ -110,6 +131,10 @@ export default function CreateProjectPage() {
     const blob = new Blob([targetFile], { type: 'application/octet-stream' })
     formData.append('target', blob, 'targets.mind')
     formData.append('video', videoFile)
+    // 저화질 프리뷰 영상 추가 (있는 경우)
+    if (previewVideoFile) {
+      formData.append('previewVideo', previewVideoFile)
+    }
     // 원본 타겟 이미지 추가 (썸네일용)
     if (targetImageFile) {
       formData.append('targetImage', targetImageFile)
@@ -189,10 +214,11 @@ export default function CreateProjectPage() {
 
   const workflowStatus = useMemo(() => {
     if (isCompiling) return '타겟 변환 중'
+    if (isCompressing) return compressionProgress?.message || '영상 압축 중'
     if (isUploading) return '업로드 중'
     if (canPublish) return '배포 준비 완료'
     return '업로드를 진행해주세요'
-  }, [canPublish, isCompiling, isUploading])
+  }, [canPublish, isCompiling, isCompressing, isUploading, compressionProgress])
 
   return (
     <PageBackground>
@@ -254,6 +280,8 @@ export default function CreateProjectPage() {
               progress={progress}
               isUploading={isUploading}
               isCompiling={isCompiling}
+              isCompressing={isCompressing}
+              compressionProgress={compressionProgress?.progress ?? 0}
               uploadError={uploadError}
             />
           </UploadCard>

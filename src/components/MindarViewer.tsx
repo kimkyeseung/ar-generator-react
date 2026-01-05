@@ -45,6 +45,7 @@ type MindARScene = HTMLElement & {
 interface Props {
   mindUrl: string
   videoUrl: string
+  previewVideoUrl?: string
   targetImageUrl: string
   chromaKeyColor?: string
   flatView?: boolean
@@ -163,6 +164,7 @@ const isIOS = () => {
 const MindARViewer: React.FC<Props> = ({
   mindUrl,
   videoUrl,
+  previewVideoUrl,
   targetImageUrl,
   chromaKeyColor,
   flatView,
@@ -172,6 +174,9 @@ const MindARViewer: React.FC<Props> = ({
   // iOS는 muted 기본값, Android는 unmuted 기본값
   const [isMuted, setIsMuted] = useState(isIOS())
   const [isLoading, setIsLoading] = useState(true)
+  // 현재 재생 중인 비디오 URL (프리뷰 → 원본 전환)
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
+  const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
 
   // 스피커 버튼 클릭 핸들러
   const handleToggleMute = useCallback(async () => {
@@ -205,6 +210,58 @@ const MindARViewer: React.FC<Props> = ({
       console.log('[MindAR] Sound disabled')
     }
   }, [isMuted])
+
+  // 원본 HD 비디오를 백그라운드에서 미리 로드
+  useEffect(() => {
+    if (!previewVideoUrl || isHDReady) return // 프리뷰가 없거나 이미 HD면 스킵
+
+    console.log('[MindAR] Preloading HD video in background...')
+    const hdVideo = document.createElement('video')
+    hdVideo.preload = 'auto'
+    hdVideo.muted = true
+    hdVideo.playsInline = true
+    hdVideo.crossOrigin = 'anonymous'
+    hdVideo.src = videoUrl
+
+    const handleCanPlay = () => {
+      console.log('[MindAR] HD video ready, switching source...')
+      setIsHDReady(true)
+      setCurrentVideoUrl(videoUrl)
+    }
+
+    hdVideo.addEventListener('canplaythrough', handleCanPlay, { once: true })
+
+    // 로드 시작
+    hdVideo.load()
+
+    return () => {
+      hdVideo.removeEventListener('canplaythrough', handleCanPlay)
+      hdVideo.src = ''
+    }
+  }, [videoUrl, previewVideoUrl, isHDReady])
+
+  // 비디오 소스가 변경되면 현재 재생 중인 비디오 업데이트
+  useEffect(() => {
+    const sceneEl = sceneRef.current
+    if (!sceneEl) return
+
+    const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+    if (!video) return
+
+    // 현재 재생 시간 저장
+    const currentTime = video.currentTime
+    const wasPlaying = !video.paused
+
+    // 새 소스로 변경
+    if (video.src !== currentVideoUrl) {
+      console.log('[MindAR] Switching video source to:', currentVideoUrl.includes('preview') ? 'preview' : 'HD')
+      video.src = currentVideoUrl
+      video.currentTime = currentTime
+      if (wasPlaying) {
+        video.play().catch(() => {})
+      }
+    }
+  }, [currentVideoUrl])
 
   useEffect(() => {
     const sceneEl = sceneRef.current
@@ -491,6 +548,20 @@ const MindARViewer: React.FC<Props> = ({
         <SpeakerIcon muted={isMuted} />
       </button>
 
+      {/* HD 로딩 표시기 */}
+      {previewVideoUrl && !isHDReady && (
+        <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
+          <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-400"></div>
+          <span>HD 로딩 중...</span>
+        </div>
+      )}
+      {previewVideoUrl && isHDReady && (
+        <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
+          <div className="h-2 w-2 rounded-full bg-green-400"></div>
+          <span>HD</span>
+        </div>
+      )}
+
       <a-scene
         className='h-full w-full'
         style={{ width: '100%', height: '100%' }}
@@ -506,7 +577,7 @@ const MindARViewer: React.FC<Props> = ({
         <a-assets>
           <video
             id='ar-video'
-            src={videoUrl}
+            src={currentVideoUrl}
             loop
             crossOrigin='anonymous'
             playsInline

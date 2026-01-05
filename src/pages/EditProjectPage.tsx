@@ -7,6 +7,8 @@ import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
 import { Button } from '../components/ui/button'
 import { Project } from '../types/project'
+import { useVideoCompressor } from '../hooks/useVideoCompressor'
+import { Progress } from '../components/ui/progress'
 
 const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
@@ -29,6 +31,7 @@ export default function EditProjectPage() {
   const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
   const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // null이면 기존 비율 유지
   const [videoError, setVideoError] = useState<string | null>(null)
   const [useChromaKey, setUseChromaKey] = useState(false)
@@ -40,7 +43,10 @@ export default function EditProjectPage() {
   const [progress, setProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [isCompiling, setIsCompiling] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const { compressVideo, compressionProgress } = useVideoCompressor()
 
   // 프로젝트 로드
   useEffect(() => {
@@ -72,10 +78,11 @@ export default function EditProjectPage() {
     fetchProject()
   }, [id])
 
-  const handleVideoSelect = useCallback((input: File | File[] | null) => {
+  const handleVideoSelect = useCallback(async (input: File | File[] | null) => {
     setVideoError(null)
+    setPreviewVideoFile(null)
 
-    const processVideo = (file: File) => {
+    const processVideo = async (file: File) => {
       if (file.size > MAX_VIDEO_SIZE_BYTES) {
         setVideoError(
           `비디오 파일은 최대 ${MAX_VIDEO_SIZE_MB}MB까지만 업로드할 수 있습니다.`
@@ -96,6 +103,20 @@ export default function EditProjectPage() {
       videoElement.src = URL.createObjectURL(file)
 
       setVideoFile(file)
+
+      // 저화질 프리뷰 영상 생성 (백그라운드에서)
+      setIsCompressing(true)
+      try {
+        const { previewFile } = await compressVideo(file)
+        setPreviewVideoFile(previewFile)
+        console.log(
+          `[Compressor] Preview: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB, Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+        )
+      } catch (err) {
+        console.warn('Preview compression failed, will upload without preview:', err)
+      } finally {
+        setIsCompressing(false)
+      }
     }
 
     if (Array.isArray(input)) {
@@ -104,7 +125,7 @@ export default function EditProjectPage() {
         setVideoAspectRatio(null)
         return
       }
-      processVideo(input[0])
+      await processVideo(input[0])
       return
     }
 
@@ -114,8 +135,8 @@ export default function EditProjectPage() {
       return
     }
 
-    processVideo(input)
-  }, [])
+    await processVideo(input)
+  }, [compressVideo])
 
   const handleChromaKeyColorChange = (color: string) => {
     setChromaKeyColor(color)
@@ -135,6 +156,7 @@ export default function EditProjectPage() {
   const canSave =
     !isUploading &&
     !isCompiling &&
+    !isCompressing &&
     (!useChromaKey || isValidHexColor(chromaKeyColor))
 
   const handleSave = async () => {
@@ -166,6 +188,10 @@ export default function EditProjectPage() {
     }
     if (videoFile) {
       formData.append('video', videoFile)
+      // 저화질 프리뷰 영상도 함께 업로드
+      if (previewVideoFile) {
+        formData.append('previewVideo', previewVideoFile)
+      }
     }
 
     try {
@@ -345,6 +371,19 @@ export default function EditProjectPage() {
                 </div>
               )}
 
+              {isCompressing && (
+                <div className='mb-4 space-y-2'>
+                  <p className='text-sm text-amber-600'>
+                    빠른 로딩을 위해 영상을 압축하고 있습니다...
+                  </p>
+                  <div className='flex items-center justify-between text-xs text-gray-500'>
+                    <span>압축 진행률</span>
+                    <span>{compressionProgress?.progress ?? 0}%</span>
+                  </div>
+                  <Progress value={compressionProgress?.progress ?? 0} />
+                </div>
+              )}
+
               {isUploading && (
                 <div className='mb-4'>
                   <div className='h-2 bg-gray-200 rounded-full overflow-hidden'>
@@ -373,7 +412,7 @@ export default function EditProjectPage() {
                   disabled={!canSave}
                   className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
                 >
-                  {isUploading ? '저장 중...' : '저장'}
+                  {isUploading ? '저장 중...' : isCompressing ? '압축 완료 후 저장' : '저장'}
                 </Button>
               </div>
             </div>

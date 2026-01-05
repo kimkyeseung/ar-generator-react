@@ -8,6 +8,7 @@ const API_URL = process.env.REACT_APP_API_URL
 interface ArFilesResponse {
   mindFileId: string
   videoFileId: string
+  previewVideoFileId?: string
   targetImageFileId?: string
   chromaKeyColor?: string
   flatView?: boolean
@@ -16,6 +17,7 @@ interface ArFilesResponse {
 interface ArAssets {
   mindUrl: string
   videoUrl: string
+  previewVideoUrl?: string
   targetImageUrl: string
 }
 
@@ -49,7 +51,11 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
     fileIds,
     assets: {
       mindUrl,
+      // 프리뷰가 있으면 프리뷰 URL, 없으면 원본 URL
       videoUrl: `${API_URL}/stream/${fileIds.videoFileId}`,
+      previewVideoUrl: fileIds.previewVideoFileId
+        ? `${API_URL}/stream/${fileIds.previewVideoFileId}`
+        : undefined,
       targetImageUrl,
     },
   }
@@ -120,6 +126,7 @@ export default function MindARViewerPage() {
         <MindARViewer
           mindUrl={data.assets.mindUrl}
           videoUrl={data.assets.videoUrl}
+          previewVideoUrl={data.assets.previewVideoUrl}
           targetImageUrl={data.assets.targetImageUrl}
           chromaKeyColor={data.fileIds.chromaKeyColor}
           flatView={data.fileIds.flatView}

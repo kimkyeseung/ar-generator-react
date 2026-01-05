@@ -1,0 +1,113 @@
+import { useState, useCallback, useEffect } from 'react'
+import { Button } from './ui/button'
+
+interface PasswordModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (password: string) => void
+  isLoading?: boolean
+  error?: string | null
+}
+
+export default function PasswordModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  isLoading = false,
+  error,
+}: PasswordModalProps) {
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault()
+      if (password.trim()) {
+        onSubmit(password)
+      }
+    },
+    [password, onSubmit]
+  )
+
+  // 모달이 닫힐 때 비밀번호 초기화
+  useEffect(() => {
+    if (!isOpen) {
+      setPassword('')
+    }
+  }, [isOpen])
+
+  // ESC 키로 닫기
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isLoading) {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, isLoading, onClose])
+
+  if (!isOpen) return null
+
+  return (
+    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+      {/* 배경 오버레이 */}
+      <div
+        className='absolute inset-0 bg-black/50 backdrop-blur-sm'
+        onClick={isLoading ? undefined : onClose}
+      />
+
+      {/* 모달 콘텐츠 */}
+      <div className='relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-xl p-6'>
+        <h2 className='text-xl font-semibold text-gray-900 mb-4'>
+          비밀번호 입력
+        </h2>
+
+        <form onSubmit={handleSubmit}>
+          <div className='mb-4'>
+            <label
+              htmlFor='password'
+              className='block text-sm font-medium text-gray-700 mb-2'
+            >
+              관리자 비밀번호
+            </label>
+            <input
+              id='password'
+              type='password'
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder='비밀번호를 입력하세요'
+              className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              autoFocus
+              disabled={isLoading}
+            />
+          </div>
+
+          {error && (
+            <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
+              {error}
+            </div>
+          )}
+
+          <div className='flex gap-3'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={onClose}
+              disabled={isLoading}
+              className='flex-1'
+            >
+              취소
+            </Button>
+            <Button
+              type='submit'
+              disabled={isLoading || !password.trim()}
+              className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+            >
+              {isLoading ? '확인 중...' : '확인'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

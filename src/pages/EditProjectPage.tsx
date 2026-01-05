@@ -5,6 +5,7 @@ import HeroHeader from '../components/home/HeroHeader'
 import PageBackground from '../components/home/PageBackground'
 import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
+import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { Project } from '../types/project'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
@@ -45,6 +46,10 @@ export default function EditProjectPage() {
   const [isCompiling, setIsCompiling] = useState(false)
   const [isCompressing, setIsCompressing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+
+  // 비밀번호 모달 상태
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   const { compressVideo, compressionProgress } = useVideoCompressor()
 
@@ -159,13 +164,22 @@ export default function EditProjectPage() {
     !isCompressing &&
     (!useChromaKey || isValidHexColor(chromaKeyColor))
 
-  const handleSave = async () => {
+  // 저장 버튼 클릭 시 비밀번호 모달 열기
+  const handleSaveClick = () => {
     if (!canSave || !id) return
 
     if (useChromaKey && !isValidHexColor(chromaKeyColor)) {
       setChromaKeyError('유효한 HEX 색상을 입력하세요 (예: #00FF00)')
       return
     }
+
+    setPasswordError(null)
+    setShowPasswordModal(true)
+  }
+
+  // 비밀번호 확인 후 실제 저장
+  const handlePasswordSubmit = async (password: string) => {
+    if (!canSave || !id) return
 
     const formData = new FormData()
 
@@ -202,6 +216,7 @@ export default function EditProjectPage() {
       const res = await new Promise<Project>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${API_URL}/projects/${id}/update`)
+        xhr.setRequestHeader('X-Admin-Password', password)
         xhr.responseType = 'json'
 
         xhr.upload.onprogress = (evt) => {
@@ -215,6 +230,8 @@ export default function EditProjectPage() {
           if (xhr.status >= 200 && xhr.status < 300) {
             setProgress(100)
             resolve(xhr.response)
+          } else if (xhr.status === 401) {
+            reject(new Error('401: 비밀번호가 올바르지 않습니다.'))
           } else {
             reject(new Error(`업데이트 실패: ${xhr.status}`))
           }
@@ -223,14 +240,22 @@ export default function EditProjectPage() {
         xhr.send(formData)
       })
 
+      setShowPasswordModal(false)
       navigate(`/result/qr/${res.folderId}`)
     } catch (err) {
       console.error(err)
-      setUploadError(
+      const errorMessage =
         err instanceof Error
           ? err.message
           : '저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
-      )
+
+      // 비밀번호 오류인 경우 모달에 표시
+      if (errorMessage.includes('401') || errorMessage.includes('비밀번호')) {
+        setPasswordError('비밀번호가 올바르지 않습니다.')
+      } else {
+        setShowPasswordModal(false)
+        setUploadError(errorMessage)
+      }
     } finally {
       setIsUploading(false)
     }
@@ -408,7 +433,7 @@ export default function EditProjectPage() {
                   취소
                 </Button>
                 <Button
-                  onClick={handleSave}
+                  onClick={handleSaveClick}
                   disabled={!canSave}
                   className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
                 >
@@ -419,6 +444,18 @@ export default function EditProjectPage() {
           </UploadCard>
         </div>
       </div>
+
+      {/* 비밀번호 입력 모달 */}
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false)
+          setPasswordError(null)
+        }}
+        onSubmit={handlePasswordSubmit}
+        isLoading={isUploading}
+        error={passwordError}
+      />
     </PageBackground>
   )
 }

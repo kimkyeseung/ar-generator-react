@@ -7,6 +7,7 @@ import PageBackground from '../components/home/PageBackground'
 import PublishSection from '../components/home/PublishSection'
 import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
+import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 
@@ -43,6 +44,10 @@ export default function CreateProjectPage() {
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
+
+  // 비밀번호 모달 상태
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   const { compressVideo, compressionProgress } = useVideoCompressor()
 
@@ -118,7 +123,8 @@ export default function CreateProjectPage() {
     }
   }
 
-  const handlePublish = async () => {
+  // 배포 버튼 클릭 시 비밀번호 모달 열기
+  const handlePublishClick = () => {
     if (!canPublish || isUploading || isCompiling || isCompressing) return
 
     // 크로마키 색상 validation
@@ -126,6 +132,14 @@ export default function CreateProjectPage() {
       setChromaKeyError('유효한 HEX 색상을 입력하세요 (예: #00FF00)')
       return
     }
+
+    setPasswordError(null)
+    setShowPasswordModal(true)
+  }
+
+  // 비밀번호 확인 후 실제 업로드
+  const handlePasswordSubmit = async (password: string) => {
+    if (!canPublish || !targetFile || !videoFile) return
 
     const formData = new FormData()
     const blob = new Blob([targetFile], { type: 'application/octet-stream' })
@@ -155,20 +169,28 @@ export default function CreateProjectPage() {
     }
 
     try {
-      const res = await uploadWithProgress(formData)
+      const res = await uploadWithProgress(formData, password)
+      setShowPasswordModal(false)
       navigate(`/result/qr/${res.folderId}`)
     } catch (error) {
       console.error(error)
-      setUploadError(
+      const errorMessage =
         error instanceof Error
           ? error.message
           : '업로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
-      )
+
+      // 비밀번호 오류인 경우 모달에 표시
+      if (errorMessage.includes('401') || errorMessage.includes('비밀번호')) {
+        setPasswordError('비밀번호가 올바르지 않습니다.')
+      } else {
+        setShowPasswordModal(false)
+        setUploadError(errorMessage)
+      }
     }
   }
 
   // 업로드 (진행률 표시용: XMLHttpRequest 사용)
-  const uploadWithProgress = async (formData: FormData) => {
+  const uploadWithProgress = async (formData: FormData, password: string) => {
     setProgress(0)
     setUploadError(null)
     setIsUploading(true)
@@ -181,6 +203,7 @@ export default function CreateProjectPage() {
         const xhr = new XMLHttpRequest()
 
         xhr.open('POST', `${API_URL}/upload`)
+        xhr.setRequestHeader('X-Admin-Password', password)
         xhr.responseType = 'json'
 
         xhr.upload.onprogress = (evt) => {
@@ -194,6 +217,8 @@ export default function CreateProjectPage() {
           if (xhr.status >= 200 && xhr.status < 300) {
             setProgress(100)
             resolve(xhr.response)
+          } else if (xhr.status === 401) {
+            reject(new Error('401: 비밀번호가 올바르지 않습니다.'))
           } else {
             reject(new Error(`Upload failed: ${xhr.status}`))
           }
@@ -276,7 +301,7 @@ export default function CreateProjectPage() {
 
             <PublishSection
               canPublish={canPublish}
-              onPublish={handlePublish}
+              onPublish={handlePublishClick}
               progress={progress}
               isUploading={isUploading}
               isCompiling={isCompiling}
@@ -289,6 +314,18 @@ export default function CreateProjectPage() {
           <InfoFooter />
         </div>
       </div>
+
+      {/* 비밀번호 입력 모달 */}
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false)
+          setPasswordError(null)
+        }}
+        onSubmit={handlePasswordSubmit}
+        isLoading={isUploading}
+        error={passwordError}
+      />
     </PageBackground>
   )
 }

@@ -46,11 +46,37 @@ export default function ProjectListPage() {
     setShowPasswordModal(true)
   }
 
+  // 비밀번호 검증 API 호출
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/verify-password`, {
+        method: 'POST',
+        headers: {
+          'X-Admin-Password': password,
+        },
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   // 비밀번호 확인 후 실제 삭제
   const handleDeleteWithPassword = async (password: string) => {
     if (!deleteTargetId) return
 
     try {
+      // 1. 비밀번호 먼저 검증
+      const isValidPassword = await verifyPassword(password)
+      if (!isValidPassword) {
+        setPasswordError('비밀번호가 올바르지 않습니다.')
+        return
+      }
+
+      // 비밀번호 확인 성공 - 모달 닫기
+      setShowPasswordModal(false)
+
+      // 2. 삭제 실행
       setIsDeleting(true)
       const res = await fetch(`${API_URL}/projects/${deleteTargetId}`, {
         method: 'DELETE',
@@ -59,24 +85,13 @@ export default function ProjectListPage() {
         },
       })
 
-      if (res.status === 401) {
-        setPasswordError('비밀번호가 올바르지 않습니다.')
-        return
-      }
-
       if (!res.ok) throw new Error('삭제에 실패했습니다.')
 
       setProjects((prev) => prev.filter((p) => p.id !== deleteTargetId))
-      setShowPasswordModal(false)
       setDeleteTargetId(null)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.'
-      if (errorMessage.includes('401') || errorMessage.includes('비밀번호')) {
-        setPasswordError('비밀번호가 올바르지 않습니다.')
-      } else {
-        setShowPasswordModal(false)
-        alert(errorMessage)
-      }
+      alert(errorMessage)
     } finally {
       setIsDeleting(false)
     }

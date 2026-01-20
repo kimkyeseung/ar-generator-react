@@ -178,6 +178,9 @@ export default function CreateProjectPage() {
         return
       }
 
+      // 비밀번호 확인 성공 - 모달 닫기
+      setShowPasswordModal(false)
+
       // 2. 타겟 이미지 컴파일
       const { targetBuffer, originalImage } = await compile(targetImageFiles, {
         highPrecision,
@@ -217,7 +220,6 @@ export default function CreateProjectPage() {
 
       // 4. 업로드
       const res = await uploadWithProgress(formData, password)
-      setShowPasswordModal(false)
       navigate(`/result/qr/${res.folderId}`)
     } catch (error) {
       console.error(error)
@@ -226,13 +228,7 @@ export default function CreateProjectPage() {
           ? error.message
           : '처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
 
-      // 비밀번호 오류인 경우 모달에 표시
-      if (errorMessage.includes('401') || errorMessage.includes('비밀번호')) {
-        setPasswordError('비밀번호가 올바르지 않습니다.')
-      } else {
-        setShowPasswordModal(false)
-        setUploadError(errorMessage)
-      }
+      setUploadError(errorMessage)
     }
   }
 

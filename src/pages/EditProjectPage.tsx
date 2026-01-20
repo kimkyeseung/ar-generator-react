@@ -207,6 +207,9 @@ export default function EditProjectPage() {
         return
       }
 
+      // 비밀번호 확인 성공 - 모달 닫기
+      setShowPasswordModal(false)
+
       const formData = new FormData()
 
       // 메타데이터
@@ -267,7 +270,6 @@ export default function EditProjectPage() {
         xhr.send(formData)
       })
 
-      setShowPasswordModal(false)
       navigate(`/result/qr/${res.folderId}`)
     } catch (err) {
       console.error(err)
@@ -276,12 +278,7 @@ export default function EditProjectPage() {
           ? err.message
           : '저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
 
-      if (errorMessage.includes('401') || errorMessage.includes('비밀번호')) {
-        setPasswordError('비밀번호가 올바르지 않습니다.')
-      } else {
-        setShowPasswordModal(false)
-        setUploadError(errorMessage)
-      }
+      setUploadError(errorMessage)
     } finally {
       setIsUploading(false)
     }

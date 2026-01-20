@@ -50,6 +50,7 @@ interface Props {
   chromaKeyColor?: string
   flatView?: boolean
   highPrecision?: boolean
+  debugMode?: boolean
 }
 
 // billboard 컴포넌트를 모듈 로드 시점에 미리 등록 (flatView용)
@@ -170,6 +171,7 @@ const MindARViewer: React.FC<Props> = ({
   chromaKeyColor,
   flatView,
   highPrecision,
+  debugMode = false,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
   const isRestartingRef = useRef(false)
@@ -179,6 +181,11 @@ const MindARViewer: React.FC<Props> = ({
   // 현재 재생 중인 비디오 URL (프리뷰 → 원본 전환)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
+
+  // 디버그 모드: 필터 설정
+  const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
+  const [filterMinCF, setFilterMinCF] = useState(0.001)
+  const [filterBeta, setFilterBeta] = useState(10)
 
   // 스피커 버튼 클릭 핸들러
   const handleToggleMute = useCallback(async () => {
@@ -557,10 +564,82 @@ const MindARViewer: React.FC<Props> = ({
           <span>HD 로딩 중...</span>
         </div>
       )}
-      {previewVideoUrl && isHDReady && (
+      {previewVideoUrl && isHDReady && !debugMode && (
         <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
           <div className="h-2 w-2 rounded-full bg-green-400"></div>
           <span>HD</span>
+        </div>
+      )}
+
+      {/* 디버그 패널 */}
+      {debugMode && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/80 p-4 text-white backdrop-blur-sm">
+          <div className="mx-auto max-w-md space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">디버그 모드</span>
+              {previewVideoUrl && (
+                <span className={`text-xs px-2 py-0.5 rounded ${isHDReady ? 'bg-green-500' : 'bg-yellow-500'}`}>
+                  {isHDReady ? 'HD' : 'Preview'}
+                </span>
+              )}
+            </div>
+
+            {/* 떨림 보정 토글 */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm">떨림 보정 (Stabilization)</span>
+              <button
+                onClick={() => setStabilizationEnabled(!stabilizationEnabled)}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  stabilizationEnabled
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : 'bg-red-500 hover:bg-red-600'
+                }`}
+              >
+                {stabilizationEnabled ? 'ON' : 'OFF'}
+              </button>
+            </div>
+
+            {/* 필터 파라미터 */}
+            {stabilizationEnabled && (
+              <>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>filterMinCF (낮을수록 부드러움)</span>
+                    <span className="font-mono">{filterMinCF}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0001"
+                    max="0.1"
+                    step="0.0001"
+                    value={filterMinCF}
+                    onChange={(e) => setFilterMinCF(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>filterBeta (높을수록 반응 빠름)</span>
+                    <span className="font-mono">{filterBeta}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={filterBeta}
+                    onChange={(e) => setFilterBeta(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </>
+            )}
+
+            <p className="text-xs text-gray-400">
+              * 설정 변경 후 페이지 새로고침 필요
+            </p>
+          </div>
         </div>
       )}
 
@@ -568,7 +647,7 @@ const MindARViewer: React.FC<Props> = ({
         className='h-full w-full'
         style={{ width: '100%', height: '100%' }}
         ref={sceneRef}
-        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;${highPrecision ? ' warmupTolerance: 2; missTolerance: 8; filterMinCF: 0.0001;' : ''}`}
+        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;${stabilizationEnabled ? ` filterMinCF: ${filterMinCF}; filterBeta: ${filterBeta};` : ''}${highPrecision ? ' warmupTolerance: 2; missTolerance: 8;' : ''}`}
         assettimeout='15000'
         color-space='sRGB'
         embedded

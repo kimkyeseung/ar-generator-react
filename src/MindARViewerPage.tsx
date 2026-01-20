@@ -1,5 +1,5 @@
 import MindARViewer from './components/MindarViewer'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
@@ -92,6 +92,8 @@ function usePrefetchCamera() {
 
 export default function MindARViewerPage() {
   const { folderId } = useParams<{ folderId: string }>()
+  const [searchParams] = useSearchParams()
+  const isDebugMode = searchParams.get('mode') === 'debug'
 
   if (!folderId) {
     throw new Error('folderId가 없습니다.')
@@ -132,6 +134,7 @@ export default function MindARViewerPage() {
           chromaKeyColor={data.fileIds.chromaKeyColor}
           flatView={data.fileIds.flatView}
           highPrecision={data.fileIds.highPrecision}
+          debugMode={isDebugMode}
         />
       </div>
     </section>

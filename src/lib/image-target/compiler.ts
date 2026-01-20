@@ -13,9 +13,14 @@ type WorkerCompileDoneMessage = {
 
 type WorkerResponseMessage = WorkerProgressMessage | WorkerCompileDoneMessage
 
+type CompileOptions = {
+  highPrecision?: boolean
+}
+
 type WorkerRequestMessage = {
   type: 'compile'
   targetImages: TargetImage[]
+  options?: CompileOptions
 }
 
 export class Compiler extends CompilerBase {
@@ -30,6 +35,7 @@ export class Compiler extends CompilerBase {
     progressCallback,
     targetImages,
     basePercent,
+    options = {},
   }: CompileTrackArgs): Promise<unknown[]> {
     return new Promise((resolve, reject) => {
       const worker = new Worker(
@@ -54,6 +60,7 @@ export class Compiler extends CompilerBase {
       const message: WorkerRequestMessage = {
         type: 'compile',
         targetImages,
+        options,
       }
 
       worker.postMessage(message)

@@ -6,10 +6,15 @@ export type TargetImage = {
   height: number
 }
 
+export type CompileOptions = {
+  highPrecision?: boolean
+}
+
 export type CompileTrackArgs = {
   progressCallback: ProgressCallback
   targetImages: TargetImage[]
   basePercent: number
+  options?: CompileOptions
 }
 
 export type CompilerDataEntry = {
@@ -30,7 +35,8 @@ export class CompilerBase {
 
   compileImageTargets(
     images: HTMLImageElement[],
-    progressCallback: ProgressCallback
+    progressCallback: ProgressCallback,
+    options?: CompileOptions
   ): Promise<CompilerDataEntry[]>
 
   exportData(): Uint8Array

@@ -22,11 +22,13 @@ type FileUploadFormData = z.infer<typeof fileUploadSchema>
 interface Props {
   onCompileColplete: (target: ArrayBuffer, originalImage: File) => void
   onCompileStateChange?: (isCompiling: boolean) => void
+  highPrecision?: boolean
 }
 
 const MindARCompiler: FC<Props> = ({
   onCompileColplete,
   onCompileStateChange,
+  highPrecision = false,
 }) => {
   const [isPending, setIsPending] = useState<boolean>(false)
   const { control, handleSubmit, watch } = useForm<FileUploadFormData>({
@@ -152,7 +154,8 @@ const MindARCompiler: FC<Props> = ({
           images,
           (progressValue: number) => {
             setProgress(progressValue)
-          }
+          },
+          { highPrecision }
         )
         console.log(
           `Execution time (compile): ${performance.now() - startTime}ms`
@@ -168,7 +171,7 @@ const MindARCompiler: FC<Props> = ({
         emitCompileState(false)
       }
     },
-    [emitCompileState, onCompileColplete]
+    [emitCompileState, onCompileColplete, highPrecision]
   )
 
   // .mind 파일을 로드하는 함수

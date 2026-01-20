@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import MindARCompiler from './MindARCompiler'
+import TargetImageUpload from './TargetImageUpload'
+import ArOptionsSection from './home/ArOptionsSection'
 import HeroHeader from './home/HeroHeader'
 import InfoFooter from './home/InfoFooter'
 import PageBackground from './home/PageBackground'
@@ -8,6 +9,7 @@ import PublishSection from './home/PublishSection'
 import StepIndicator from './home/StepIndicator'
 import UploadCard from './home/UploadCard'
 import VideoUploadSection from './home/VideoUploadSection'
+import { useImageCompiler } from '../hooks/useImageCompiler'
 
 const STEPS = [
   { label: '타겟 업로드', description: '이미지 파일' },
@@ -18,7 +20,7 @@ const STEPS = [
 const stepMessageMap = {
   1: 'Step 1. 타겟 이미지를 업로드해주세요.',
   2: 'Step 2. 타겟에 재생될 영상을 업로드해주세요',
-  3: 'Step 3. 배포 준비가 완료되었습니다.',
+  3: 'Step 3. 배포 버튼을 클릭하세요.',
 }
 
 const API_URL = process.env.REACT_APP_API_URL
@@ -33,17 +35,31 @@ function isValidHexColor(color: string): boolean {
 export default function App() {
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
-  const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
-  const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
+
+  // 타겟 이미지 파일 (컴파일 전 원본)
+  const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
+
+  // 비디오 관련 상태
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoError, setVideoError] = useState<string | null>(null)
+
+  // 업로드/에러 상태
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [isCompiling, setIsCompiling] = useState(false)
+
+  // 옵션 상태
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
+  const [highPrecision, setHighPrecision] = useState(false)
+
+  // 훅
+  const { compile, isCompiling, progress: compileProgress } = useImageCompiler()
+
+  const handleTargetImageSelect = useCallback((files: File[]) => {
+    setTargetImageFiles(files)
+  }, [])
 
   const handleVideoSelect = useCallback((input: File | File[] | null) => {
     setVideoError(null)
@@ -81,7 +97,11 @@ export default function App() {
     setVideoFile(input)
   }, [])
 
-  const canPublish = targetFile !== null && videoFile !== null && (!useChromaKey || isValidHexColor(chromaKeyColor))
+  // 퍼블리시 가능 여부
+  const canPublish =
+    targetImageFiles.length > 0 &&
+    videoFile !== null &&
+    (!useChromaKey || isValidHexColor(chromaKeyColor))
 
   const handleChromaKeyColorChange = (color: string) => {
     setChromaKeyColor(color)
@@ -92,6 +112,7 @@ export default function App() {
     }
   }
 
+  // 퍼블리시: 컴파일 + 업로드 순차 실행
   const handlePublish = async () => {
     if (!canPublish || isUploading || isCompiling) return
 
@@ -101,24 +122,37 @@ export default function App() {
       return
     }
 
-    const formData = new FormData()
-    const blob = new Blob([targetFile], { type: 'application/octet-stream' })
-    formData.append('target', blob, 'targets.mind')
-    formData.append('video', videoFile)
-    // 원본 타겟 이미지 추가 (비율 계산용)
-    if (targetImageFile) {
-      formData.append('targetImage', targetImageFile)
-    }
-    // 크로마키 색상 전송
-    if (useChromaKey && chromaKeyColor) {
-      formData.append('chromaKeyColor', chromaKeyColor)
-    }
-    // 정면 고정 옵션 전송
-    if (flatView) {
-      formData.append('flatView', 'true')
-    }
-
     try {
+      setUploadError(null)
+
+      // 1. 타겟 이미지 컴파일
+      const { targetBuffer, originalImage } = await compile(targetImageFiles, {
+        highPrecision,
+      })
+
+      // 2. FormData 구성
+      const formData = new FormData()
+      const blob = new Blob([targetBuffer], { type: 'application/octet-stream' })
+      formData.append('target', blob, 'targets.mind')
+      formData.append('video', videoFile)
+
+      // 원본 타겟 이미지 추가 (비율 계산용)
+      formData.append('targetImage', originalImage)
+
+      // 크로마키 색상 전송
+      if (useChromaKey && chromaKeyColor) {
+        formData.append('chromaKeyColor', chromaKeyColor)
+      }
+      // 정면 고정 옵션 전송
+      if (flatView) {
+        formData.append('flatView', 'true')
+      }
+      // 추적 정확도 향상 옵션 전송
+      if (highPrecision) {
+        formData.append('highPrecision', 'true')
+      }
+
+      // 3. 업로드
       const res = await uploadWithProgress(formData)
       navigate(`/result/qr/${res.folderId}`)
     } catch (error) {
@@ -126,7 +160,7 @@ export default function App() {
       setUploadError(
         error instanceof Error
           ? error.message
-          : '업로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+          : '처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
       )
     }
   }
@@ -134,7 +168,6 @@ export default function App() {
   // 업로드 (진행률 표시용: XMLHttpRequest 사용)
   const uploadWithProgress = async (formData: FormData) => {
     setProgress(0)
-    setUploadError(null)
     setIsUploading(true)
     try {
       return await new Promise<{
@@ -170,26 +203,21 @@ export default function App() {
     }
   }
 
-  const handleComplieComplete = (target: ArrayBuffer, originalImage: File) => {
-    setTargetFile(target)
-    setTargetImageFile(originalImage)
-  }
-
   // 현재 스텝 계산
   const currentStep = useMemo(() => {
-    if (!targetFile) return 1
+    if (targetImageFiles.length === 0) return 1
     if (!videoFile) return 2
     return 3
-  }, [targetFile, videoFile])
+  }, [targetImageFiles.length, videoFile])
 
   // 상태 텍스트와 타입
   const { workflowStatus, statusType } = useMemo(() => {
-    if (isCompiling) return { workflowStatus: '타겟 변환 중', statusType: 'compiling' as const }
-    if (isUploading) return { workflowStatus: '업로드 중', statusType: 'uploading' as const }
+    if (isCompiling) return { workflowStatus: `타겟 변환 중 (${Math.round(compileProgress)}%)`, statusType: 'compiling' as const }
+    if (isUploading) return { workflowStatus: `업로드 중 (${progress}%)`, statusType: 'uploading' as const }
     if (uploadError) return { workflowStatus: '오류 발생', statusType: 'error' as const }
     if (canPublish) return { workflowStatus: '배포 준비 완료', statusType: 'ready' as const }
-    return { workflowStatus: '업로드를 진행해주세요', statusType: 'idle' as const }
-  }, [canPublish, isCompiling, isUploading, uploadError])
+    return { workflowStatus: '파일을 업로드해주세요', statusType: 'idle' as const }
+  }, [canPublish, isCompiling, isUploading, uploadError, compileProgress, progress])
 
   return (
     <PageBackground>
@@ -204,13 +232,25 @@ export default function App() {
             status={workflowStatus}
             statusType={statusType}
           >
-            <MindARCompiler
-              onCompileColplete={handleComplieComplete}
-              onCompileStateChange={setIsCompiling}
-            />
+            {/* AR 설정 */}
+            <div className='mb-6'>
+              <ArOptionsSection
+                highPrecision={highPrecision}
+                onHighPrecisionChange={setHighPrecision}
+              />
+            </div>
 
+            {/* 타겟 이미지 업로드 */}
+            <div className='mb-6'>
+              <TargetImageUpload
+                files={targetImageFiles}
+                onFileSelect={handleTargetImageSelect}
+              />
+            </div>
+
+            {/* 비디오 업로드 */}
             <VideoUploadSection
-              isTargetReady={Boolean(targetFile)}
+              isTargetReady={targetImageFiles.length > 0}
               videoFile={videoFile}
               onFileSelect={handleVideoSelect}
               limitMb={MAX_VIDEO_SIZE_MB}
@@ -224,10 +264,11 @@ export default function App() {
               onFlatViewChange={setFlatView}
             />
 
+            {/* 배포 섹션 */}
             <PublishSection
               canPublish={canPublish}
               onPublish={handlePublish}
-              progress={progress}
+              progress={isCompiling ? compileProgress : progress}
               isUploading={isUploading}
               isCompiling={isCompiling}
               uploadError={uploadError}

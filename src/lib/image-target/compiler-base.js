@@ -11,10 +11,18 @@ const CURRENT_VERSION = 2
 class CompilerBase {
   constructor() {
     this.data = null
+    this.options = {}
+  }
+
+  setOptions(options) {
+    this.options = options || {}
   }
 
   // input html Images
-  compileImageTargets(images, progressCallback) {
+  compileImageTargets(images, progressCallback, options = {}) {
+    // Store options for use in compilation
+    this.setOptions(options)
+
     return new Promise(async (resolve, reject) => {
       const targetImages = []
       for (let i = 0; i < images.length; i++) {
@@ -62,7 +70,7 @@ class CompilerBase {
 
       for (let i = 0; i < targetImages.length; i++) {
         const targetImage = targetImages[i]
-        const imageList = buildImageList(targetImage)
+        const imageList = buildImageList(targetImage, options)
         const percentPerAction = percentPerImage / imageList.length
         const matchingData = await _extractMatchingFeatures(
           imageList,
@@ -76,7 +84,7 @@ class CompilerBase {
       }
 
       for (let i = 0; i < targetImages.length; i++) {
-        const trackingImageList = buildTrackingImageList(targetImages[i])
+        const trackingImageList = buildTrackingImageList(targetImages[i], options)
         this.data[i].trackingImageList = trackingImageList
       }
 
@@ -84,6 +92,7 @@ class CompilerBase {
         progressCallback,
         targetImages,
         basePercent: 50,
+        options,
       })
 
       for (let i = 0; i < targetImages.length; i++) {

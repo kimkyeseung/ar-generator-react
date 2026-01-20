@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import MindARCompiler from '../components/MindARCompiler'
+import TargetImageUpload from '../components/TargetImageUpload'
+import ArOptionsSection from '../components/home/ArOptionsSection'
 import HeroHeader from '../components/home/HeroHeader'
 import InfoFooter from '../components/home/InfoFooter'
 import PageBackground from '../components/home/PageBackground'
@@ -10,11 +11,7 @@ import VideoUploadSection from '../components/home/VideoUploadSection'
 import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
-
-const stepMessageMap = {
-  1: 'Step 1. 타겟 이미지를 업로드해주세요.',
-  2: 'Step 2. 타겟에 재생될 영상을 업로드해주세요',
-}
+import { useImageCompiler } from '../hooks/useImageCompiler'
 
 const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
@@ -26,30 +23,42 @@ function isValidHexColor(color: string): boolean {
 }
 
 export default function CreateProjectPage() {
-  const [step, setStep] = useState<1 | 2>(1)
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
-  const [targetFile, setTargetFile] = useState<ArrayBuffer | null>(null)
-  const [targetImageFile, setTargetImageFile] = useState<File | null>(null)
+
+  // 타겟 이미지 파일 (컴파일 전 원본)
+  const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
+
+  // 비디오 관련 상태
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
   const [videoAspectRatio, setVideoAspectRatio] = useState<number>(1)
   const [videoError, setVideoError] = useState<string | null>(null)
+
+  // 업로드/에러 상태
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [isCompiling, setIsCompiling] = useState(false)
   const [isCompressing, setIsCompressing] = useState(false)
+
+  // 옵션 상태
   const [title, setTitle] = useState<string>('')
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
+  const [highPrecision, setHighPrecision] = useState(false)
 
   // 비밀번호 모달 상태
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
+  // 훅
   const { compressVideo, compressionProgress } = useVideoCompressor()
+  const { compile, isCompiling, progress: compileProgress } = useImageCompiler()
+
+  const handleTargetImageSelect = useCallback((files: File[]) => {
+    setTargetImageFiles(files)
+  }, [])
 
   const handleVideoSelect = useCallback(async (input: File | File[] | null) => {
     setVideoError(null)
@@ -87,7 +96,6 @@ export default function CreateProjectPage() {
         )
       } catch (err) {
         console.warn('Preview compression failed, will upload without preview:', err)
-        // 압축 실패해도 원본은 사용 가능
       } finally {
         setIsCompressing(false)
       }
@@ -112,7 +120,11 @@ export default function CreateProjectPage() {
     await processVideo(input)
   }, [compressVideo])
 
-  const canPublish = targetFile !== null && videoFile !== null && (!useChromaKey || isValidHexColor(chromaKeyColor))
+  // 퍼블리시 가능 여부: 타겟 이미지 파일 + 비디오 파일이 있어야 함
+  const canPublish =
+    targetImageFiles.length > 0 &&
+    videoFile !== null &&
+    (!useChromaKey || isValidHexColor(chromaKeyColor))
 
   const handleChromaKeyColorChange = (color: string) => {
     setChromaKeyColor(color)
@@ -137,38 +149,73 @@ export default function CreateProjectPage() {
     setShowPasswordModal(true)
   }
 
-  // 비밀번호 확인 후 실제 업로드
-  const handlePasswordSubmit = async (password: string) => {
-    if (!canPublish || !targetFile || !videoFile) return
+  // 비밀번호 검증 API 호출
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/verify-password`, {
+        method: 'POST',
+        headers: {
+          'X-Admin-Password': password,
+        },
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
 
-    const formData = new FormData()
-    const blob = new Blob([targetFile], { type: 'application/octet-stream' })
-    formData.append('target', blob, 'targets.mind')
-    formData.append('video', videoFile)
-    // 저화질 프리뷰 영상 추가 (있는 경우)
-    if (previewVideoFile) {
-      formData.append('previewVideo', previewVideoFile)
-    }
-    // 원본 타겟 이미지 추가 (썸네일용)
-    if (targetImageFile) {
-      formData.append('targetImage', targetImageFile)
-    }
-    // 비디오 비율 전송 (width=1 고정, height=종횡비)
-    formData.append('width', '1')
-    formData.append('height', videoAspectRatio.toString())
-    if (title) {
-      formData.append('title', title)
-    }
-    // 크로마키 색상 전송
-    if (useChromaKey && chromaKeyColor) {
-      formData.append('chromaKeyColor', chromaKeyColor)
-    }
-    // 정면 고정 옵션 전송
-    if (flatView) {
-      formData.append('flatView', 'true')
-    }
+  // 비밀번호 확인 후 컴파일 + 업로드 순차 실행
+  const handlePasswordSubmit = async (password: string) => {
+    if (!canPublish || targetImageFiles.length === 0 || !videoFile) return
 
     try {
+      setUploadError(null)
+
+      // 1. 비밀번호 먼저 검증
+      const isValidPassword = await verifyPassword(password)
+      if (!isValidPassword) {
+        setPasswordError('비밀번호가 올바르지 않습니다.')
+        return
+      }
+
+      // 2. 타겟 이미지 컴파일
+      const { targetBuffer, originalImage } = await compile(targetImageFiles, {
+        highPrecision,
+      })
+
+      // 3. FormData 구성
+      const formData = new FormData()
+      const blob = new Blob([targetBuffer], { type: 'application/octet-stream' })
+      formData.append('target', blob, 'targets.mind')
+      formData.append('video', videoFile)
+
+      // 저화질 프리뷰 영상 추가 (있는 경우)
+      if (previewVideoFile) {
+        formData.append('previewVideo', previewVideoFile)
+      }
+      // 원본 타겟 이미지 추가 (썸네일용)
+      formData.append('targetImage', originalImage)
+
+      // 비디오 비율 전송 (width=1 고정, height=종횡비)
+      formData.append('width', '1')
+      formData.append('height', videoAspectRatio.toString())
+      if (title) {
+        formData.append('title', title)
+      }
+      // 크로마키 색상 전송
+      if (useChromaKey && chromaKeyColor) {
+        formData.append('chromaKeyColor', chromaKeyColor)
+      }
+      // 정면 고정 옵션 전송
+      if (flatView) {
+        formData.append('flatView', 'true')
+      }
+      // 추적 정확도 향상 옵션 전송
+      if (highPrecision) {
+        formData.append('highPrecision', 'true')
+      }
+
+      // 4. 업로드
       const res = await uploadWithProgress(formData, password)
       setShowPasswordModal(false)
       navigate(`/result/qr/${res.folderId}`)
@@ -177,7 +224,7 @@ export default function CreateProjectPage() {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : '업로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+          : '처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
 
       // 비밀번호 오류인 경우 모달에 표시
       if (errorMessage.includes('401') || errorMessage.includes('비밀번호')) {
@@ -192,7 +239,6 @@ export default function CreateProjectPage() {
   // 업로드 (진행률 표시용: XMLHttpRequest 사용)
   const uploadWithProgress = async (formData: FormData, password: string) => {
     setProgress(0)
-    setUploadError(null)
     setIsUploading(true)
     try {
       return await new Promise<{
@@ -231,19 +277,25 @@ export default function CreateProjectPage() {
     }
   }
 
-  const handleComplieComplete = (target: ArrayBuffer, originalImage: File) => {
-    setTargetFile(target)
-    setTargetImageFile(originalImage)
-    setStep(2)
-  }
+  // 현재 단계 메시지
+  const stepMessage = useMemo(() => {
+    if (targetImageFiles.length === 0) {
+      return 'Step 1. 타겟 이미지를 업로드해주세요.'
+    }
+    if (!videoFile) {
+      return 'Step 2. 타겟에 재생될 영상을 업로드해주세요.'
+    }
+    return 'Step 3. 배포 버튼을 클릭하세요.'
+  }, [targetImageFiles.length, videoFile])
 
+  // 워크플로우 상태
   const workflowStatus = useMemo(() => {
-    if (isCompiling) return '타겟 변환 중'
+    if (isCompiling) return `타겟 변환 중 (${Math.round(compileProgress)}%)`
     if (isCompressing) return compressionProgress?.message || '영상 압축 중'
-    if (isUploading) return '업로드 중'
+    if (isUploading) return `업로드 중 (${progress}%)`
     if (canPublish) return '배포 준비 완료'
-    return '업로드를 진행해주세요'
-  }, [canPublish, isCompiling, isCompressing, isUploading, compressionProgress])
+    return '파일을 업로드해주세요'
+  }, [canPublish, isCompiling, isCompressing, isUploading, compileProgress, compressionProgress, progress])
 
   return (
     <PageBackground>
@@ -262,7 +314,7 @@ export default function CreateProjectPage() {
           <HeroHeader />
 
           <UploadCard
-            stepMessage={stepMessageMap[step]}
+            stepMessage={stepMessage}
             status={workflowStatus}
           >
             {/* 프로젝트 제목 입력 */}
@@ -279,13 +331,25 @@ export default function CreateProjectPage() {
               />
             </div>
 
-            <MindARCompiler
-              onCompileColplete={handleComplieComplete}
-              onCompileStateChange={setIsCompiling}
-            />
+            {/* AR 설정 */}
+            <div className='mb-6'>
+              <ArOptionsSection
+                highPrecision={highPrecision}
+                onHighPrecisionChange={setHighPrecision}
+              />
+            </div>
 
+            {/* 타겟 이미지 업로드 */}
+            <div className='mb-6'>
+              <TargetImageUpload
+                files={targetImageFiles}
+                onFileSelect={handleTargetImageSelect}
+              />
+            </div>
+
+            {/* 비디오 업로드 */}
             <VideoUploadSection
-              isTargetReady={Boolean(targetFile)}
+              isTargetReady={targetImageFiles.length > 0}
               videoFile={videoFile}
               onFileSelect={handleVideoSelect}
               limitMb={MAX_VIDEO_SIZE_MB}
@@ -299,10 +363,11 @@ export default function CreateProjectPage() {
               onFlatViewChange={setFlatView}
             />
 
+            {/* 배포 섹션 */}
             <PublishSection
               canPublish={canPublish}
               onPublish={handlePublishClick}
-              progress={progress}
+              progress={isCompiling ? compileProgress : progress}
               isUploading={isUploading}
               isCompiling={isCompiling}
               isCompressing={isCompressing}
@@ -323,7 +388,7 @@ export default function CreateProjectPage() {
           setPasswordError(null)
         }}
         onSubmit={handlePasswordSubmit}
-        isLoading={isUploading}
+        isLoading={isUploading || isCompiling}
         error={passwordError}
       />
     </PageBackground>

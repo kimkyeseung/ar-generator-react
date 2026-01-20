@@ -49,6 +49,7 @@ interface Props {
   targetImageUrl: string
   chromaKeyColor?: string
   flatView?: boolean
+  highPrecision?: boolean
 }
 
 // billboard 컴포넌트를 모듈 로드 시점에 미리 등록 (flatView용)
@@ -168,6 +169,7 @@ const MindARViewer: React.FC<Props> = ({
   targetImageUrl,
   chromaKeyColor,
   flatView,
+  highPrecision,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
   const isRestartingRef = useRef(false)
@@ -566,7 +568,7 @@ const MindARViewer: React.FC<Props> = ({
         className='h-full w-full'
         style={{ width: '100%', height: '100%' }}
         ref={sceneRef}
-        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`}
+        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;${highPrecision ? ' warmupTolerance: 2; missTolerance: 8; filterMinCF: 0.0001;' : ''}`}
         assettimeout='15000'
         color-space='sRGB'
         embedded

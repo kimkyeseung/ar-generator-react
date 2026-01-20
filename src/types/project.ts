@@ -10,6 +10,7 @@ export interface Project {
   description: string | null
   chromaKeyColor: string | null
   flatView: boolean
+  highPrecision: boolean
   createdAt: string
   updatedAt: string
 }

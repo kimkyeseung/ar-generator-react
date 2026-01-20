@@ -12,6 +12,7 @@ interface ArFilesResponse {
   targetImageFileId?: string
   chromaKeyColor?: string
   flatView?: boolean
+  highPrecision?: boolean
 }
 
 interface ArAssets {
@@ -130,6 +131,7 @@ export default function MindARViewerPage() {
           targetImageUrl={data.assets.targetImageUrl}
           chromaKeyColor={data.fileIds.chromaKeyColor}
           flatView={data.fileIds.flatView}
+          highPrecision={data.fileIds.highPrecision}
         />
       </div>
     </section>

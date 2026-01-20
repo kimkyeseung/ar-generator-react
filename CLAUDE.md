@@ -29,23 +29,32 @@ npm test                 # 테스트 실행
 ```
 src/
 ├── components/
-│   ├── MindARCompiler.tsx    # 이미지 → .mind 파일 컴파일
-│   ├── MindarViewer.tsx      # AR 뷰어 (MindAR + A-Frame)
-│   ├── PasswordModal.tsx     # 관리자 비밀번호 입력 모달
-│   ├── Home.tsx              # 메인 업로드 페이지
-│   └── VideoUploadSection.tsx # 비디오 업로드 UI
+│   ├── MindARCompiler.tsx      # 이미지 → .mind 파일 컴파일 (레거시)
+│   ├── MindarViewer.tsx        # AR 뷰어 (MindAR + A-Frame)
+│   ├── PasswordModal.tsx       # 관리자 비밀번호 입력 모달
+│   ├── Home.tsx                # 메인 업로드 페이지
+│   ├── TargetImageUpload.tsx   # 타겟 이미지 업로드 UI
+│   └── home/                   # Home 페이지 하위 컴포넌트
+│       ├── ArOptionsSection.tsx    # AR 옵션 설정 (추적 정확도 등)
+│       ├── VideoUploadSection.tsx  # 비디오 업로드 UI
+│       ├── PublishSection.tsx      # 발행 버튼 섹션
+│       ├── StepIndicator.tsx       # 단계 표시기
+│       └── ...                     # 기타 UI 컴포넌트
 ├── pages/
-│   ├── CreateProjectPage.tsx # 프로젝트 생성 페이지
-│   ├── EditProjectPage.tsx   # 프로젝트 편집 페이지
-│   └── ProjectListPage.tsx   # 프로젝트 목록 페이지
+│   ├── CreateProjectPage.tsx   # 프로젝트 생성 페이지
+│   ├── EditProjectPage.tsx     # 프로젝트 편집 페이지
+│   └── ProjectListPage.tsx     # 프로젝트 목록 페이지
 ├── hooks/
-│   └── useVideoCompressor.ts # ffmpeg.wasm 비디오 압축 훅
+│   ├── useVideoCompressor.ts   # ffmpeg.wasm 비디오 압축 훅
+│   └── useImageCompiler.ts     # 이미지 타겟 컴파일 훅
 ├── lib/
-│   └── image-target/         # 커스텀 MindAR 라이브러리 (카메라 해상도 수정)
-├── MindARViewerPage.tsx      # AR 뷰어 페이지
-└── App.tsx                   # 라우팅
+│   └── image-target/           # 커스텀 MindAR 라이브러리 (카메라 해상도 수정)
+├── MindARViewerPage.tsx        # AR 뷰어 페이지
+└── App.tsx                     # 라우팅
+e2e/
+└── app.spec.ts                 # Playwright E2E 테스트
 vendor/
-└── mind-ar/                  # 로컬 MindAR 패키지 (npm link)
+└── mind-ar/                    # 로컬 MindAR 패키지 (npm link)
 ```
 
 ## Key Components
@@ -65,6 +74,12 @@ vendor/
 - UMD 빌드 사용 (`@ffmpeg/core@0.12.6/dist/umd`)
 - 압축 설정: 480p, CRF 35, ultrafast preset, 64kbps 오디오
 - AR 뷰어에서 프리뷰 먼저 로드 후 HD로 전환
+
+### useImageCompiler Hook
+- 이미지 파일을 `.mind` 파일로 컴파일하는 훅
+- `compile(files, options)` 함수 제공
+- `highPrecision` 옵션: 추적 정확도 향상 (컴파일 시간 증가)
+- 진행률(progress)과 상태(isCompiling) 제공
 
 ## Environment Variables
 
@@ -90,6 +105,11 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 - HEX 색상 코드로 키 색상 지정 (예: #00FF00)
 - similarity, smoothness 파라미터 조절 가능
 
+### High Precision Tracking (추적 정확도 향상)
+- `highPrecision: true` 설정 시 활성화
+- 컴파일 시 더 많은 특징점 추출 (컴파일 시간 증가)
+- 복잡한 이미지나 저조도 환경에서 추적 안정성 향상
+
 ## Technical Notes
 
 - 비디오 크기 제한: 32MB
@@ -98,15 +118,22 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 - ffmpeg.wasm은 UMD 빌드 사용 (ESM 모듈 문제 회피)
 - 카메라 해상도: 1920x1080 (Full HD) - `src/lib/image-target/aframe.js`에서 설정
 - 프로젝트 생성/편집/삭제 시 관리자 비밀번호 필요 (`X-Admin-Password` 헤더)
+- 발행 시 컴파일+업로드가 한 번에 실행됨 (1-click flow)
 
 ## Testing
 
 ```bash
-npm test                           # 전체 테스트
+npm test                           # 전체 유닛 테스트
 npm test -- --testPathPattern=useVideoCompressor  # 특정 테스트
+npm run test:e2e                   # E2E 테스트 (Playwright)
+npm run test:e2e:ui                # E2E 테스트 UI 모드
 ```
 
 주요 테스트 파일:
 - `useVideoCompressor.test.tsx` - 압축 훅 테스트
+- `useImageCompiler.test.tsx` - 이미지 컴파일 훅 테스트
 - `MindarViewer.test.tsx` - AR 뷰어 테스트
 - `Home.test.tsx` - 업로드 페이지 테스트
+- `TargetImageUpload.test.tsx` - 타겟 이미지 업로드 테스트
+- `CreateProjectPage.test.tsx` - 프로젝트 생성 페이지 테스트
+- `e2e/app.spec.ts` - E2E 테스트 (Playwright)

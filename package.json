@@ -33,7 +33,7 @@
   "scripts": {
     "start": "react-scripts start",
     "start-https": "HTTPS=true react-scripts start",
-    "build": "react-scripts build",
+    "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",

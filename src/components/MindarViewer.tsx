@@ -33,14 +33,28 @@ const SpeakerIcon: React.FC<{ muted: boolean }> = ({ muted }) => (
   </svg>
 )
 
+type OneEuroFilter = {
+  minCutOff: number
+  beta: number
+  reset: () => void
+}
+
+type TrackingState = {
+  showing: boolean
+  isTracking: boolean
+  filter: OneEuroFilter
+}
+
+type MindARController = {
+  filterMinCF: number
+  filterBeta: number
+  trackingStates: TrackingState[]
+}
+
 type MindARSystem = {
   start: () => void
   stop: () => void
-  controller?: {
-    filterMinCF?: number
-    filterBeta?: number
-    onUpdate?: (data: { hasFace: boolean; estimateResult: unknown }) => void
-  }
+  controller?: MindARController
 }
 
 type MindARScene = HTMLElement & {
@@ -204,19 +218,29 @@ const MindARViewer: React.FC<Props> = ({
     const arSystem = sceneEl.systems?.['mindar-image-system'] as MindARSystem | undefined
     if (!arSystem?.controller) return
 
-    if (stabilizationEnabled) {
-      arSystem.controller.filterMinCF = filterMinCF
-      arSystem.controller.filterBeta = filterBeta
-    } else {
-      // 필터 비활성화: 매우 높은 값으로 설정하면 거의 필터링 없음
-      arSystem.controller.filterMinCF = 1000
-      arSystem.controller.filterBeta = 0
+    const { controller } = arSystem
+    const newMinCF = stabilizationEnabled ? filterMinCF : 1000
+    const newBeta = stabilizationEnabled ? filterBeta : 0
+
+    // 컨트롤러 속성 업데이트
+    controller.filterMinCF = newMinCF
+    controller.filterBeta = newBeta
+
+    // 각 트래킹 상태의 필터 인스턴스 직접 업데이트
+    if (controller.trackingStates) {
+      controller.trackingStates.forEach((state) => {
+        if (state.filter) {
+          state.filter.minCutOff = newMinCF
+          state.filter.beta = newBeta
+        }
+      })
     }
 
     console.log('[Debug] Filter updated:', {
       stabilizationEnabled,
-      filterMinCF: arSystem.controller.filterMinCF,
-      filterBeta: arSystem.controller.filterBeta,
+      minCutOff: newMinCF,
+      beta: newBeta,
+      trackingStatesCount: controller.trackingStates?.length ?? 0,
     })
   }, [debugMode, stabilizationEnabled, filterMinCF, filterBeta])
 

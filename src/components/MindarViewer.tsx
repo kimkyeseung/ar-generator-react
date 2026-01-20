@@ -33,12 +33,19 @@ const SpeakerIcon: React.FC<{ muted: boolean }> = ({ muted }) => (
   </svg>
 )
 
+type MindARSystem = {
+  start: () => void
+  stop: () => void
+  controller?: {
+    filterMinCF?: number
+    filterBeta?: number
+    onUpdate?: (data: { hasFace: boolean; estimateResult: unknown }) => void
+  }
+}
+
 type MindARScene = HTMLElement & {
   systems: {
-    ['mindar-image-system']?: {
-      start: () => void
-      stop: () => void
-    }
+    ['mindar-image-system']?: MindARSystem
   }
 }
 
@@ -186,6 +193,32 @@ const MindARViewer: React.FC<Props> = ({
   const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
   const [filterMinCF, setFilterMinCF] = useState(0.001)
   const [filterBeta, setFilterBeta] = useState(10)
+
+  // 디버그 모드: 필터 파라미터 실시간 업데이트
+  useEffect(() => {
+    if (!debugMode) return
+
+    const sceneEl = sceneRef.current
+    if (!sceneEl) return
+
+    const arSystem = sceneEl.systems?.['mindar-image-system'] as MindARSystem | undefined
+    if (!arSystem?.controller) return
+
+    if (stabilizationEnabled) {
+      arSystem.controller.filterMinCF = filterMinCF
+      arSystem.controller.filterBeta = filterBeta
+    } else {
+      // 필터 비활성화: 매우 높은 값으로 설정하면 거의 필터링 없음
+      arSystem.controller.filterMinCF = 1000
+      arSystem.controller.filterBeta = 0
+    }
+
+    console.log('[Debug] Filter updated:', {
+      stabilizationEnabled,
+      filterMinCF: arSystem.controller.filterMinCF,
+      filterBeta: arSystem.controller.filterBeta,
+    })
+  }, [debugMode, stabilizationEnabled, filterMinCF, filterBeta])
 
   // 스피커 버튼 클릭 핸들러
   const handleToggleMute = useCallback(async () => {
@@ -637,7 +670,7 @@ const MindARViewer: React.FC<Props> = ({
             )}
 
             <p className="text-xs text-gray-400">
-              * 설정 변경 후 페이지 새로고침 필요
+              * 실시간 반영됨
             </p>
           </div>
         </div>

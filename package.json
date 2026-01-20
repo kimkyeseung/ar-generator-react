@@ -12,6 +12,7 @@
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
     "aframe": "^1.4.2",
+    "canvas": "^2.11.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fflate": "^0.8.2",
@@ -44,6 +45,15 @@
       "react-app/jest"
     ]
   },
+  "jest": {
+    "moduleNameMapper": {
+      "^canvas$": "<rootDir>/__mocks__/canvas.js",
+      "canvas/lib/bindings": "<rootDir>/__mocks__/canvas.js"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(canvas)/)"
+    ]
+  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -67,6 +77,7 @@
     "@types/three": "^0.165.0",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
+    "jest-canvas-mock": "^2.5.2",
     "postcss": "^8.5.6",
     "prettier-plugin-tailwindcss": "^0.7.1",
     "tailwindcss": "^3.4.14",

@@ -175,6 +175,51 @@ describe('MindARViewer', () => {
     })
   })
 
+  describe('highPrecision prop', () => {
+    it('should not include precision parameters when highPrecision is false', () => {
+      const MindARViewer = MindARViewerModule().default
+      const { container } = render(
+        <MindARViewer {...defaultProps} highPrecision={false} />
+      )
+
+      const scene = container.querySelector('a-scene')
+      const mindarConfig = scene?.getAttribute('mindar-image')
+
+      // Should not contain high precision parameters
+      expect(mindarConfig).not.toContain('warmupTolerance')
+      expect(mindarConfig).not.toContain('missTolerance')
+      expect(mindarConfig).not.toContain('filterMinCF')
+    })
+
+    it('should include precision parameters when highPrecision is true', () => {
+      const MindARViewer = MindARViewerModule().default
+      const { container } = render(
+        <MindARViewer {...defaultProps} highPrecision={true} />
+      )
+
+      const scene = container.querySelector('a-scene')
+      const mindarConfig = scene?.getAttribute('mindar-image')
+
+      // Should contain high precision parameters
+      expect(mindarConfig).toContain('warmupTolerance: 2')
+      expect(mindarConfig).toContain('missTolerance: 8')
+      expect(mindarConfig).toContain('filterMinCF: 0.0001')
+    })
+
+    it('should use default settings when highPrecision is undefined', () => {
+      const MindARViewer = MindARViewerModule().default
+      const { container } = render(<MindARViewer {...defaultProps} />)
+
+      const scene = container.querySelector('a-scene')
+      const mindarConfig = scene?.getAttribute('mindar-image')
+
+      // Should not contain high precision parameters when undefined
+      expect(mindarConfig).not.toContain('warmupTolerance')
+      expect(mindarConfig).not.toContain('missTolerance')
+      expect(mindarConfig).not.toContain('filterMinCF')
+    })
+  })
+
   describe('previewVideoUrl prop', () => {
     it('should render with only videoUrl when previewVideoUrl is not provided', () => {
       const MindARViewer = MindARViewerModule().default

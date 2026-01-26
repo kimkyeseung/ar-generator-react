@@ -12,7 +12,7 @@
 
 **Created**: 2025-01-26
 **Last Updated**: 2025-01-26
-**Status**: Planning
+**Status**: ✅ Completed
 **Estimated Scope**: Medium (5 phases, 10-15 hours)
 
 ---
@@ -287,7 +287,25 @@ npm run test:e2e
 
 ## Notes & Learnings
 
-*(각 페이즈 완료 후 학습 내용 기록)*
+### Phase 1
+- TypeScript Union 타입 (`'ar' | 'basic'`)으로 모드 구분
+- VideoPosition은 0~1 범위의 비율로 저장 (반응형 대응)
+
+### Phase 2
+- 드래그 제스처: `onMouseDown/Move/Up` + `onTouchStart/Move/End`
+- 스케일: 마우스 휠 + 슬라이더 (모바일/데스크탑 동시 지원)
+
+### Phase 3
+- Canvas 2D 크로마키가 WebGL보다 구현이 간단하고 호환성 좋음
+- iOS에서 비디오 자동재생 위해 `muted` 필수
+
+### Phase 4
+- 기본 모드에서는 `.mind` 파일 불필요 → `mindFileId` optional 처리
+- 조건부 렌더링으로 뷰어 분기 (BasicModeViewer vs MindARViewer)
+
+### Phase 5
+- 모드 뱃지로 프로젝트 구분 시각화
+- 백엔드 API 수정은 별도 작업 필요 (ar-generator-server)
 
 ---
 
@@ -295,8 +313,8 @@ npm run test:e2e
 
 | Phase | Status | Started | Completed | Notes |
 |-------|--------|---------|-----------|-------|
-| 1 | 대기 | - | - | - |
-| 2 | 대기 | - | - | - |
-| 3 | 대기 | - | - | - |
-| 4 | 대기 | - | - | - |
-| 5 | 대기 | - | - | - |
+| 1 | ✅ 완료 | 2025-01-26 | 2025-01-26 | 데이터 모델 확장, ModeSelector 컴포넌트 생성 |
+| 2 | ✅ 완료 | 2025-01-26 | 2025-01-26 | VideoPositionEditor 드래그/스케일 구현 |
+| 3 | ✅ 완료 | 2025-01-26 | 2025-01-26 | BasicModeViewer, Canvas 2D 크로마키 |
+| 4 | ✅ 완료 | 2025-01-26 | 2025-01-26 | MindARViewerPage 모드 분기 처리 |
+| 5 | ✅ 완료 | 2025-01-26 | 2025-01-26 | 모드 뱃지, 문서 업데이트 |

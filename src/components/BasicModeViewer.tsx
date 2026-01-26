@@ -57,7 +57,7 @@ const BasicModeViewer: React.FC<Props> = ({
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const [isMuted, setIsMuted] = useState(isIOS())
+  const [isMuted, setIsMuted] = useState(true) // 항상 음소거로 시작 (자동 재생 지원)
   const [isLoading, setIsLoading] = useState(true)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl)

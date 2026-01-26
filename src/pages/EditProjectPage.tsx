@@ -468,10 +468,11 @@ export default function EditProjectPage() {
             </div>
 
             {/* 비디오 위치/크기 조정 (기본 모드에서만) */}
-            {mode === 'basic' && videoFile && (
+            {mode === 'basic' && (videoFile || project.videoFileId) && (
               <div className='mb-6'>
                 <VideoPositionEditor
-                  videoFile={videoFile}
+                  videoFile={videoFile ?? undefined}
+                  videoSrc={!videoFile && project.videoFileId ? `${API_URL}/file/${project.videoFileId}` : undefined}
                   position={videoPosition}
                   scale={videoScale}
                   onPositionChange={setVideoPosition}

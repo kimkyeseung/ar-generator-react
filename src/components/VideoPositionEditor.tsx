@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { VideoPosition } from '../types/project'
 
 interface VideoPositionEditorProps {
-  videoFile: File
+  videoFile?: File // 새로 업로드한 비디오 파일
+  videoSrc?: string // 기존 비디오 URL (서버에서 가져온 경우)
   position: VideoPosition
   scale: number
   onPositionChange: (position: VideoPosition) => void
@@ -18,6 +19,7 @@ type DragMode = 'none' | 'pan' | 'resize'
 
 export default function VideoPositionEditor({
   videoFile,
+  videoSrc,
   position,
   scale,
   onPositionChange,
@@ -36,10 +38,20 @@ export default function VideoPositionEditor({
 
   // 비디오 URL 생성
   useEffect(() => {
-    const url = URL.createObjectURL(videoFile)
-    setVideoUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [videoFile])
+    // videoSrc가 있으면 그것을 사용 (기존 비디오 URL)
+    if (videoSrc) {
+      setVideoUrl(videoSrc)
+      return
+    }
+    // videoFile이 있으면 ObjectURL 생성 (새로 업로드한 파일)
+    if (videoFile) {
+      const url = URL.createObjectURL(videoFile)
+      setVideoUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    // 둘 다 없으면 null
+    setVideoUrl(null)
+  }, [videoFile, videoSrc])
 
   // 카메라 시작
   useEffect(() => {

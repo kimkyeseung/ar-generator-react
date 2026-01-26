@@ -4,6 +4,7 @@ import TargetImageUpload from '../components/TargetImageUpload'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import HeroHeader from '../components/home/HeroHeader'
 import InfoFooter from '../components/home/InfoFooter'
+import ModeSelector from '../components/home/ModeSelector'
 import PageBackground from '../components/home/PageBackground'
 import PublishSection from '../components/home/PublishSection'
 import UploadCard from '../components/home/UploadCard'
@@ -12,6 +13,7 @@ import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
+import { ProjectMode } from '../types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
@@ -26,7 +28,10 @@ export default function CreateProjectPage() {
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
 
-  // 타겟 이미지 파일 (컴파일 전 원본)
+  // 모드 선택 (AR 모드 / 기본 모드)
+  const [mode, setMode] = useState<ProjectMode>('ar')
+
+  // 타겟 이미지 파일 (컴파일 전 원본) - AR 모드에서만 사용
   const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
 
   // 비디오 관련 상태
@@ -120,11 +125,19 @@ export default function CreateProjectPage() {
     await processVideo(input)
   }, [compressVideo])
 
-  // 퍼블리시 가능 여부: 타겟 이미지 파일 + 비디오 파일이 있어야 함
-  const canPublish =
-    targetImageFiles.length > 0 &&
-    videoFile !== null &&
-    (!useChromaKey || isValidHexColor(chromaKeyColor))
+  // 퍼블리시 가능 여부
+  // AR 모드: 타겟 이미지 파일 + 비디오 파일 필요
+  // 기본 모드: 비디오 파일만 필요
+  const canPublish = useMemo(() => {
+    const hasVideo = videoFile !== null
+    const hasValidChromaKey = !useChromaKey || isValidHexColor(chromaKeyColor)
+
+    if (mode === 'ar') {
+      return targetImageFiles.length > 0 && hasVideo && hasValidChromaKey
+    }
+    // 기본 모드
+    return hasVideo && hasValidChromaKey
+  }, [mode, targetImageFiles.length, videoFile, useChromaKey, chromaKeyColor])
 
   const handleChromaKeyColorChange = (color: string) => {
     setChromaKeyColor(color)
@@ -166,7 +179,9 @@ export default function CreateProjectPage() {
 
   // 비밀번호 확인 후 컴파일 + 업로드 순차 실행
   const handlePasswordSubmit = async (password: string) => {
-    if (!canPublish || targetImageFiles.length === 0 || !videoFile) return
+    if (!canPublish || !videoFile) return
+    // AR 모드에서는 타겟 이미지 필수
+    if (mode === 'ar' && targetImageFiles.length === 0) return
 
     try {
       setUploadError(null)
@@ -181,23 +196,26 @@ export default function CreateProjectPage() {
       // 비밀번호 확인 성공 - 모달 닫기
       setShowPasswordModal(false)
 
-      // 2. 타겟 이미지 컴파일
-      const { targetBuffer, originalImage } = await compile(targetImageFiles, {
-        highPrecision,
-      })
-
-      // 3. FormData 구성
+      // 2. FormData 구성
       const formData = new FormData()
-      const blob = new Blob([targetBuffer], { type: 'application/octet-stream' })
-      formData.append('target', blob, 'targets.mind')
+
+      // AR 모드: 타겟 이미지 컴파일 필요
+      if (mode === 'ar') {
+        const { targetBuffer, originalImage } = await compile(targetImageFiles, {
+          highPrecision,
+        })
+        const blob = new Blob([targetBuffer], { type: 'application/octet-stream' })
+        formData.append('target', blob, 'targets.mind')
+        formData.append('targetImage', originalImage)
+      }
+
       formData.append('video', videoFile)
+      formData.append('mode', mode)
 
       // 저화질 프리뷰 영상 추가 (있는 경우)
       if (previewVideoFile) {
         formData.append('previewVideo', previewVideoFile)
       }
-      // 원본 타겟 이미지 추가 (썸네일용)
-      formData.append('targetImage', originalImage)
 
       // 비디오 비율 전송 (width=1 고정, height=종횡비)
       formData.append('width', '1')
@@ -209,16 +227,16 @@ export default function CreateProjectPage() {
       if (useChromaKey && chromaKeyColor) {
         formData.append('chromaKeyColor', chromaKeyColor)
       }
-      // 정면 고정 옵션 전송
-      if (flatView) {
+      // 정면 고정 옵션 전송 (AR 모드에서만)
+      if (mode === 'ar' && flatView) {
         formData.append('flatView', 'true')
       }
-      // 추적 정확도 향상 옵션 전송
-      if (highPrecision) {
+      // 추적 정확도 향상 옵션 전송 (AR 모드에서만)
+      if (mode === 'ar' && highPrecision) {
         formData.append('highPrecision', 'true')
       }
 
-      // 4. 업로드
+      // 3. 업로드
       const res = await uploadWithProgress(formData, password)
       navigate(`/result/qr/${res.folderId}`)
     } catch (error) {
@@ -275,14 +293,21 @@ export default function CreateProjectPage() {
 
   // 현재 단계 메시지
   const stepMessage = useMemo(() => {
-    if (targetImageFiles.length === 0) {
-      return 'Step 1. 타겟 이미지를 업로드해주세요.'
+    if (mode === 'ar') {
+      if (targetImageFiles.length === 0) {
+        return 'Step 1. 타겟 이미지를 업로드해주세요.'
+      }
+      if (!videoFile) {
+        return 'Step 2. 타겟에 재생될 영상을 업로드해주세요.'
+      }
+      return 'Step 3. 배포 버튼을 클릭하세요.'
     }
+    // 기본 모드
     if (!videoFile) {
-      return 'Step 2. 타겟에 재생될 영상을 업로드해주세요.'
+      return 'Step 1. 재생할 영상을 업로드해주세요.'
     }
-    return 'Step 3. 배포 버튼을 클릭하세요.'
-  }, [targetImageFiles.length, videoFile])
+    return 'Step 2. 배포 버튼을 클릭하세요.'
+  }, [mode, targetImageFiles.length, videoFile])
 
   // 워크플로우 상태
   const workflowStatus = useMemo(() => {
@@ -327,25 +352,38 @@ export default function CreateProjectPage() {
               />
             </div>
 
-            {/* AR 설정 */}
+            {/* 모드 선택 */}
             <div className='mb-6'>
-              <ArOptionsSection
-                highPrecision={highPrecision}
-                onHighPrecisionChange={setHighPrecision}
+              <ModeSelector
+                mode={mode}
+                onModeChange={setMode}
+                disabled={isUploading || isCompiling || isCompressing}
               />
             </div>
 
-            {/* 타겟 이미지 업로드 */}
-            <div className='mb-6'>
-              <TargetImageUpload
-                files={targetImageFiles}
-                onFileSelect={handleTargetImageSelect}
-              />
-            </div>
+            {/* AR 설정 - AR 모드에서만 표시 */}
+            {mode === 'ar' && (
+              <div className='mb-6'>
+                <ArOptionsSection
+                  highPrecision={highPrecision}
+                  onHighPrecisionChange={setHighPrecision}
+                />
+              </div>
+            )}
+
+            {/* 타겟 이미지 업로드 - AR 모드에서만 표시 */}
+            {mode === 'ar' && (
+              <div className='mb-6'>
+                <TargetImageUpload
+                  files={targetImageFiles}
+                  onFileSelect={handleTargetImageSelect}
+                />
+              </div>
+            )}
 
             {/* 비디오 업로드 */}
             <VideoUploadSection
-              isTargetReady={targetImageFiles.length > 0}
+              isTargetReady={mode === 'basic' || targetImageFiles.length > 0}
               videoFile={videoFile}
               onFileSelect={handleVideoSelect}
               limitMb={MAX_VIDEO_SIZE_MB}
@@ -357,6 +395,7 @@ export default function CreateProjectPage() {
               chromaKeyError={chromaKeyError}
               flatView={flatView}
               onFlatViewChange={setFlatView}
+              showFlatView={mode === 'ar'}
             />
 
             {/* 배포 섹션 */}

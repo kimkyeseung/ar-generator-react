@@ -15,6 +15,7 @@ type VideoUploadSectionProps = {
   chromaKeyError: string | null
   flatView: boolean
   onFlatViewChange: (value: boolean) => void
+  showFlatView?: boolean // AR 모드에서만 표시
 }
 
 // 유효한 hex 색상인지 검증
@@ -35,6 +36,7 @@ export default function VideoUploadSection({
   chromaKeyError,
   flatView,
   onFlatViewChange,
+  showFlatView = true,
 }: VideoUploadSectionProps) {
   if (!isTargetReady) {
     return (
@@ -61,26 +63,28 @@ export default function VideoUploadSection({
       />
       <VideoLimitNotice limitMb={limitMb} />
 
-      {/* AR 옵션 설정 */}
+      {/* 영상 옵션 설정 */}
       <div className='rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4'>
-        {/* 정면 고정 옵션 */}
-        <div className='flex items-start gap-3'>
-          <input
-            type='checkbox'
-            id='flat-view'
-            checked={flatView}
-            onChange={(e) => onFlatViewChange(e.target.checked)}
-            className='h-4 w-4 mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500'
-          />
-          <div>
-            <label htmlFor='flat-view' className='text-sm font-medium text-gray-700'>
-              항상 정면으로 표시
-            </label>
-            <p className='text-xs text-gray-500 mt-1'>
-              타겟 이미지의 기울기에 상관없이 영상이 항상 카메라를 향해 정면으로 표시됩니다.
-            </p>
+        {/* 정면 고정 옵션 - AR 모드에서만 표시 */}
+        {showFlatView && (
+          <div className='flex items-start gap-3'>
+            <input
+              type='checkbox'
+              id='flat-view'
+              checked={flatView}
+              onChange={(e) => onFlatViewChange(e.target.checked)}
+              className='h-4 w-4 mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500'
+            />
+            <div>
+              <label htmlFor='flat-view' className='text-sm font-medium text-gray-700'>
+                항상 정면으로 표시
+              </label>
+              <p className='text-xs text-gray-500 mt-1'>
+                타겟 이미지의 기울기에 상관없이 영상이 항상 카메라를 향해 정면으로 표시됩니다.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 크로마키 설정 */}
         <div className='flex items-center gap-3'>

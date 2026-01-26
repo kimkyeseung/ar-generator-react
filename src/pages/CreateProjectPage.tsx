@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TargetImageUpload from '../components/TargetImageUpload'
+import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import HeroHeader from '../components/home/HeroHeader'
 import InfoFooter from '../components/home/InfoFooter'
@@ -13,7 +14,7 @@ import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
-import { ProjectMode } from '../types/project'
+import { ProjectMode, VideoPosition } from '../types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
@@ -39,6 +40,10 @@ export default function CreateProjectPage() {
   const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
   const [videoAspectRatio, setVideoAspectRatio] = useState<number>(1)
   const [videoError, setVideoError] = useState<string | null>(null)
+
+  // 기본 모드: 비디오 위치/크기
+  const [videoPosition, setVideoPosition] = useState<VideoPosition>({ x: 0.5, y: 0.5 })
+  const [videoScale, setVideoScale] = useState<number>(1)
 
   // 업로드/에러 상태
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -235,6 +240,11 @@ export default function CreateProjectPage() {
       if (mode === 'ar' && highPrecision) {
         formData.append('highPrecision', 'true')
       }
+      // 기본 모드: 비디오 위치/크기 전송
+      if (mode === 'basic') {
+        formData.append('videoPosition', JSON.stringify(videoPosition))
+        formData.append('videoScale', videoScale.toString())
+      }
 
       // 3. 업로드
       const res = await uploadWithProgress(formData, password)
@@ -306,7 +316,7 @@ export default function CreateProjectPage() {
     if (!videoFile) {
       return 'Step 1. 재생할 영상을 업로드해주세요.'
     }
-    return 'Step 2. 배포 버튼을 클릭하세요.'
+    return 'Step 2. 영상 위치를 조정하고 배포 버튼을 클릭하세요.'
   }, [mode, targetImageFiles.length, videoFile])
 
   // 워크플로우 상태
@@ -397,6 +407,20 @@ export default function CreateProjectPage() {
               onFlatViewChange={setFlatView}
               showFlatView={mode === 'ar'}
             />
+
+            {/* 기본 모드: 비디오 위치/크기 편집 */}
+            {mode === 'basic' && videoFile && (
+              <div className='mt-6'>
+                <VideoPositionEditor
+                  videoFile={videoFile}
+                  position={videoPosition}
+                  scale={videoScale}
+                  onPositionChange={setVideoPosition}
+                  onScaleChange={setVideoScale}
+                  chromaKeyColor={useChromaKey ? chromaKeyColor : undefined}
+                />
+              </div>
+            )}
 
             {/* 배포 섹션 */}
             <PublishSection

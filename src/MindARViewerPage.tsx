@@ -1,25 +1,30 @@
 import MindARViewer from './components/MindarViewer'
+import BasicModeViewer from './components/BasicModeViewer'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import { ProjectMode, VideoPosition } from './types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
 
 interface ArFilesResponse {
-  mindFileId: string
+  mindFileId?: string // 기본 모드에서는 null
   videoFileId: string
   previewVideoFileId?: string
   targetImageFileId?: string
   chromaKeyColor?: string
   flatView?: boolean
   highPrecision?: boolean
+  mode?: ProjectMode // 'ar' | 'basic'
+  videoPosition?: VideoPosition // 기본 모드용
+  videoScale?: number // 기본 모드용
 }
 
 interface ArAssets {
-  mindUrl: string
+  mindUrl?: string // 기본 모드에서는 undefined
   videoUrl: string
   previewVideoUrl?: string
-  targetImageUrl: string
+  targetImageUrl?: string // 기본 모드에서는 undefined
 }
 
 // 단일 fetch + blob 변환
@@ -40,19 +45,29 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
   if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
   const fileIds: ArFilesResponse = await res.json()
 
-  // Step 2: 모든 에셋을 병렬 로드
-  const [mindUrl, targetImageUrl] = await Promise.all([
-    fetchBlobUrlFromFileId(fileIds.mindFileId),
-    fileIds.targetImageFileId
-      ? fetchBlobUrlFromFileId(fileIds.targetImageFileId)
-      : Promise.resolve(''),
-  ])
+  // 기본 모드: .mind 파일과 타겟 이미지 불필요
+  const isBasicMode = fileIds.mode === 'basic'
+
+  // Step 2: 에셋 로드 (모드에 따라 다름)
+  let mindUrl: string | undefined
+  let targetImageUrl: string | undefined
+
+  if (!isBasicMode && fileIds.mindFileId) {
+    // AR 모드: mind 파일과 타겟 이미지 로드
+    const [mind, target] = await Promise.all([
+      fetchBlobUrlFromFileId(fileIds.mindFileId),
+      fileIds.targetImageFileId
+        ? fetchBlobUrlFromFileId(fileIds.targetImageFileId)
+        : Promise.resolve(undefined),
+    ])
+    mindUrl = mind
+    targetImageUrl = target
+  }
 
   return {
     fileIds,
     assets: {
       mindUrl,
-      // 프리뷰가 있으면 프리뷰 URL, 없으면 원본 URL
       videoUrl: `${API_URL}/stream/${fileIds.videoFileId}`,
       previewVideoUrl: fileIds.previewVideoFileId
         ? `${API_URL}/stream/${fileIds.previewVideoFileId}`
@@ -123,14 +138,32 @@ export default function MindARViewerPage() {
     )
   }
 
+  const isBasicMode = data.fileIds.mode === 'basic'
+
+  // 기본 모드: BasicModeViewer 렌더링
+  if (isBasicMode) {
+    return (
+      <section className="relative flex min-h-[100dvh] w-full">
+        <BasicModeViewer
+          videoUrl={data.assets.videoUrl}
+          previewVideoUrl={data.assets.previewVideoUrl}
+          position={data.fileIds.videoPosition || { x: 0.5, y: 0.5 }}
+          scale={data.fileIds.videoScale || 1}
+          chromaKeyColor={data.fileIds.chromaKeyColor}
+        />
+      </section>
+    )
+  }
+
+  // AR 모드: MindARViewer 렌더링
   return (
     <section className="relative flex min-h-[100dvh] w-full">
       <div className="absolute inset-0">
         <MindARViewer
-          mindUrl={data.assets.mindUrl}
+          mindUrl={data.assets.mindUrl!}
           videoUrl={data.assets.videoUrl}
           previewVideoUrl={data.assets.previewVideoUrl}
-          targetImageUrl={data.assets.targetImageUrl}
+          targetImageUrl={data.assets.targetImageUrl!}
           chromaKeyColor={data.fileIds.chromaKeyColor}
           flatView={data.fileIds.flatView}
           highPrecision={data.fileIds.highPrecision}

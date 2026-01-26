@@ -104,8 +104,8 @@ AFRAME.registerSystem('mindar-image-system', {
         audio: false,
         video: {
           facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          width: { ideal: 4096 },
+          height: { ideal: 2160 },
         },
       })
       .then((stream) => {

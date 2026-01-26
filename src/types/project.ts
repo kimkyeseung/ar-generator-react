@@ -11,6 +11,7 @@ export interface Project {
   videoFileId: string
   targetFileId: string | null // 기본모드에서는 null
   targetImageFileId: string | null
+  thumbnailFileId: string | null // 정사각형 썸네일 (미설정시 영상 첫화면 사용)
   width: number | null
   height: number | null
   title: string | null

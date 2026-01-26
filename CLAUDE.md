@@ -33,6 +33,7 @@ src/
 │   ├── MindarViewer.tsx        # AR 뷰어 (MindAR + A-Frame)
 │   ├── BasicModeViewer.tsx     # 기본 모드 뷰어 (카메라 + 비디오 오버레이)
 │   ├── VideoPositionEditor.tsx # 기본 모드 비디오 위치/크기 편집
+│   ├── ThumbnailUpload.tsx     # 커스텀 썸네일 이미지 업로드 UI
 │   ├── PasswordModal.tsx       # 관리자 비밀번호 입력 모달
 │   ├── Home.tsx                # 메인 업로드 페이지
 │   ├── TargetImageUpload.tsx   # 타겟 이미지 업로드 UI
@@ -53,7 +54,7 @@ src/
 ├── lib/
 │   └── image-target/           # 커스텀 MindAR 라이브러리 (카메라 해상도 수정)
 ├── types/
-│   └── project.ts              # Project 타입 정의 (mode, videoPosition 등)
+│   └── project.ts              # Project 타입 정의 (mode, videoPosition, thumbnailFileId 등)
 ├── MindARViewerPage.tsx        # AR/기본 모드 뷰어 라우팅 페이지
 └── App.tsx                     # 라우팅
 e2e/
@@ -87,6 +88,12 @@ vendor/
 - 슬라이더 및 +/- 버튼으로도 크기 조절 가능
 - 실시간 카메라 프리뷰 배경
 - File 또는 URL 소스 지원 (편집 시 기존 영상 사용 가능)
+
+### ThumbnailUpload
+- 커스텀 썸네일 이미지 업로드 컴포넌트
+- 정사각형 이미지 권장 (5MB 이하)
+- 미설정 시 영상의 첫 화면이 썸네일로 사용됨
+- 프리뷰 표시 및 삭제 기능 지원
 
 ### useVideoCompressor Hook
 - ffmpeg.wasm을 사용한 클라이언트 사이드 비디오 압축
@@ -150,7 +157,7 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 - 타겟 이미지 비율이 AR 오버레이에 보존됨
 - MindAR 컴파일은 클라이언트에서 실행 (서버 부하 없음)
 - ffmpeg.wasm은 UMD 빌드 사용 (ESM 모듈 문제 회피)
-- 카메라 해상도: 1920x1080 (Full HD) - `src/lib/image-target/aframe.js`에서 설정
+- 카메라 해상도: 4096x2160 (4K UHD) - `src/lib/image-target/aframe.js`에서 설정 (기기 지원 시 최고 화질 사용)
 - 프로젝트 생성/편집/삭제 시 관리자 비밀번호 필요 (`X-Admin-Password` 헤더)
 - 발행 시 컴파일+업로드가 한 번에 실행됨 (1-click flow)
 

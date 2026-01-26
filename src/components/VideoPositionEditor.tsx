@@ -60,7 +60,11 @@ export default function VideoPositionEditor({
     const startCamera = async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 4096 },
+            height: { ideal: 2160 },
+          },
         })
         if (cameraRef.current) {
           cameraRef.current.srcObject = stream

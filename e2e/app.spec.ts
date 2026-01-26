@@ -107,8 +107,8 @@ test.describe('New Publish Flow', () => {
     // 초기 상태: Step 1
     await expect(page.getByText(/Step 1/)).toBeVisible()
 
-    // 파일 업로드 시뮬레이션
-    const fileInput = page.locator('input[type="file"][accept="image/*"]')
+    // 파일 업로드 시뮬레이션 (타겟 이미지용 - multiple 속성이 있음)
+    const fileInput = page.locator('input[type="file"][accept="image/*"][multiple]')
 
     // 테스트 이미지 파일 경로 (실제 테스트시에는 fixtures 폴더에 테스트 이미지 필요)
     // await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'test-image.png'))
@@ -358,5 +358,33 @@ test.describe('Mode Badge in Project List', () => {
         page.getByRole('button', { name: /다시 시도/ })
       )
     ).toBeVisible({ timeout: 15000 })
+  })
+})
+
+test.describe('Thumbnail Upload', () => {
+  test('should show thumbnail upload section on create page', async ({ page }) => {
+    await page.goto('/create')
+
+    // 썸네일 이미지 업로드 섹션이 보여야 함
+    await expect(page.getByText('썸네일 이미지 (선택)')).toBeVisible()
+
+    // 설명 텍스트가 보여야 함
+    await expect(page.getByText(/정사각형 이미지 권장/)).toBeVisible()
+  })
+
+  test('should have thumbnail input element', async ({ page }) => {
+    await page.goto('/create')
+
+    // 썸네일 업로드 input이 존재해야 함
+    const thumbnailInput = page.locator('[data-testid="thumbnail-input"]')
+    await expect(thumbnailInput).toBeAttached()
+  })
+
+  test('should show upload button for thumbnail', async ({ page }) => {
+    await page.goto('/create')
+
+    // 업로드 버튼이 있어야 함
+    const uploadButton = page.getByRole('button', { name: /업로드/ }).first()
+    await expect(uploadButton).toBeVisible()
   })
 })

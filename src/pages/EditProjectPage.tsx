@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import TargetImageUpload from '../components/TargetImageUpload'
+import ThumbnailUpload from '../components/ThumbnailUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import HeroHeader from '../components/home/HeroHeader'
@@ -45,6 +46,7 @@ export default function EditProjectPage() {
   const [highPrecision, setHighPrecision] = useState(false)
   const [videoPosition, setVideoPosition] = useState<VideoPosition>({ x: 0.5, y: 0.5 })
   const [videoScale, setVideoScale] = useState(1)
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
 
   // Upload state
   const [progress, setProgress] = useState(0)
@@ -240,6 +242,11 @@ export default function EditProjectPage() {
         formData.append('videoScale', videoScale.toString())
       }
 
+      // 썸네일 이미지 전송 (있는 경우)
+      if (thumbnailFile) {
+        formData.append('thumbnail', thumbnailFile)
+      }
+
       // 새 타겟 이미지가 있으면 컴파일 후 추가
       if (targetImageFiles.length > 0) {
         const { targetBuffer, originalImage } = await compile(targetImageFiles, {
@@ -369,6 +376,16 @@ export default function EditProjectPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder='프로젝트 제목을 입력하세요'
                 className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              />
+            </div>
+
+            {/* 썸네일 이미지 업로드 */}
+            <div className='mb-6'>
+              <ThumbnailUpload
+                file={thumbnailFile}
+                existingThumbnailUrl={project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined}
+                onFileSelect={setThumbnailFile}
+                disabled={isUploading || isCompiling || isCompressing}
               />
             </div>
 

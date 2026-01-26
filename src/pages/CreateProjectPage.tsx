@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TargetImageUpload from '../components/TargetImageUpload'
+import ThumbnailUpload from '../components/ThumbnailUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import HeroHeader from '../components/home/HeroHeader'
@@ -52,6 +53,7 @@ export default function CreateProjectPage() {
 
   // 옵션 상태
   const [title, setTitle] = useState<string>('')
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
@@ -245,6 +247,10 @@ export default function CreateProjectPage() {
         formData.append('videoPosition', JSON.stringify(videoPosition))
         formData.append('videoScale', videoScale.toString())
       }
+      // 썸네일 이미지 전송 (있는 경우)
+      if (thumbnailFile) {
+        formData.append('thumbnail', thumbnailFile)
+      }
 
       // 3. 업로드
       const res = await uploadWithProgress(formData, password)
@@ -359,6 +365,15 @@ export default function CreateProjectPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder='프로젝트 제목을 입력하세요'
                 className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              />
+            </div>
+
+            {/* 썸네일 이미지 업로드 */}
+            <div className='mb-6'>
+              <ThumbnailUpload
+                file={thumbnailFile}
+                onFileSelect={setThumbnailFile}
+                disabled={isUploading || isCompiling || isCompressing}
               />
             </div>
 

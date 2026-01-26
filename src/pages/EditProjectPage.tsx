@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import TargetImageUpload from '../components/TargetImageUpload'
+import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import HeroHeader from '../components/home/HeroHeader'
 import PageBackground from '../components/home/PageBackground'
@@ -8,7 +9,7 @@ import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
 import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
-import { Project } from '../types/project'
+import { Project, ProjectMode, VideoPosition } from '../types/project'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { Progress } from '../components/ui/progress'
@@ -31,6 +32,7 @@ export default function EditProjectPage() {
 
   // Form state
   const [title, setTitle] = useState('')
+  const [mode, setMode] = useState<ProjectMode>('ar')
   const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
@@ -41,6 +43,8 @@ export default function EditProjectPage() {
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
   const [highPrecision, setHighPrecision] = useState(false)
+  const [videoPosition, setVideoPosition] = useState<VideoPosition>({ x: 0.5, y: 0.5 })
+  const [videoScale, setVideoScale] = useState(1)
 
   // Upload state
   const [progress, setProgress] = useState(0)
@@ -68,6 +72,7 @@ export default function EditProjectPage() {
         const data: Project = await res.json()
         setProject(data)
         setTitle(data.title || '')
+        setMode(data.mode || 'ar')
         if (data.chromaKeyColor) {
           setUseChromaKey(true)
           setChromaKeyColor(data.chromaKeyColor)
@@ -77,6 +82,13 @@ export default function EditProjectPage() {
         }
         if (data.highPrecision) {
           setHighPrecision(data.highPrecision)
+        }
+        // 기본모드 위치/크기 로드
+        if (data.videoPosition) {
+          setVideoPosition(data.videoPosition)
+        }
+        if (data.videoScale != null) {
+          setVideoScale(data.videoScale)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
@@ -221,6 +233,13 @@ export default function EditProjectPage() {
       formData.append('flatView', flatView ? 'true' : 'false')
       formData.append('highPrecision', highPrecision ? 'true' : 'false')
 
+      // 기본모드 위치/크기
+      if (mode === 'basic') {
+        formData.append('videoPositionX', videoPosition.x.toString())
+        formData.append('videoPositionY', videoPosition.y.toString())
+        formData.append('videoScale', videoScale.toString())
+      }
+
       // 새 타겟 이미지가 있으면 컴파일 후 추가
       if (targetImageFiles.length > 0) {
         const { targetBuffer, originalImage } = await compile(targetImageFiles, {
@@ -353,13 +372,31 @@ export default function EditProjectPage() {
               />
             </div>
 
+            {/* 모드 표시 (읽기 전용) */}
+            <div className='mb-6'>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                프로젝트 모드
+              </label>
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                mode === 'basic'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-purple-100 text-purple-700'
+              }`}>
+                {mode === 'basic' ? '📹 기본 모드' : '🎯 AR 모드'}
+              </div>
+              <p className='text-xs text-gray-500 mt-1'>
+                모드는 프로젝트 생성 시에만 선택할 수 있습니다.
+              </p>
+            </div>
+
             {/* 현재 에셋 미리보기 */}
             <div className='mb-6'>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
                 현재 에셋
               </label>
               <div className='flex gap-4 flex-wrap'>
-                {project.targetImageFileId && targetImageFiles.length === 0 && (
+                {/* AR 모드에서만 타겟 이미지 표시 */}
+                {mode === 'ar' && project.targetImageFileId && targetImageFiles.length === 0 && (
                   <div className='flex flex-col items-center'>
                     <img
                       src={`${API_URL}/file/${project.targetImageFileId}`}
@@ -385,24 +422,28 @@ export default function EditProjectPage() {
               </div>
             </div>
 
-            {/* AR 설정 */}
-            <div className='mb-6'>
-              <ArOptionsSection
-                highPrecision={highPrecision}
-                onHighPrecisionChange={setHighPrecision}
-              />
-            </div>
+            {/* AR 설정 (AR 모드에서만) */}
+            {mode === 'ar' && (
+              <div className='mb-6'>
+                <ArOptionsSection
+                  highPrecision={highPrecision}
+                  onHighPrecisionChange={setHighPrecision}
+                />
+              </div>
+            )}
 
-            {/* 타겟 이미지 변경 */}
-            <div className='mb-6'>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                타겟 이미지 변경 (선택)
-              </label>
-              <TargetImageUpload
-                files={targetImageFiles}
-                onFileSelect={handleTargetImageSelect}
-              />
-            </div>
+            {/* 타겟 이미지 변경 (AR 모드에서만) */}
+            {mode === 'ar' && (
+              <div className='mb-6'>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  타겟 이미지 변경 (선택)
+                </label>
+                <TargetImageUpload
+                  files={targetImageFiles}
+                  onFileSelect={handleTargetImageSelect}
+                />
+              </div>
+            )}
 
             {/* 비디오 변경 */}
             <div className='mb-6'>
@@ -422,8 +463,23 @@ export default function EditProjectPage() {
                 chromaKeyError={chromaKeyError}
                 flatView={flatView}
                 onFlatViewChange={setFlatView}
+                showFlatView={mode === 'ar'}
               />
             </div>
+
+            {/* 비디오 위치/크기 조정 (기본 모드에서만) */}
+            {mode === 'basic' && videoFile && (
+              <div className='mb-6'>
+                <VideoPositionEditor
+                  videoFile={videoFile}
+                  position={videoPosition}
+                  scale={videoScale}
+                  onPositionChange={setVideoPosition}
+                  onScaleChange={setVideoScale}
+                  chromaKeyColor={useChromaKey ? chromaKeyColor : undefined}
+                />
+              </div>
+            )}
 
             {/* 저장 버튼 */}
             <div className='mt-8'>

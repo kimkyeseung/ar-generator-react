@@ -31,10 +31,13 @@ src/
 ├── components/
 │   ├── MindARCompiler.tsx      # 이미지 → .mind 파일 컴파일 (레거시)
 │   ├── MindarViewer.tsx        # AR 뷰어 (MindAR + A-Frame)
+│   ├── BasicModeViewer.tsx     # 기본 모드 뷰어 (카메라 + 비디오 오버레이)
+│   ├── VideoPositionEditor.tsx # 기본 모드 비디오 위치/크기 편집
 │   ├── PasswordModal.tsx       # 관리자 비밀번호 입력 모달
 │   ├── Home.tsx                # 메인 업로드 페이지
 │   ├── TargetImageUpload.tsx   # 타겟 이미지 업로드 UI
 │   └── home/                   # Home 페이지 하위 컴포넌트
+│       ├── ModeSelector.tsx        # AR/기본 모드 선택 UI
 │       ├── ArOptionsSection.tsx    # AR 옵션 설정 (추적 정확도 등)
 │       ├── VideoUploadSection.tsx  # 비디오 업로드 UI
 │       ├── PublishSection.tsx      # 발행 버튼 섹션
@@ -49,7 +52,9 @@ src/
 │   └── useImageCompiler.ts     # 이미지 타겟 컴파일 훅
 ├── lib/
 │   └── image-target/           # 커스텀 MindAR 라이브러리 (카메라 해상도 수정)
-├── MindARViewerPage.tsx        # AR 뷰어 페이지
+├── types/
+│   └── project.ts              # Project 타입 정의 (mode, videoPosition 등)
+├── MindARViewerPage.tsx        # AR/기본 모드 뷰어 라우팅 페이지
 └── App.tsx                     # 라우팅
 e2e/
 └── app.spec.ts                 # Playwright E2E 테스트
@@ -64,10 +69,22 @@ vendor/
 - MindAR의 `Compiler` 클래스 사용
 
 ### MindarViewer
-- A-Frame 기반 AR 뷰어
+- A-Frame 기반 AR 뷰어 (AR 모드용)
 - 커스텀 컴포넌트:
   - `billboard`: flatView 모드에서 비디오가 항상 카메라를 향함
   - `chromakey-material`: 크로마키(그린스크린) 제거 셰이더
+
+### BasicModeViewer
+- 기본 모드 뷰어 (타겟 이미지 없이 카메라에 비디오 오버레이)
+- 카메라 피드 위에 비디오를 지정된 위치/크기로 표시
+- Canvas 2D 기반 크로마키 처리 (WebGL 없이)
+- HD 비디오 백그라운드 프리로드 지원
+
+### VideoPositionEditor
+- 기본 모드에서 비디오 위치/크기 편집 UI
+- 드래그로 위치 이동
+- 마우스 휠/핀치/슬라이더로 크기 조절
+- 실시간 카메라 프리뷰 배경
 
 ### useVideoCompressor Hook
 - ffmpeg.wasm을 사용한 클라이언트 사이드 비디오 압축
@@ -86,6 +103,21 @@ vendor/
 ```
 REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 ```
+
+## Project Modes
+
+### AR 모드 (기본)
+- 타겟 이미지를 인식하면 영상이 재생되는 전통적인 AR 경험
+- `.mind` 파일 컴파일 필요
+- MindAR + A-Frame 기반
+- 옵션: flatView, highPrecision, chromaKey
+
+### 기본 모드
+- 타겟 이미지 없이 카메라 화면에 바로 비디오 표시
+- `.mind` 파일 불필요 (컴파일 시간 절약)
+- 순수 WebRTC + CSS Transform 기반
+- 사용자가 비디오 위치/크기를 드래그로 조정
+- 옵션: chromaKey만 지원 (flatView, highPrecision 불필요)
 
 ## AR Viewer Features
 

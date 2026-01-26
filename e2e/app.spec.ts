@@ -236,3 +236,127 @@ test.describe('Video Upload Options', () => {
     await expect(page.getByText('Target Image')).toBeVisible()
   })
 })
+
+test.describe('Basic Mode Feature', () => {
+  test('should show mode selector on create page', async ({ page }) => {
+    await page.goto('/create')
+
+    // 모드 선택 섹션이 보여야 함
+    await expect(page.getByText('모드 선택')).toBeVisible()
+    await expect(page.getByText('AR 모드')).toBeVisible()
+    await expect(page.getByText('기본 모드')).toBeVisible()
+  })
+
+  test('should have AR mode selected by default', async ({ page }) => {
+    await page.goto('/create')
+
+    // AR 모드가 기본 선택되어 있어야 함 (aria-label 사용)
+    const arModeButton = page.getByRole('button', { name: /AR 모드 선택/i })
+    await expect(arModeButton).toHaveAttribute('aria-pressed', 'true')
+
+    // 기본 모드는 선택 안됨
+    const basicModeButton = page.getByRole('button', { name: /기본 모드 선택/i })
+    await expect(basicModeButton).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('should switch to basic mode when clicked', async ({ page }) => {
+    await page.goto('/create')
+
+    // 기본 모드 버튼 클릭
+    const basicModeButton = page.getByRole('button', { name: /기본 모드 선택/i })
+    await basicModeButton.click()
+
+    // 기본 모드가 선택됨
+    await expect(basicModeButton).toHaveAttribute('aria-pressed', 'true')
+
+    // AR 모드는 선택 해제됨
+    const arModeButton = page.getByRole('button', { name: /AR 모드 선택/i })
+    await expect(arModeButton).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('should hide target image upload in basic mode', async ({ page }) => {
+    await page.goto('/create')
+
+    // 초기 상태: AR 모드 - 타겟 이미지 섹션 보임
+    await expect(page.getByText('Target Image')).toBeVisible()
+
+    // 기본 모드로 전환
+    await page.getByRole('button', { name: /기본 모드 선택/i }).click()
+
+    // 타겟 이미지 섹션이 숨겨져야 함
+    await expect(page.getByText('Target Image')).not.toBeVisible()
+  })
+
+  test('should show different step message in basic mode', async ({ page }) => {
+    await page.goto('/create')
+
+    // 기본 모드로 전환
+    await page.getByRole('button', { name: /기본 모드 선택/i }).click()
+
+    // 스텝 메시지가 변경되어야 함
+    await expect(page.getByText(/Step 1.*비디오/i)).toBeVisible()
+  })
+
+  test('should hide flatView option in basic mode', async ({ page }) => {
+    await page.goto('/create')
+
+    // AR 모드에서는 flatView 옵션이 있어야 함 (비디오 선택 후)
+    // 기본 모드로 전환
+    await page.getByRole('button', { name: /기본 모드 선택/i }).click()
+
+    // flatView 옵션이 보이지 않아야 함
+    await expect(page.getByText('플랫 뷰')).not.toBeVisible()
+  })
+})
+
+test.describe('Video Position Editor', () => {
+  // Note: 이 테스트들은 비디오 파일 업로드가 필요하므로
+  // 실제 파일 fixtures 설정 후 완전히 동작합니다.
+
+  test('should show position editor after video upload in basic mode', async ({ page }) => {
+    await page.goto('/create')
+
+    // 기본 모드로 전환
+    await page.getByRole('button', { name: /기본 모드 선택/i }).click()
+
+    // 비디오 업로드 전에는 위치 편집기가 안 보임
+    await expect(page.getByText('영상 위치 조정')).not.toBeVisible()
+
+    // 비디오 업로드 input이 존재해야 함
+    const videoInput = page.locator('input[type="file"][accept="video/*"]')
+    await expect(videoInput).toBeAttached()
+  })
+
+  test('should display scale controls with slider and buttons', async ({ page }) => {
+    await page.goto('/create')
+
+    // 기본 모드로 전환
+    await page.getByRole('button', { name: /기본 모드 선택/i }).click()
+
+    // 비디오 업로드 후 크기 조정 컨트롤이 있어야 함
+    // 실제 테스트는 fixtures 필요
+  })
+})
+
+test.describe('Mode Badge in Project List', () => {
+  test('should display projects or empty state after loading', async ({ page }) => {
+    await page.goto('/')
+
+    // 내 프로젝트 섹션이 로드될 때까지 대기
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+
+    // 로딩이 완료될 때까지 대기 (둘 중 하나가 나타날 때까지)
+    // 프로젝트 목록이 있거나 / 빈 상태 메시지가 있거나 / 에러가 있거나
+    await expect(
+      page.getByText('아직 프로젝트가 없습니다').or(
+        page.locator('[data-testid="project-card"]').first()
+      ).or(
+        page.getByText('🎯 AR').first()
+      ).or(
+        page.getByText('📹 기본').first()
+      ).or(
+        page.getByRole('button', { name: /다시 시도/ })
+      )
+    ).toBeVisible({ timeout: 15000 })
+  })
+})

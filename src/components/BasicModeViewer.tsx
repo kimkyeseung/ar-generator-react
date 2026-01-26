@@ -36,15 +36,6 @@ interface Props {
   chromaKeyColor?: string
 }
 
-// iOS 감지
-const isIOS = () => {
-  if (typeof navigator === 'undefined') return false
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  )
-}
-
 const BasicModeViewer: React.FC<Props> = ({
   videoUrl,
   previewVideoUrl,
@@ -225,6 +216,14 @@ const BasicModeViewer: React.FC<Props> = ({
     }
   }, [chromaKeyColor])
 
+  // isMuted 상태 변경 시 비디오에 반영
+  useEffect(() => {
+    const video = videoRef.current
+    if (video) {
+      video.muted = isMuted
+    }
+  }, [isMuted])
+
   // 음소거 토글
   const handleToggleMute = useCallback(async () => {
     const video = videoRef.current
@@ -251,25 +250,34 @@ const BasicModeViewer: React.FC<Props> = ({
     }
   }, [isMuted])
 
-  // 비디오 자동 재생
+  // 비디오 자동 재생 (음소거 상태로 시작해야 브라우저 정책 충족)
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
-    const handleCanPlay = () => {
-      video.play().catch((err) => {
+    // React의 muted prop 버그 우회: 직접 muted 속성 설정
+    video.muted = true
+    video.defaultMuted = true
+
+    const attemptPlay = async () => {
+      try {
+        // 재생 전 음소거 보장
+        video.muted = true
+        await video.play()
+        console.log('[BasicMode] Autoplay started (muted)')
+      } catch (err) {
         console.warn('[BasicMode] Autoplay blocked:', err)
-      })
+      }
     }
 
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      handleCanPlay()
+      attemptPlay()
     } else {
-      video.addEventListener('canplay', handleCanPlay, { once: true })
+      video.addEventListener('canplay', attemptPlay, { once: true })
     }
 
     return () => {
-      video.removeEventListener('canplay', handleCanPlay)
+      video.removeEventListener('canplay', attemptPlay)
     }
   }, [currentVideoUrl])
 
@@ -351,9 +359,10 @@ const BasicModeViewer: React.FC<Props> = ({
                 ref={videoRef}
                 src={currentVideoUrl}
                 loop
-                muted={isMuted}
+                muted
                 playsInline
                 crossOrigin="anonymous"
+                autoPlay
                 className="hidden"
               />
               {/* 크로마키 처리된 캔버스 */}
@@ -367,7 +376,7 @@ const BasicModeViewer: React.FC<Props> = ({
               ref={videoRef}
               src={currentVideoUrl}
               loop
-              muted={isMuted}
+              muted
               playsInline
               crossOrigin="anonymous"
               autoPlay

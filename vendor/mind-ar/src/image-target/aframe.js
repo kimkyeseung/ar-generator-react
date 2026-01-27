@@ -104,11 +104,13 @@ AFRAME.registerSystem('mindar-image-system', {
         audio: false,
         video: {
           facingMode: 'environment',
+          width: { ideal: 4096 },
+          height: { ideal: 2160 },
         },
       })
       .then((stream) => {
         this.video.addEventListener('loadedmetadata', () => {
-          //console.log("video ready...", this.video);
+          console.log(`[MindAR Camera] Resolution: ${this.video.videoWidth}x${this.video.videoHeight}`)
           this.video.setAttribute('width', this.video.videoWidth)
           this.video.setAttribute('height', this.video.videoHeight)
           this._startAR()

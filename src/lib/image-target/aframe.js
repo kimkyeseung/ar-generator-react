@@ -107,6 +107,9 @@ AFRAME.registerSystem('mindar-image-system', {
       'qhd': { width: 2560, height: 1440 },
       'fhd': { width: 1920, height: 1080 },
       'hd': { width: 1280, height: 720 },
+      'nhd': { width: 640, height: 360 },
+      'vga': { width: 640, height: 480 },
+      'qvga': { width: 320, height: 240 },
     }
     const { width: cameraWidth, height: cameraHeight } = resolutionMap[this.cameraResolution] || resolutionMap['fhd']
     console.log(`[MindAR Camera] Requested resolution: ${this.cameraResolution} (${cameraWidth}x${cameraHeight})`)

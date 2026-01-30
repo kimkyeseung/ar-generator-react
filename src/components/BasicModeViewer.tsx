@@ -55,6 +55,7 @@ const BasicModeViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // 영상 비율 (width/height)
 
   // 카메라 시작
   useEffect(() => {
@@ -296,6 +297,30 @@ const BasicModeViewer: React.FC<Props> = ({
     }
   }, [currentVideoUrl])
 
+  // 영상 비율 감지
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handleLoadedMetadata = () => {
+      if (video.videoWidth && video.videoHeight) {
+        const ratio = video.videoWidth / video.videoHeight
+        setVideoAspectRatio(ratio)
+        console.log(`[BasicMode] Video aspect ratio: ${ratio.toFixed(2)} (${video.videoWidth}x${video.videoHeight})`)
+      }
+    }
+
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      handleLoadedMetadata()
+    } else {
+      video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true })
+    }
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+    }
+  }, [currentVideoUrl])
+
   return (
     <>
       {/* 로딩 화면 */}
@@ -364,7 +389,7 @@ const BasicModeViewer: React.FC<Props> = ({
             top: `${position.y * 100}%`,
             transform: `translate(-50%, -50%) scale(${scale})`,
             width: '50%',
-            aspectRatio: '16/9',
+            aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : '16/9',
           }}
         >
           {chromaKeyColor ? (

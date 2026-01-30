@@ -4,6 +4,7 @@ import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
+import CameraResolutionSelector from '../components/home/CameraResolutionSelector'
 import HeroHeader from '../components/home/HeroHeader'
 import ModeSelector from '../components/home/ModeSelector'
 import PageBackground from '../components/home/PageBackground'
@@ -11,7 +12,7 @@ import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
 import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
-import { Project, ProjectMode, VideoPosition } from '../types/project'
+import { CameraResolution, Project, ProjectMode, VideoPosition } from '../types/project'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { Progress } from '../components/ui/progress'
@@ -35,6 +36,7 @@ export default function EditProjectPage() {
   // Form state
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState<ProjectMode>('ar')
+  const [cameraResolution, setCameraResolution] = useState<CameraResolution>('fhd')
   const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
@@ -76,6 +78,7 @@ export default function EditProjectPage() {
         setProject(data)
         setTitle(data.title || '')
         setMode(data.mode || 'ar')
+        setCameraResolution(data.cameraResolution || 'fhd')
         if (data.chromaKeyColor) {
           setUseChromaKey(true)
           setChromaKeyColor(data.chromaKeyColor)
@@ -245,6 +248,7 @@ export default function EditProjectPage() {
       // 메타데이터
       formData.append('title', title)
       formData.append('mode', mode)
+      formData.append('cameraResolution', cameraResolution)
       formData.append('width', '1')
       const heightValue = videoAspectRatio ?? project?.height ?? 1
       formData.append('height', heightValue.toString())
@@ -418,6 +422,15 @@ export default function EditProjectPage() {
                   AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
                 </p>
               )}
+            </div>
+
+            {/* 카메라 해상도 선택 */}
+            <div className='mb-6'>
+              <CameraResolutionSelector
+                resolution={cameraResolution}
+                onResolutionChange={setCameraResolution}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
             </div>
 
             {/* 현재 에셋 미리보기 */}

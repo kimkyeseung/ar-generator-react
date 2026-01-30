@@ -3,7 +3,7 @@ import BasicModeViewer from './components/BasicModeViewer'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { ProjectMode, VideoPosition } from './types/project'
+import { CameraResolution, ProjectMode, VideoPosition } from './types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
 
@@ -16,6 +16,7 @@ interface ArFilesResponse {
   flatView?: boolean
   highPrecision?: boolean
   mode?: ProjectMode // 'ar' | 'basic'
+  cameraResolution?: CameraResolution // '4k' | 'fhd' | 'hd'
   videoPosition?: VideoPosition // 기본 모드용
   videoScale?: number // 기본 모드용
 }
@@ -150,6 +151,7 @@ export default function MindARViewerPage() {
           position={data.fileIds.videoPosition || { x: 0.5, y: 0.5 }}
           scale={data.fileIds.videoScale || 1}
           chromaKeyColor={data.fileIds.chromaKeyColor}
+          cameraResolution={data.fileIds.cameraResolution || 'fhd'}
         />
       </section>
     )
@@ -167,6 +169,7 @@ export default function MindARViewerPage() {
           chromaKeyColor={data.fileIds.chromaKeyColor}
           flatView={data.fileIds.flatView}
           highPrecision={data.fileIds.highPrecision}
+          cameraResolution={data.fileIds.cameraResolution || 'fhd'}
           debugMode={isDebugMode}
         />
       </div>

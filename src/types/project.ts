@@ -1,4 +1,5 @@
 export type ProjectMode = 'ar' | 'basic'
+export type CameraResolution = '4k' | 'qhd' | 'fhd' | 'hd'
 
 export interface VideoPosition {
   x: number // 0~1 범위 (화면 비율 기준)
@@ -20,6 +21,7 @@ export interface Project {
   flatView: boolean
   highPrecision: boolean
   mode: ProjectMode // 'ar' | 'basic'
+  cameraResolution: CameraResolution // '4k' | 'fhd' | 'hd'
   videoPosition: VideoPosition | null // 기본모드에서 비디오 위치
   videoScale: number | null // 기본모드에서 비디오 크기 (0.1~2.0)
   createdAt: string

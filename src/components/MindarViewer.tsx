@@ -63,6 +63,8 @@ type MindARScene = HTMLElement & {
   }
 }
 
+type CameraResolution = '4k' | 'qhd' | 'fhd' | 'hd'
+
 interface Props {
   mindUrl: string
   videoUrl: string
@@ -71,6 +73,7 @@ interface Props {
   chromaKeyColor?: string
   flatView?: boolean
   highPrecision?: boolean
+  cameraResolution?: CameraResolution
   debugMode?: boolean
 }
 
@@ -192,6 +195,7 @@ const MindARViewer: React.FC<Props> = ({
   chromaKeyColor,
   flatView,
   highPrecision,
+  cameraResolution = 'fhd',
   debugMode = false,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
@@ -704,7 +708,7 @@ const MindARViewer: React.FC<Props> = ({
         className='h-full w-full'
         style={{ width: '100%', height: '100%' }}
         ref={sceneRef}
-        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;${stabilizationEnabled ? ` filterMinCF: ${filterMinCF}; filterBeta: ${filterBeta};` : ''}${highPrecision ? ' warmupTolerance: 2; missTolerance: 8;' : ''}`}
+        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no; cameraResolution: ${cameraResolution};${stabilizationEnabled ? ` filterMinCF: ${filterMinCF}; filterBeta: ${filterBeta};` : ''}${highPrecision ? ' warmupTolerance: 2; missTolerance: 8;' : ''}`}
         assettimeout='15000'
         color-space='sRGB'
         embedded

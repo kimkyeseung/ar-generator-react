@@ -4,6 +4,7 @@ import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
+import CameraResolutionSelector from '../components/home/CameraResolutionSelector'
 import HeroHeader from '../components/home/HeroHeader'
 import InfoFooter from '../components/home/InfoFooter'
 import ModeSelector from '../components/home/ModeSelector'
@@ -15,7 +16,7 @@ import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
-import { ProjectMode, VideoPosition } from '../types/project'
+import { CameraResolution, ProjectMode, VideoPosition } from '../types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
@@ -32,6 +33,9 @@ export default function CreateProjectPage() {
 
   // 모드 선택 (AR 모드 / 기본 모드)
   const [mode, setMode] = useState<ProjectMode>('ar')
+
+  // 카메라 해상도 선택
+  const [cameraResolution, setCameraResolution] = useState<CameraResolution>('fhd')
 
   // 타겟 이미지 파일 (컴파일 전 원본) - AR 모드에서만 사용
   const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
@@ -218,6 +222,7 @@ export default function CreateProjectPage() {
 
       formData.append('video', videoFile)
       formData.append('mode', mode)
+      formData.append('cameraResolution', cameraResolution)
 
       // 저화질 프리뷰 영상 추가 (있는 경우)
       if (previewVideoFile) {
@@ -382,6 +387,15 @@ export default function CreateProjectPage() {
               <ModeSelector
                 mode={mode}
                 onModeChange={setMode}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+            </div>
+
+            {/* 카메라 해상도 선택 */}
+            <div className='mb-6'>
+              <CameraResolutionSelector
+                resolution={cameraResolution}
+                onResolutionChange={setCameraResolution}
                 disabled={isUploading || isCompiling || isCompressing}
               />
             </div>

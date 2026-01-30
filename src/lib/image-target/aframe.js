@@ -24,6 +24,7 @@ AFRAME.registerSystem('mindar-image-system', {
     warmupTolerance,
     filterMinCF,
     filterBeta,
+    cameraResolution,
   }) {
     this.imageTargetSrc = imageTargetSrc
     this.maxTrack = maxTrack
@@ -32,6 +33,7 @@ AFRAME.registerSystem('mindar-image-system', {
     this.missTolerance = missTolerance
     this.warmupTolerance = warmupTolerance
     this.showStats = showStats
+    this.cameraResolution = cameraResolution || 'fhd'
     this.ui = new UI({ uiLoading, uiScanning, uiError })
   },
 
@@ -99,13 +101,23 @@ AFRAME.registerSystem('mindar-image-system', {
       return
     }
 
+    // 해상도 설정에 따른 카메라 크기
+    const resolutionMap = {
+      '4k': { width: 4096, height: 2160 },
+      'qhd': { width: 2560, height: 1440 },
+      'fhd': { width: 1920, height: 1080 },
+      'hd': { width: 1280, height: 720 },
+    }
+    const { width: cameraWidth, height: cameraHeight } = resolutionMap[this.cameraResolution] || resolutionMap['fhd']
+    console.log(`[MindAR Camera] Requested resolution: ${this.cameraResolution} (${cameraWidth}x${cameraHeight})`)
+
     navigator.mediaDevices
       .getUserMedia({
         audio: false,
         video: {
           facingMode: 'environment',
-          width: { ideal: 4096 },
-          height: { ideal: 2160 },
+          width: { ideal: cameraWidth },
+          height: { ideal: cameraHeight },
         },
       })
       .then((stream) => {
@@ -236,6 +248,7 @@ AFRAME.registerComponent('mindar-image', {
     uiLoading: { type: 'string', default: 'yes' },
     uiScanning: { type: 'string', default: 'yes' },
     uiError: { type: 'string', default: 'yes' },
+    cameraResolution: { type: 'string', default: 'fhd' },
   },
 
   init: function () {
@@ -254,6 +267,7 @@ AFRAME.registerComponent('mindar-image', {
       uiLoading: this.data.uiLoading,
       uiScanning: this.data.uiScanning,
       uiError: this.data.uiError,
+      cameraResolution: this.data.cameraResolution,
     })
     if (this.data.autoStart) {
       this.el.sceneEl.addEventListener('renderstart', () => {

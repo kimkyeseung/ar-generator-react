@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { VideoPosition } from '../types/project'
+import { CameraResolution, VideoPosition } from '../types/project'
 
 // 스피커 아이콘 컴포넌트
 const SpeakerIcon: React.FC<{ muted: boolean }> = ({ muted }) => (
@@ -34,6 +34,7 @@ interface Props {
   position: VideoPosition
   scale: number
   chromaKeyColor?: string
+  cameraResolution?: CameraResolution
 }
 
 const BasicModeViewer: React.FC<Props> = ({
@@ -42,6 +43,7 @@ const BasicModeViewer: React.FC<Props> = ({
   position,
   scale,
   chromaKeyColor,
+  cameraResolution = 'fhd',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const cameraRef = useRef<HTMLVideoElement>(null)
@@ -58,13 +60,23 @@ const BasicModeViewer: React.FC<Props> = ({
   useEffect(() => {
     let stream: MediaStream | null = null
 
+    // 해상도 설정에 따른 카메라 크기
+    const resolutionMap = {
+      '4k': { width: 4096, height: 2160 },
+      'qhd': { width: 2560, height: 1440 },
+      'fhd': { width: 1920, height: 1080 },
+      'hd': { width: 1280, height: 720 },
+    }
+    const { width: cameraWidth, height: cameraHeight } = resolutionMap[cameraResolution] || resolutionMap['fhd']
+    console.log(`[BasicMode Camera] Requested resolution: ${cameraResolution} (${cameraWidth}x${cameraHeight})`)
+
     const startCamera = async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'environment',
-            width: { ideal: 4096 },
-            height: { ideal: 2160 },
+            width: { ideal: cameraWidth },
+            height: { ideal: cameraHeight },
           },
         })
         if (cameraRef.current) {

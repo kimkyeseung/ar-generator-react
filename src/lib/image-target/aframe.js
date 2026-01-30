@@ -139,9 +139,31 @@ AFRAME.registerSystem('mindar-image-system', {
     const video = this.video
     const container = this.container
 
+    // 트래킹 해상도 제한 (최대 FHD) - 성능 최적화
+    // 카메라는 고해상도로 표시하면서 AR 트래킹은 낮은 해상도로 처리
+    const MAX_TRACKING_WIDTH = 1920
+    const MAX_TRACKING_HEIGHT = 1080
+    const aspectRatio = video.videoWidth / video.videoHeight
+
+    let trackingWidth, trackingHeight
+    if (video.videoWidth > MAX_TRACKING_WIDTH || video.videoHeight > MAX_TRACKING_HEIGHT) {
+      if (aspectRatio > MAX_TRACKING_WIDTH / MAX_TRACKING_HEIGHT) {
+        trackingWidth = MAX_TRACKING_WIDTH
+        trackingHeight = Math.round(MAX_TRACKING_WIDTH / aspectRatio)
+      } else {
+        trackingHeight = MAX_TRACKING_HEIGHT
+        trackingWidth = Math.round(MAX_TRACKING_HEIGHT * aspectRatio)
+      }
+    } else {
+      trackingWidth = video.videoWidth
+      trackingHeight = video.videoHeight
+    }
+
+    console.log(`[MindAR] Camera: ${video.videoWidth}x${video.videoHeight}, Tracking: ${trackingWidth}x${trackingHeight}`)
+
     this.controller = new Controller({
-      inputWidth: video.videoWidth,
-      inputHeight: video.videoHeight,
+      inputWidth: trackingWidth,
+      inputHeight: trackingHeight,
       maxTrack: this.maxTrack,
       filterMinCF: this.filterMinCF,
       filterBeta: this.filterBeta,

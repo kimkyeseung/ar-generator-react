@@ -78,8 +78,8 @@ const BasicModeViewer: React.FC<Props> = ({
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'environment',
-            width: { ideal: cameraWidth },
-            height: { ideal: cameraHeight },
+            width: { ideal: cameraWidth, max: cameraWidth },
+            height: { ideal: cameraHeight, max: cameraHeight },
           },
         })
         if (cameraRef.current) {

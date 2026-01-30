@@ -388,3 +388,174 @@ test.describe('Thumbnail Upload', () => {
     await expect(uploadButton).toBeVisible()
   })
 })
+
+test.describe('Edit Project Page - Mode Change', () => {
+  // Note: These tests require a project to exist in the database
+  // They verify the mode change functionality in the edit page
+
+  test('should show mode selector on edit page', async ({ page }) => {
+    // First, go to project list and check if there are projects
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+
+    // Wait for page to load completely
+    await page.waitForLoadState('networkidle')
+
+    // Try to find an edit button (if projects exist)
+    const editButtons = page.locator('button', { hasText: '편집' })
+    const count = await editButtons.count()
+
+    if (count > 0) {
+      await editButtons.first().click()
+
+      // Edit page should show mode selector
+      await expect(page.getByText('모드 선택')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText('AR 모드')).toBeVisible()
+      await expect(page.getByText('기본 모드')).toBeVisible()
+    } else {
+      // Skip test if no projects exist
+      test.skip()
+    }
+  })
+
+  test('should allow mode change from AR to basic on edit page', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    // Find AR mode project badge
+    const arBadges = page.locator('span', { hasText: '🎯 AR' })
+    const arCount = await arBadges.count()
+
+    if (arCount > 0) {
+      // Get the first AR badge and find its parent card, then click edit
+      const firstArBadge = arBadges.first()
+      // Navigate up to the Card component and find the edit button
+      const card = firstArBadge.locator('xpath=ancestor::div[contains(@class, "rounded")]').last()
+      const editButton = card.locator('button', { hasText: '편집' })
+
+      if (await editButton.count() > 0) {
+        await editButton.click()
+
+        // Should show mode selector
+        await expect(page.getByText('모드 선택')).toBeVisible({ timeout: 10000 })
+
+        // AR mode should be selected
+        const arModeButton = page.getByRole('button', { name: /AR 모드 선택/i })
+        await expect(arModeButton).toHaveAttribute('aria-pressed', 'true')
+
+        // Click basic mode button
+        const basicModeButton = page.getByRole('button', { name: /기본 모드 선택/i })
+        await basicModeButton.click()
+
+        // Basic mode should now be selected
+        await expect(basicModeButton).toHaveAttribute('aria-pressed', 'true')
+        await expect(arModeButton).toHaveAttribute('aria-pressed', 'false')
+
+        // AR settings should be hidden
+        await expect(page.getByText('AR 설정')).not.toBeVisible()
+
+        // Target image section should be hidden
+        await expect(page.getByText('타겟 이미지 변경 (선택)')).not.toBeVisible()
+      } else {
+        test.skip()
+      }
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should require target image when changing basic to AR mode', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    // Find basic mode project badge
+    const basicBadges = page.locator('span', { hasText: '📹 기본' })
+    const basicCount = await basicBadges.count()
+
+    if (basicCount > 0) {
+      // Get the first basic badge and find its parent card, then click edit
+      const firstBasicBadge = basicBadges.first()
+      const card = firstBasicBadge.locator('xpath=ancestor::div[contains(@class, "rounded")]').last()
+      const editButton = card.locator('button', { hasText: '편집' })
+
+      if (await editButton.count() > 0) {
+        await editButton.click()
+
+        // Should show mode selector
+        await expect(page.getByText('모드 선택')).toBeVisible({ timeout: 10000 })
+
+        // Basic mode should be selected
+        const basicModeButton = page.getByRole('button', { name: /기본 모드 선택/i })
+        await expect(basicModeButton).toHaveAttribute('aria-pressed', 'true')
+
+        // Click AR mode button
+        const arModeButton = page.getByRole('button', { name: /AR 모드 선택/i })
+        await arModeButton.click()
+
+        // AR mode should now be selected
+        await expect(arModeButton).toHaveAttribute('aria-pressed', 'true')
+
+        // Warning message should appear
+        await expect(page.getByText('AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.')).toBeVisible()
+
+        // Target image should be marked as required
+        await expect(page.getByText('타겟 이미지 (필수)')).toBeVisible()
+        await expect(page.getByText('AR 모드에서는 타겟 이미지가 필요합니다.')).toBeVisible()
+
+        // Save button should be disabled
+        const saveButton = page.getByRole('button', { name: /저장/i })
+        await expect(saveButton).toBeDisabled()
+      } else {
+        test.skip()
+      }
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should show save and cancel buttons on edit page', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    const editButtons = page.locator('button', { hasText: '편집' })
+    const count = await editButtons.count()
+
+    if (count > 0) {
+      await editButtons.first().click()
+
+      // Should show save and cancel buttons
+      await expect(page.getByRole('button', { name: /저장/i })).toBeVisible({ timeout: 10000 })
+      await expect(page.getByRole('button', { name: /취소/i })).toBeVisible()
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should navigate back to list when cancel is clicked', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    const editButtons = page.locator('button', { hasText: '편집' })
+    const count = await editButtons.count()
+
+    if (count > 0) {
+      await editButtons.first().click()
+
+      // Wait for edit page to load
+      await expect(page.getByText('모드 선택')).toBeVisible({ timeout: 10000 })
+
+      // Click cancel
+      await page.getByRole('button', { name: /취소/i }).click()
+
+      // Should navigate back to project list
+      await expect(page).toHaveURL('/')
+      await expect(page.getByText('내 프로젝트')).toBeVisible()
+    } else {
+      test.skip()
+    }
+  })
+})

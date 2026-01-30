@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'cross-env PORT=3001 npm start',
+    command: 'cross-env PORT=3001 REACT_APP_API_URL=http://localhost:4000 npm start',
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

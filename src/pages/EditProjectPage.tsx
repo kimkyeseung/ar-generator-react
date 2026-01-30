@@ -5,6 +5,7 @@ import ThumbnailUpload from '../components/ThumbnailUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import HeroHeader from '../components/home/HeroHeader'
+import ModeSelector from '../components/home/ModeSelector'
 import PageBackground from '../components/home/PageBackground'
 import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
@@ -102,6 +103,17 @@ export default function EditProjectPage() {
     fetchProject()
   }, [id])
 
+  // 모드 변경 핸들러
+  const handleModeChange = useCallback((newMode: ProjectMode) => {
+    setMode(newMode)
+    // 기본 모드로 변경 시 AR 관련 상태 초기화
+    if (newMode === 'basic') {
+      setTargetImageFiles([])
+      setHighPrecision(false)
+      setFlatView(false)
+    }
+  }, [])
+
   const handleTargetImageSelect = useCallback((files: File[]) => {
     setTargetImageFiles(files)
   }, [])
@@ -173,11 +185,15 @@ export default function EditProjectPage() {
     }
   }
 
+  // AR 모드로 변경 시 타겟 이미지가 필요한지 확인
+  const needsTargetImage = mode === 'ar' && !project?.targetImageFileId && targetImageFiles.length === 0
+
   const canSave =
     !isUploading &&
     !isCompiling &&
     !isCompressing &&
-    (!useChromaKey || isValidHexColor(chromaKeyColor))
+    (!useChromaKey || isValidHexColor(chromaKeyColor)) &&
+    !needsTargetImage
 
   // 저장 버튼 클릭 시 비밀번호 모달 열기
   const handleSaveClick = () => {
@@ -228,6 +244,7 @@ export default function EditProjectPage() {
 
       // 메타데이터
       formData.append('title', title)
+      formData.append('mode', mode)
       formData.append('width', '1')
       const heightValue = videoAspectRatio ?? project?.height ?? 1
       formData.append('height', heightValue.toString())
@@ -389,21 +406,18 @@ export default function EditProjectPage() {
               />
             </div>
 
-            {/* 모드 표시 (읽기 전용) */}
+            {/* 모드 선택 */}
             <div className='mb-6'>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                프로젝트 모드
-              </label>
-              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-                mode === 'basic'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-purple-100 text-purple-700'
-              }`}>
-                {mode === 'basic' ? '📹 기본 모드' : '🎯 AR 모드'}
-              </div>
-              <p className='text-xs text-gray-500 mt-1'>
-                모드는 프로젝트 생성 시에만 선택할 수 있습니다.
-              </p>
+              <ModeSelector
+                mode={mode}
+                onModeChange={handleModeChange}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+              {mode === 'ar' && project.mode === 'basic' && (
+                <p className='text-xs text-amber-600 mt-2'>
+                  AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
+                </p>
+              )}
             </div>
 
             {/* 현재 에셋 미리보기 */}
@@ -453,12 +467,18 @@ export default function EditProjectPage() {
             {mode === 'ar' && (
               <div className='mb-6'>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  타겟 이미지 변경 (선택)
+                  타겟 이미지 {needsTargetImage ? '(필수)' : '변경 (선택)'}
+                  {needsTargetImage && <span className='text-red-500 ml-1'>*</span>}
                 </label>
                 <TargetImageUpload
                   files={targetImageFiles}
                   onFileSelect={handleTargetImageSelect}
                 />
+                {needsTargetImage && (
+                  <p className='text-xs text-red-500 mt-1'>
+                    AR 모드에서는 타겟 이미지가 필요합니다.
+                  </p>
+                )}
               </div>
             )}
 

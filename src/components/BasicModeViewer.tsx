@@ -61,11 +61,14 @@ const BasicModeViewer: React.FC<Props> = ({
     let stream: MediaStream | null = null
 
     // 해상도 설정에 따른 카메라 크기
-    const resolutionMap = {
+    const resolutionMap: Record<CameraResolution, { width: number; height: number }> = {
       '4k': { width: 4096, height: 2160 },
       'qhd': { width: 2560, height: 1440 },
       'fhd': { width: 1920, height: 1080 },
       'hd': { width: 1280, height: 720 },
+      'nhd': { width: 640, height: 360 },
+      'vga': { width: 640, height: 480 },
+      'qvga': { width: 320, height: 240 },
     }
     const { width: cameraWidth, height: cameraHeight } = resolutionMap[cameraResolution] || resolutionMap['fhd']
     console.log(`[BasicMode Camera] Requested resolution: ${cameraResolution} (${cameraWidth}x${cameraHeight})`)

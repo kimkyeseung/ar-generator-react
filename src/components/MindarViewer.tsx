@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import 'aframe'
 import 'mind-ar/dist/mindar-image-aframe.prod.js'
+import { CameraResolution } from '../types/project'
 
 declare const DeviceMotionEvent: any
 declare const DeviceOrientationEvent: any
@@ -62,8 +63,6 @@ type MindARScene = HTMLElement & {
     ['mindar-image-system']?: MindARSystem
   }
 }
-
-type CameraResolution = '4k' | 'qhd' | 'fhd' | 'hd'
 
 interface Props {
   mindUrl: string

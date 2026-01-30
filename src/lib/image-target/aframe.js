@@ -119,8 +119,8 @@ AFRAME.registerSystem('mindar-image-system', {
         audio: false,
         video: {
           facingMode: 'environment',
-          width: { ideal: cameraWidth },
-          height: { ideal: cameraHeight },
+          width: { ideal: cameraWidth, max: cameraWidth },
+          height: { ideal: cameraHeight, max: cameraHeight },
         },
       })
       .then((stream) => {

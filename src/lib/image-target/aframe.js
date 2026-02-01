@@ -143,22 +143,20 @@ AFRAME.registerSystem('mindar-image-system', {
     const video = this.video
     const container = this.container
 
-    // 트래킹 해상도 제한 (최대 FHD) - iPhone 브라우저 최대 지원 해상도
-    // 웹 브라우저에서 카메라는 FHD(1920x1080)가 사실상 최대
-    const MAX_TRACKING_WIDTH = 1920
-    const MAX_TRACKING_HEIGHT = 1080
-    const aspectRatio = video.videoWidth / video.videoHeight
+    // 트래킹 해상도 제한 - 가로/세로 모드 모두 지원
+    // 가장 긴 변이 1920 이하면 그대로 사용 (세로 모드 1080x1920도 OK)
+    const MAX_DIMENSION = 1920
 
     let trackingWidth, trackingHeight
-    if (video.videoWidth > MAX_TRACKING_WIDTH || video.videoHeight > MAX_TRACKING_HEIGHT) {
-      if (aspectRatio > MAX_TRACKING_WIDTH / MAX_TRACKING_HEIGHT) {
-        trackingWidth = MAX_TRACKING_WIDTH
-        trackingHeight = Math.round(MAX_TRACKING_WIDTH / aspectRatio)
-      } else {
-        trackingHeight = MAX_TRACKING_HEIGHT
-        trackingWidth = Math.round(MAX_TRACKING_HEIGHT * aspectRatio)
-      }
+    const maxDimension = Math.max(video.videoWidth, video.videoHeight)
+
+    if (maxDimension > MAX_DIMENSION) {
+      // 긴 변 기준으로 비율 유지하며 축소
+      const scale = MAX_DIMENSION / maxDimension
+      trackingWidth = Math.round(video.videoWidth * scale)
+      trackingHeight = Math.round(video.videoHeight * scale)
     } else {
+      // 1920 이하면 카메라 해상도 그대로 사용
       trackingWidth = video.videoWidth
       trackingHeight = video.videoHeight
     }

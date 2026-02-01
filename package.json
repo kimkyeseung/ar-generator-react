@@ -48,7 +48,8 @@
   "jest": {
     "moduleNameMapper": {
       "^canvas$": "<rootDir>/__mocks__/canvas.js",
-      "canvas/lib/bindings": "<rootDir>/__mocks__/canvas.js"
+      "^canvas/lib/bindings$": "<rootDir>/__mocks__/canvas.js",
+      "^canvas/lib/bindings.js$": "<rootDir>/__mocks__/canvas.js"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!(canvas)/)"

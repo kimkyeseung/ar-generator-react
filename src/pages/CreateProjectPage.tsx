@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
@@ -30,6 +31,7 @@ function isValidHexColor(color: string): boolean {
 export default function CreateProjectPage() {
   const [progress, setProgress] = useState<number>(0)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // 모드 선택 (AR 모드 / 기본 모드)
   const [mode, setMode] = useState<ProjectMode>('ar')
@@ -259,6 +261,10 @@ export default function CreateProjectPage() {
 
       // 3. 업로드
       const res = await uploadWithProgress(formData, password)
+
+      // React Query 캐시 무효화 (새 프로젝트가 즉시 반영되도록)
+      await queryClient.invalidateQueries({ queryKey: ['arData', res.folderId] })
+
       navigate(`/result/qr/${res.folderId}`)
     } catch (error) {
       console.error(error)

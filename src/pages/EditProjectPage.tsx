@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
@@ -28,6 +29,7 @@ function isValidHexColor(color: string): boolean {
 export default function EditProjectPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const [project, setProject] = useState<Project | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -316,6 +318,9 @@ export default function EditProjectPage() {
         xhr.onerror = () => reject(new Error('Network error'))
         xhr.send(formData)
       })
+
+      // React Query 캐시 무효화 (새 영상이 즉시 반영되도록)
+      await queryClient.invalidateQueries({ queryKey: ['arData', res.folderId] })
 
       navigate(`/result/qr/${res.folderId}`)
     } catch (err) {

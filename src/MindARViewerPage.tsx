@@ -65,13 +65,16 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
     targetImageUrl = target
   }
 
+  // 캐시 버스터 추가 (브라우저 HTTP 캐싱 방지)
+  const cacheBuster = Date.now()
+
   return {
     fileIds,
     assets: {
       mindUrl,
-      videoUrl: `${API_URL}/stream/${fileIds.videoFileId}`,
+      videoUrl: `${API_URL}/stream/${fileIds.videoFileId}?t=${cacheBuster}`,
       previewVideoUrl: fileIds.previewVideoFileId
-        ? `${API_URL}/stream/${fileIds.previewVideoFileId}`
+        ? `${API_URL}/stream/${fileIds.previewVideoFileId}?t=${cacheBuster}`
         : undefined,
       targetImageUrl,
     },
@@ -122,7 +125,8 @@ export default function MindARViewerPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['arData', folderId],
     queryFn: () => fetchArDataAndAssets(folderId),
-    staleTime: 1000 * 60 * 5, // 5분간 캐시
+    staleTime: 0, // 항상 최신 데이터 fetch (영상 교체 즉시 반영)
+    gcTime: 0, // 캐시 비활성화
   })
 
   // 에셋 + 카메라 모두 준비될 때까지 대기

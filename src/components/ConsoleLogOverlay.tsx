@@ -123,6 +123,28 @@ export default function ConsoleLogOverlay() {
         <span className="text-xs font-medium">Console ({logs.length})</span>
         <div className="flex gap-2">
           <button
+            onClick={() => {
+              const text = logs
+                .map((log) => `[${formatTime(log.timestamp)}] ${log.message}`)
+                .join('\n')
+              navigator.clipboard.writeText(text).then(() => {
+                alert('로그가 클립보드에 복사되었습니다.')
+              }).catch(() => {
+                // 폴백: 텍스트 선택
+                const textarea = document.createElement('textarea')
+                textarea.value = text
+                document.body.appendChild(textarea)
+                textarea.select()
+                document.execCommand('copy')
+                document.body.removeChild(textarea)
+                alert('로그가 클립보드에 복사되었습니다.')
+              })
+            }}
+            className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600"
+          >
+            Copy
+          </button>
+          <button
             onClick={() => setLogs([])}
             className="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600"
           >

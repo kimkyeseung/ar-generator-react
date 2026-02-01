@@ -410,34 +410,13 @@ const MindARViewer: React.FC<Props> = ({
       const cameraFeed = getCameraFeed()
       if (!cameraFeed) return
 
+      // MindAR의 aframe.js _resize() 함수가 비디오 위치/크기를 정확히 계산함
+      // 여기서는 최소한의 스타일만 설정하고, MindAR의 계산을 덮어쓰지 않음
+      // 모바일에서 top/left/width/height를 강제로 설정하면 AR 오버레이가 어긋남!
       cameraFeed.style.position = 'absolute'
       cameraFeed.style.zIndex = '-1'
       cameraFeed.style.transform = ''
-
-      const isMobileViewport =
-        typeof window !== 'undefined' &&
-        window.matchMedia('(max-width: 768px)').matches
-
-      if (isMobileViewport) {
-        cameraFeed.dataset.mindarViewport = 'mobile'
-        Object.assign(cameraFeed.style, {
-          top: '0',
-          left: '0',
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        })
-        return
-      }
-
-      if (cameraFeed.dataset.mindarViewport === 'mobile') {
-        delete cameraFeed.dataset.mindarViewport
-        cameraFeed.style.removeProperty('top')
-        cameraFeed.style.removeProperty('left')
-        cameraFeed.style.removeProperty('width')
-        cameraFeed.style.removeProperty('height')
-        cameraFeed.style.removeProperty('object-fit')
-      }
+      // objectFit은 설정하지 않음 - MindAR가 정확한 크기를 계산함
     }
 
     const observer = containerEl ? new MutationObserver(styleCameraFeed) : null

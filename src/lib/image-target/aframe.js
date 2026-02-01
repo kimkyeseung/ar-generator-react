@@ -245,29 +245,16 @@ AFRAME.registerSystem('mindar-image-system', {
 
     const proj = this.controller.getProjectionMatrix()
 
-    // 프로젝션 매트릭스는 트래킹 해상도(trackingWidth x trackingHeight) 기준으로 생성됨
-    // 비디오가 더 높은 해상도일 때, FOV를 보정해야 오버레이가 정확히 위치함
+    // MindAR의 proj[5]는 고정된 45° FOV 기준으로 계산됨 (≈2.414, 해상도 무관)
+    // proj[5] = 1 / tan(22.5°) = 상수
+    // 따라서 트래킹 해상도와 비디오 해상도의 비율 조정은 불필요
     //
-    // 트래킹 해상도와 비디오 해상도의 비율
-    const videoToTrackingRatio = video.videoHeight / this.trackingHeight
-
-    // 비디오 해상도가 트래킹 해상도보다 높으면:
-    // - 프로젝션 매트릭스는 더 작은 이미지 기준으로 계산됨
-    // - 실제 비디오는 더 넓은 영역을 보여줌
-    // - vh를 비율만큼 키워서 FOV를 줄여야 함 (오버레이가 타겟에 맞게 위치)
-    const adjustedVh = vh * videoToTrackingRatio
-
+    // FOV 공식: 비디오가 컨테이너에 어떻게 맞춰지는지에 따라 조정
+    // - vh == container.clientHeight → fov ≈ 45°
+    // - vh > container.clientHeight → fov < 45° (비디오 일부만 보임)
     const fov =
-      (2 * Math.atan((1 / proj[5] / adjustedVh) * container.clientHeight) * 180) /
+      (2 * Math.atan((1 / proj[5] / vh) * container.clientHeight) * 180) /
       Math.PI // vertical fov
-
-    // 디버그: 고해상도 카메라에서 값 확인
-    if (videoToTrackingRatio > 1.1) {
-      const fovWithoutAdjust = (2 * Math.atan((1 / proj[5] / vh) * container.clientHeight) * 180) / Math.PI
-      console.log(`[MindAR FOV] Video: ${video.videoWidth}x${video.videoHeight}, Tracking: ${this.trackingWidth}x${this.trackingHeight}`)
-      console.log(`[MindAR FOV] ratio: ${videoToTrackingRatio.toFixed(2)}, vh: ${vh.toFixed(1)}, adjustedVh: ${adjustedVh.toFixed(1)}`)
-      console.log(`[MindAR FOV] FOV without adjust: ${fovWithoutAdjust.toFixed(2)}°, FOV with adjust: ${fov.toFixed(2)}°`)
-    }
     const near = proj[14] / (proj[10] - 1.0)
     const far = proj[14] / (proj[10] + 1.0)
     const ratio = proj[5] / proj[0] // (r-l) / (t-b)

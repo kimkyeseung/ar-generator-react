@@ -47,6 +47,13 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
   if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
   const fileIds: ArFilesResponse = await res.json()
 
+  // 디버그: API 응답 로깅
+  console.log('[MindAR API] Response:', {
+    videoFileId: fileIds.videoFileId,
+    previewVideoFileId: fileIds.previewVideoFileId,
+    mode: fileIds.mode,
+  })
+
   // 기본 모드: .mind 파일과 타겟 이미지 불필요
   const isBasicMode = fileIds.mode === 'basic'
 

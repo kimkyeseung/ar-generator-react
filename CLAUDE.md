@@ -34,6 +34,7 @@ src/
 │   ├── BasicModeViewer.tsx     # 기본 모드 뷰어 (카메라 + 비디오 오버레이)
 │   ├── VideoPositionEditor.tsx # 기본 모드 비디오 위치/크기 편집
 │   ├── ThumbnailUpload.tsx     # 커스텀 썸네일 이미지 업로드 UI
+│   ├── ConsoleLogOverlay.tsx   # 모바일 디버깅용 콘솔 로그 오버레이
 │   ├── PasswordModal.tsx       # 관리자 비밀번호 입력 모달
 │   ├── Home.tsx                # 메인 업로드 페이지
 │   ├── TargetImageUpload.tsx   # 타겟 이미지 업로드 UI
@@ -156,9 +157,16 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 
 ### Camera Resolution (카메라 해상도)
 - `cameraResolution` 옵션으로 카메라 해상도 조절
-- 지원 옵션: `4k` (4096x2160), `qhd` (2560x1440), `fhd` (1920x1080, 기본값), `hd` (1280x720), `nhd` (640x360), `vga` (640x480), `qvga` (320x240)
+- 지원 옵션: `fhd` (1920x1080, 기본값), `hd` (1280x720), `nhd` (640x360), `vga` (640x480), `qvga` (320x240)
+- 4K/QHD는 iPhone 브라우저에서 지원되지 않아 제거됨
 - 저사양 기기에서 트래킹 성능 향상을 위해 낮은 해상도 선택 가능
-- 트래킹 연산은 최대 FHD로 제한됨 (카메라는 고해상도, 트래킹은 FHD)
+- 세로/가로 모드 모두 지원 (트래킹 해상도는 긴 변 기준 최대 1920px)
+
+### Console Log Overlay (모바일 디버깅)
+- URL에 `?mode=log` 추가 시 화면 우측 하단에 콘솔 로그 표시
+- log, warn, error, info 레벨 색상 구분
+- Copy 버튼으로 전체 로그 클립보드 복사
+- 모바일에서 디버깅 시 유용
 
 ## Technical Notes
 

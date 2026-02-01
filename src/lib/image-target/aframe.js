@@ -103,10 +103,9 @@ AFRAME.registerSystem('mindar-image-system', {
       return
     }
 
-    // 해상도 설정에 따른 카메라 크기
+    // 해상도 설정에 따른 카메라 크기 (iPhone 브라우저 최대 FHD 지원)
+    // 기존 프로젝트가 4k/qhd를 가지고 있어도 fallback으로 fhd 사용
     const resolutionMap = {
-      '4k': { width: 4096, height: 2160 },
-      'qhd': { width: 2560, height: 1440 },
       'fhd': { width: 1920, height: 1080 },
       'hd': { width: 1280, height: 720 },
       'nhd': { width: 640, height: 360 },
@@ -144,10 +143,10 @@ AFRAME.registerSystem('mindar-image-system', {
     const video = this.video
     const container = this.container
 
-    // 트래킹 해상도 제한 (최대 QHD) - 성능과 정확도 균형
-    // QHD까지 지원하여 고해상도 카메라에서 정확한 위치 추적
-    const MAX_TRACKING_WIDTH = 2560
-    const MAX_TRACKING_HEIGHT = 1440
+    // 트래킹 해상도 제한 (최대 FHD) - iPhone 브라우저 최대 지원 해상도
+    // 웹 브라우저에서 카메라는 FHD(1920x1080)가 사실상 최대
+    const MAX_TRACKING_WIDTH = 1920
+    const MAX_TRACKING_HEIGHT = 1080
     const aspectRatio = video.videoWidth / video.videoHeight
 
     let trackingWidth, trackingHeight

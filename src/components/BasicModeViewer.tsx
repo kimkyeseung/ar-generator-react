@@ -42,10 +42,8 @@ const BasicModeViewer: React.FC<Props> = ({
   useEffect(() => {
     let stream: MediaStream | null = null
 
-    // 해상도 설정에 따른 카메라 크기
+    // 해상도 설정에 따른 카메라 크기 (iPhone 브라우저 최대 FHD 지원)
     const resolutionMap: Record<CameraResolution, { width: number; height: number }> = {
-      '4k': { width: 4096, height: 2160 },
-      'qhd': { width: 2560, height: 1440 },
       'fhd': { width: 1920, height: 1080 },
       'hd': { width: 1280, height: 720 },
       'nhd': { width: 640, height: 360 },

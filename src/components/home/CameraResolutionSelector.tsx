@@ -13,21 +13,9 @@ const resolutionOptions: {
   specs: string
 }[] = [
   {
-    value: '4k',
-    label: '4K UHD',
-    description: '최고 화질 (배터리 소모 높음)',
-    specs: '4096x2160',
-  },
-  {
-    value: 'qhd',
-    label: 'QHD (2K)',
-    description: '고화질',
-    specs: '2560x1440',
-  },
-  {
     value: 'fhd',
     label: 'Full HD',
-    description: '권장 설정',
+    description: '권장 설정 (iPhone 최대 지원)',
     specs: '1920x1080',
   },
   {

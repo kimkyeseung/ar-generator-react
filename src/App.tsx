@@ -11,6 +11,7 @@ const EditProjectPage = lazy(() => import('./pages/EditProjectPage'))
 const QRCodePage = lazy(() => import('./QRCodePage').then(m => ({ default: m.QRCodePage })))
 const TestPage = lazy(() => import('./TestPage'))
 const Template = lazy(() => import('./components/Template').then(m => ({ default: m.Template })))
+const CleanupPage = lazy(() => import('./pages/CleanupPage'))
 
 // 로딩 폴백 컴포넌트
 const PageLoader = () => (
@@ -33,6 +34,7 @@ const App: React.FC = () => (
         <Route path='/result/qr/:folderId' element={<QRCodePage />} />
         <Route path='/result/:folderId' element={<MindARViewerPage />} />
         <Route path='/test/:folderId' element={<TestPage />} />
+        <Route path='/cleanup' element={<CleanupPage />} />
         <Route path='*' element={<Navigate to='/' replace />} />
       </Routes>
     </Suspense>

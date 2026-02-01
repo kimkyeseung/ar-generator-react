@@ -53,6 +53,13 @@ export default function VideoPositionEditor({
     setVideoUrl(null)
   }, [videoFile, videoSrc])
 
+  // 비디오 URL 변경 시 새 영상 로드
+  useEffect(() => {
+    if (videoUrl && videoRef.current) {
+      videoRef.current.load()
+    }
+  }, [videoUrl])
+
   // 카메라 시작
   useEffect(() => {
     let stream: MediaStream | null = null
@@ -266,6 +273,7 @@ export default function VideoPositionEditor({
             onTouchStart={handleVideoTouchStart}
           >
             <video
+              key={videoUrl}
               ref={videoRef}
               src={videoUrl}
               autoPlay

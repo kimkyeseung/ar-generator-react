@@ -29,7 +29,14 @@ const BasicModeViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl)
   const [cameraError, setCameraError] = useState<string | null>(null)
+
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // 영상 비율 (width/height)
+
+  // props 변경 시 상태 리셋
+  useEffect(() => {
+    setCurrentVideoUrl(previewVideoUrl || videoUrl)
+    setIsHDReady(!previewVideoUrl)
+  }, [videoUrl, previewVideoUrl])
 
   // 카메라 시작
   useEffect(() => {
@@ -370,6 +377,7 @@ const BasicModeViewer: React.FC<Props> = ({
             <>
               {/* 원본 비디오 (숨김) */}
               <video
+                key={currentVideoUrl}
                 ref={videoRef}
                 src={currentVideoUrl}
                 loop
@@ -387,6 +395,7 @@ const BasicModeViewer: React.FC<Props> = ({
             </>
           ) : (
             <video
+              key={currentVideoUrl}
               ref={videoRef}
               src={currentVideoUrl}
               loop

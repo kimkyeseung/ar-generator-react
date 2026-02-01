@@ -190,6 +190,12 @@ const MindARViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
 
+  // props 변경 시 상태 리셋 (영상 교체 시)
+  useEffect(() => {
+    setCurrentVideoUrl(previewVideoUrl || videoUrl)
+    setIsHDReady(!previewVideoUrl)
+  }, [videoUrl, previewVideoUrl])
+
   // 디버그 모드: 필터 설정 (MindAR 기본값: minCF=0.001, beta=1000)
   const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
   const [filterMinCF, setFilterMinCF] = useState(0.001)

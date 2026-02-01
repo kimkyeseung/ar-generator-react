@@ -227,6 +227,11 @@ AFRAME.registerSystem('mindar-image-system', {
     const video = this.video
     const container = this.container
 
+    // 초기화 전에 호출되는 경우 무시
+    if (!this.controller || !video || !container) {
+      return
+    }
+
     let vw, vh // display css width, height
     const videoRatio = video.videoWidth / video.videoHeight
     const containerRatio = container.clientWidth / container.clientHeight
@@ -238,23 +243,46 @@ AFRAME.registerSystem('mindar-image-system', {
       vh = vw / videoRatio
     }
 
-    // 트래킹 해상도와 비디오 해상도 비율 계산
-    // 프로젝션 매트릭스는 트래킹 해상도 기준이므로 보정 필요
-    const trackingScale = this.trackingHeight / video.videoHeight
-
     const proj = this.controller.getProjectionMatrix()
-    // vh를 트래킹 스케일로 보정하여 FOV 계산
-    const scaledVh = vh * trackingScale
+
+    // 프로젝션 매트릭스는 트래킹 해상도(trackingWidth x trackingHeight) 기준으로 생성됨
+    // 비디오가 더 높은 해상도일 때, FOV를 보정해야 오버레이가 정확히 위치함
+    //
+    // 트래킹 해상도와 비디오 해상도의 비율
+    const videoToTrackingRatio = video.videoHeight / this.trackingHeight
+
+    // 비디오 해상도가 트래킹 해상도보다 높으면:
+    // - 프로젝션 매트릭스는 더 작은 이미지 기준으로 계산됨
+    // - 실제 비디오는 더 넓은 영역을 보여줌
+    // - vh를 비율만큼 키워서 FOV를 줄여야 함 (오버레이가 타겟에 맞게 위치)
+    const adjustedVh = vh * videoToTrackingRatio
+
     const fov =
-      (2 * Math.atan((1 / proj[5] / scaledVh) * container.clientHeight) * 180) /
+      (2 * Math.atan((1 / proj[5] / adjustedVh) * container.clientHeight) * 180) /
       Math.PI // vertical fov
+
+    // 디버그: 고해상도 카메라에서 값 확인
+    if (videoToTrackingRatio > 1.1) {
+      const fovWithoutAdjust = (2 * Math.atan((1 / proj[5] / vh) * container.clientHeight) * 180) / Math.PI
+      console.log(`[MindAR FOV] Video: ${video.videoWidth}x${video.videoHeight}, Tracking: ${this.trackingWidth}x${this.trackingHeight}`)
+      console.log(`[MindAR FOV] ratio: ${videoToTrackingRatio.toFixed(2)}, vh: ${vh.toFixed(1)}, adjustedVh: ${adjustedVh.toFixed(1)}`)
+      console.log(`[MindAR FOV] FOV without adjust: ${fovWithoutAdjust.toFixed(2)}°, FOV with adjust: ${fov.toFixed(2)}°`)
+    }
     const near = proj[14] / (proj[10] - 1.0)
     const far = proj[14] / (proj[10] + 1.0)
     const ratio = proj[5] / proj[0] // (r-l) / (t-b)
     //console.log("loaded proj: ", proj, ". fov: ", fov, ". near: ", near, ". far: ", far, ". ratio: ", ratio);
     const newAspect = container.clientWidth / container.clientHeight
     const cameraEle = container.getElementsByTagName('a-camera')[0]
+    if (!cameraEle) {
+      // A-Frame 카메라가 아직 초기화되지 않음
+      return
+    }
     const camera = cameraEle.getObject3D('camera')
+    if (!camera) {
+      // THREE.js 카메라 객체가 아직 생성되지 않음
+      return
+    }
     camera.fov = fov
     camera.aspect = newAspect
     camera.near = near

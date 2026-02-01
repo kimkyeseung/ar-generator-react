@@ -146,10 +146,34 @@ const BasicModeViewer: React.FC<Props> = ({
       })
     }
 
+    // loop 속성이 실패할 경우 수동으로 재시작
+    const handleEnded = () => {
+      console.log('[BasicMode] Video ended, manually restarting...')
+      video.currentTime = 0
+      video.play().catch((e) => {
+        console.warn('[BasicMode] Loop restart failed:', e)
+      })
+    }
+
+    // 재생이 멈춘 경우 다시 시작 (일부 브라우저 버그 대응)
+    const handlePause = () => {
+      // 의도적인 일시정지가 아닌 경우 재시작
+      if (!video.ended && video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+        console.log('[BasicMode] Video paused unexpectedly, restarting...')
+        video.play().catch((e) => {
+          console.warn('[BasicMode] Resume after pause failed:', e)
+        })
+      }
+    }
+
     video.addEventListener('canplay', handleCanPlay, { once: true })
+    video.addEventListener('ended', handleEnded)
+    video.addEventListener('pause', handlePause)
 
     return () => {
       video.removeEventListener('canplay', handleCanPlay)
+      video.removeEventListener('ended', handleEnded)
+      video.removeEventListener('pause', handlePause)
     }
   }, [currentVideoUrl])
 
@@ -368,7 +392,8 @@ const BasicModeViewer: React.FC<Props> = ({
             left: `${position.x * 100}%`,
             top: `${position.y * 100}%`,
             transform: `translate(-50%, -50%) scale(${scale})`,
-            width: '50%',
+            // VideoPositionEditor와 동일한 로직: 세로 영상은 폭을 비율만큼 좁게
+            width: videoAspectRatio && videoAspectRatio >= 1 ? '50%' : `${50 * (videoAspectRatio || 1)}%`,
             aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : '16/9',
           }}
         >

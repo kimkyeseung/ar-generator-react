@@ -66,7 +66,7 @@ export default function EditProjectPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
   // 훅
-  const { compressVideo, compressionProgress } = useVideoCompressor()
+  const { compressVideo, compressionProgress, resetProgress } = useVideoCompressor()
   const { compile, isCompiling, progress: compileProgress } = useImageCompiler()
 
   // 프로젝트 로드
@@ -120,6 +120,32 @@ export default function EditProjectPage() {
       setFlatView(false)
     }
   }, [])
+
+  // 영상 품질 변경 시 재압축 (비디오가 이미 선택된 경우)
+  const handleVideoQualityChange = useCallback(async (quality: VideoQuality) => {
+    setVideoQuality(quality)
+
+    // 새로 선택된 비디오가 있으면 재압축
+    if (videoFile) {
+      setIsCompressing(true)
+      resetProgress()
+      try {
+        const { previewFile } = await compressVideo(videoFile, quality)
+        setPreviewVideoFile(previewFile)
+        if (previewFile) {
+          console.log(
+            `[Compressor] Re-compressed with ${quality}: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB`
+          )
+        } else {
+          console.log('[Compressor] High quality mode - no compression')
+        }
+      } catch (err) {
+        console.warn('Re-compression failed:', err)
+      } finally {
+        setIsCompressing(false)
+      }
+    }
+  }, [videoFile, compressVideo, resetProgress])
 
   const handleTargetImageSelect = useCallback((files: File[]) => {
     setTargetImageFiles(files)
@@ -448,7 +474,7 @@ export default function EditProjectPage() {
             <div className='mb-6'>
               <VideoQualitySelector
                 quality={videoQuality}
-                onQualityChange={setVideoQuality}
+                onQualityChange={handleVideoQualityChange}
                 disabled={isUploading || isCompiling || isCompressing}
               />
             </div>

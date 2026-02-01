@@ -166,6 +166,10 @@ AFRAME.registerSystem('mindar-image-system', {
 
     console.log(`[MindAR] Camera: ${video.videoWidth}x${video.videoHeight}, Tracking: ${trackingWidth}x${trackingHeight}`)
 
+    // _resize에서 사용할 수 있도록 저장
+    this.trackingWidth = trackingWidth
+    this.trackingHeight = trackingHeight
+
     this.controller = new Controller({
       inputWidth: trackingWidth,
       inputHeight: trackingHeight,
@@ -234,9 +238,15 @@ AFRAME.registerSystem('mindar-image-system', {
       vh = vw / videoRatio
     }
 
+    // 트래킹 해상도와 비디오 해상도 비율 계산
+    // 프로젝션 매트릭스는 트래킹 해상도 기준이므로 보정 필요
+    const trackingScale = this.trackingHeight / video.videoHeight
+
     const proj = this.controller.getProjectionMatrix()
+    // vh를 트래킹 스케일로 보정하여 FOV 계산
+    const scaledVh = vh * trackingScale
     const fov =
-      (2 * Math.atan((1 / proj[5] / vh) * container.clientHeight) * 180) /
+      (2 * Math.atan((1 / proj[5] / scaledVh) * container.clientHeight) * 180) /
       Math.PI // vertical fov
     const near = proj[14] / (proj[10] - 1.0)
     const far = proj[14] / (proj[10] + 1.0)

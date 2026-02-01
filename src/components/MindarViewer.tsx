@@ -190,10 +190,10 @@ const MindARViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
 
-  // 디버그 모드: 필터 설정
+  // 디버그 모드: 필터 설정 (MindAR 기본값: minCF=0.001, beta=1000)
   const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
   const [filterMinCF, setFilterMinCF] = useState(0.001)
-  const [filterBeta, setFilterBeta] = useState(10)
+  const [filterBeta, setFilterBeta] = useState(1000)
 
   // 디버그 모드: 필터 파라미터 실시간 업데이트
   useEffect(() => {
@@ -680,8 +680,8 @@ const MindARViewer: React.FC<Props> = ({
                   <input
                     type="range"
                     min="0"
-                    max="100"
-                    step="1"
+                    max="2000"
+                    step="10"
                     value={filterBeta}
                     onChange={(e) => setFilterBeta(parseInt(e.target.value))}
                     className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"

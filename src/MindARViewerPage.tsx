@@ -129,6 +129,8 @@ export default function MindARViewerPage() {
     queryFn: () => fetchArDataAndAssets(folderId),
     staleTime: 0, // 항상 최신 데이터 fetch (영상 교체 즉시 반영)
     gcTime: 0, // 캐시 비활성화
+    refetchOnMount: 'always', // 페이지 진입 시 항상 새로 fetch
+    refetchOnWindowFocus: false, // 포커스 시 refetch 방지 (AR 사용 중 방해 방지)
   })
 
   // 에셋 + 카메라 모두 준비될 때까지 대기

@@ -144,10 +144,10 @@ AFRAME.registerSystem('mindar-image-system', {
     const video = this.video
     const container = this.container
 
-    // 트래킹 해상도 제한 (최대 FHD) - 성능 최적화
-    // 카메라는 고해상도로 표시하면서 AR 트래킹은 낮은 해상도로 처리
-    const MAX_TRACKING_WIDTH = 1920
-    const MAX_TRACKING_HEIGHT = 1080
+    // 트래킹 해상도 제한 (최대 QHD) - 성능과 정확도 균형
+    // QHD까지 지원하여 고해상도 카메라에서 정확한 위치 추적
+    const MAX_TRACKING_WIDTH = 2560
+    const MAX_TRACKING_HEIGHT = 1440
     const aspectRatio = video.videoWidth / video.videoHeight
 
     let trackingWidth, trackingHeight
@@ -164,7 +164,7 @@ AFRAME.registerSystem('mindar-image-system', {
       trackingHeight = video.videoHeight
     }
 
-    console.log(`[MindAR] Camera: ${video.videoWidth}x${video.videoHeight}, Tracking: ${trackingWidth}x${trackingHeight}`)
+    console.log(`[MindAR] Camera: ${video.videoWidth}x${video.videoHeight}, Tracking: ${trackingWidth}x${trackingHeight}, Ratio: ${(video.videoWidth/trackingWidth).toFixed(2)}x`)
 
     // _resize에서 사용할 수 있도록 저장
     this.trackingWidth = trackingWidth
@@ -278,10 +278,14 @@ AFRAME.registerSystem('mindar-image-system', {
     //const newCam = new AFRAME.THREE.PerspectiveCamera(fov, newRatio, near, far);
     //camera.getObject3D('camera').projectionMatrix = newCam.projectionMatrix;
 
-    this.video.style.top = -(vh - container.clientHeight) / 2 + 'px'
-    this.video.style.left = -(vw - container.clientWidth) / 2 + 'px'
+    const videoTop = -(vh - container.clientHeight) / 2
+    const videoLeft = -(vw - container.clientWidth) / 2
+    this.video.style.top = videoTop + 'px'
+    this.video.style.left = videoLeft + 'px'
     this.video.style.width = vw + 'px'
     this.video.style.height = vh + 'px'
+
+    console.log(`[MindAR _resize] Container: ${container.clientWidth}x${container.clientHeight}, Video CSS: ${vw.toFixed(0)}x${vh.toFixed(0)}, Offset: (${videoLeft.toFixed(0)}, ${videoTop.toFixed(0)}), FOV: ${fov.toFixed(1)}°`)
   },
 })
 

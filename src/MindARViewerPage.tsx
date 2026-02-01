@@ -143,6 +143,18 @@ export default function MindARViewerPage() {
   // 에셋 + 카메라 모두 준비될 때까지 대기
   const isReady = !isLoading && data && cameraReady
 
+  // 디버그: 데이터 로드 후 로깅 (ConsoleLogOverlay 마운트 후 실행되도록 지연)
+  useEffect(() => {
+    if (data && isLogMode) {
+      const timer = setTimeout(() => {
+        console.log('[MindAR API] videoFileId:', data.fileIds.videoFileId)
+        console.log('[MindAR API] previewVideoFileId:', data.fileIds.previewVideoFileId)
+        console.log('[MindAR API] videoUrl:', data.assets.videoUrl)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [data, isLogMode])
+
   if (!isReady) {
     return (
       <div className="flex min-h-[100dvh] w-full items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">

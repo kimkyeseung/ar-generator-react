@@ -34,6 +34,7 @@ AFRAME.registerSystem('mindar-image-system', {
     this.warmupTolerance = warmupTolerance
     this.showStats = showStats
     this.cameraResolution = cameraResolution || 'fhd'
+    console.log(`[MindAR Setup] cameraResolution received: "${cameraResolution}" -> using: "${this.cameraResolution}"`)
     this.ui = new UI({ uiLoading, uiScanning, uiError })
   },
 

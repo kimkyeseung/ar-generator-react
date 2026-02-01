@@ -1,5 +1,6 @@
 import MindARViewer from './components/MindarViewer'
 import BasicModeViewer from './components/BasicModeViewer'
+import ConsoleLogOverlay from './components/ConsoleLogOverlay'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -113,6 +114,7 @@ export default function MindARViewerPage() {
   const { folderId } = useParams<{ folderId: string }>()
   const [searchParams] = useSearchParams()
   const isDebugMode = searchParams.get('mode') === 'debug'
+  const isLogMode = searchParams.get('mode') === 'log'
 
   if (!folderId) {
     throw new Error('folderId가 없습니다.')
@@ -157,6 +159,7 @@ export default function MindARViewerPage() {
           chromaKeyColor={data.fileIds.chromaKeyColor}
           cameraResolution={data.fileIds.cameraResolution || 'fhd'}
         />
+        {isLogMode && <ConsoleLogOverlay />}
       </section>
     )
   }
@@ -177,6 +180,7 @@ export default function MindARViewerPage() {
           debugMode={isDebugMode}
         />
       </div>
+      {isLogMode && <ConsoleLogOverlay />}
     </section>
   )
 }

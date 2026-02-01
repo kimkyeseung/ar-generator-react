@@ -47,12 +47,15 @@ src/
 ├── pages/
 │   ├── CreateProjectPage.tsx   # 프로젝트 생성 페이지
 │   ├── EditProjectPage.tsx     # 프로젝트 편집 페이지
-│   └── ProjectListPage.tsx     # 프로젝트 목록 페이지
+│   ├── ProjectListPage.tsx     # 프로젝트 목록 페이지
+│   └── CleanupPage.tsx         # Google Drive 찌꺼기 파일 정리 페이지
 ├── hooks/
 │   ├── useVideoCompressor.ts   # ffmpeg.wasm 비디오 압축 훅
 │   └── useImageCompiler.ts     # 이미지 타겟 컴파일 훅
 ├── lib/
-│   └── image-target/           # 커스텀 MindAR 라이브러리 (카메라 해상도 수정)
+│   ├── image-target/           # 커스텀 MindAR 이미지 타겟 라이브러리
+│   ├── ui/                     # MindAR UI 컴포넌트 (로딩, 스캐닝 등)
+│   └── libs/                   # MindAR 유틸리티 (one-euro-filter, opencv)
 ├── types/
 │   └── project.ts              # Project 타입 정의 (mode, videoPosition, thumbnailFileId 등)
 ├── MindARViewerPage.tsx        # AR/기본 모드 뷰어 라우팅 페이지
@@ -151,15 +154,24 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 - 컴파일 시 더 많은 특징점 추출 (컴파일 시간 증가)
 - 복잡한 이미지나 저조도 환경에서 추적 안정성 향상
 
+### Camera Resolution (카메라 해상도)
+- `cameraResolution` 옵션으로 카메라 해상도 조절
+- 지원 옵션: `4k` (4096x2160), `qhd` (2560x1440), `fhd` (1920x1080, 기본값), `hd` (1280x720), `nhd` (640x360), `vga` (640x480), `qvga` (320x240)
+- 저사양 기기에서 트래킹 성능 향상을 위해 낮은 해상도 선택 가능
+- 트래킹 연산은 최대 FHD로 제한됨 (카메라는 고해상도, 트래킹은 FHD)
+
 ## Technical Notes
 
 - 비디오 크기 제한: 32MB
 - 타겟 이미지 비율이 AR 오버레이에 보존됨
 - MindAR 컴파일은 클라이언트에서 실행 (서버 부하 없음)
 - ffmpeg.wasm은 UMD 빌드 사용 (ESM 모듈 문제 회피)
-- 카메라 해상도: 4096x2160 (4K UHD) - `src/lib/image-target/aframe.js`에서 설정 (기기 지원 시 최고 화질 사용)
+- 커스텀 MindAR 라이브러리 사용 (`src/lib/image-target/aframe.js`) - npm 패키지 대신 로컬 수정 버전
+- 카메라 해상도는 `cameraResolution` 옵션으로 조절 (기본값: FHD 1920x1080)
 - 프로젝트 생성/편집/삭제 시 관리자 비밀번호 필요 (`X-Admin-Password` 헤더)
 - 발행 시 컴파일+업로드가 한 번에 실행됨 (1-click flow)
+- 영상 업데이트 시 기존 파일 자동 삭제 (Google Drive 용량 관리)
+- `/cleanup` 페이지에서 찌꺼기 파일 일괄 정리 가능
 
 ## Testing
 

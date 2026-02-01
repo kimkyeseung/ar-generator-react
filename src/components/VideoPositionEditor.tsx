@@ -35,6 +35,7 @@ export default function VideoPositionEditor({
   const [initialScale, setInitialScale] = useState(1)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number>(16 / 9) // 기본값: 16:9
 
   // 비디오 URL 생성
   useEffect(() => {
@@ -59,6 +60,16 @@ export default function VideoPositionEditor({
       videoRef.current.load()
     }
   }, [videoUrl])
+
+  // 비디오 메타데이터 로드 시 실제 비율 계산
+  const handleVideoMetadata = useCallback(() => {
+    if (videoRef.current) {
+      const { videoWidth, videoHeight } = videoRef.current
+      if (videoWidth && videoHeight) {
+        setVideoAspectRatio(videoWidth / videoHeight)
+      }
+    }
+  }, [])
 
   // 카메라 시작
   useEffect(() => {
@@ -266,8 +277,8 @@ export default function VideoPositionEditor({
               left: `${position.x * 100}%`,
               top: `${position.y * 100}%`,
               transform: `translate(-50%, -50%) scale(${scale})`,
-              width: '50%',
-              aspectRatio: '16/9',
+              width: videoAspectRatio >= 1 ? '50%' : `${50 * videoAspectRatio}%`,
+              aspectRatio: `${videoAspectRatio}`,
             }}
             onMouseDown={handleVideoMouseDown}
             onTouchStart={handleVideoTouchStart}
@@ -280,6 +291,7 @@ export default function VideoPositionEditor({
               loop
               muted
               playsInline
+              onLoadedMetadata={handleVideoMetadata}
               className="h-full w-full object-contain pointer-events-none"
               style={{
                 opacity: chromaKeyColor ? 0.9 : 1,

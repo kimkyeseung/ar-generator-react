@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import 'aframe'
-import 'mind-ar/dist/mindar-image-aframe.prod.js'
+import '../lib/image-target/aframe.js'
 import { CameraResolution } from '../types/project'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 

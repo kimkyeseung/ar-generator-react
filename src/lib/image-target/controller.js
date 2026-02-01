@@ -1,7 +1,7 @@
 import { memory, nextFrame } from '@tensorflow/tfjs'
 import { OneEuroFilter } from '../libs/one-euro-filter.js'
 import { Compiler } from './compiler'
-import ControllerWorker from './controller.worker.js?worker&inline'
+// Removed Vite-specific import - use URL constructor instead for webpack/CRA
 import { CropDetector } from './detector/crop-detector.js'
 import { InputLoader } from './input-loader.js'
 import { Tracker } from './tracker/tracker.js'
@@ -69,7 +69,7 @@ class Controller {
       far: far,
     })
 
-    this.worker = new ControllerWorker() //new Worker(new URL('./controller.worker.js', import.meta.url));
+    this.worker = new Worker(new URL('./controller.worker.js', import.meta.url))
     this.workerMatchDone = null
     this.workerTrackDone = null
     this.worker.onmessage = (e) => {

@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals */
 import { Estimator } from './estimation/estimator.js'
 import { Matcher } from './matching/matcher.js'
 
@@ -72,7 +73,7 @@ onmessage = (msg) => {
       break
 
     case 'dispose':
-      close()
+      self.close()
       break
 
     default:

@@ -343,6 +343,9 @@ AFRAME.registerComponent('mindar-image-target', {
     root.matrixAutoUpdate = false
 
     root.matrix = this.invisibleMatrix
+
+    // GC 압박 방지: Matrix4 객체 사전 할당 (매 프레임 new 방지)
+    this._worldMatrix = new AFRAME.THREE.Matrix4()
   },
 
   setupMarker([markerWidth, markerHeight]) {
@@ -371,10 +374,10 @@ AFRAME.registerComponent('mindar-image-target', {
       this.el.object3D.matrix = this.invisibleMatrix
       return
     }
-    var m = new AFRAME.THREE.Matrix4()
-    m.elements = worldMatrix
-    m.multiply(this.postMatrix)
-    this.el.object3D.matrix = m
+    // 사전 할당된 Matrix4 재사용 (GC 압박 방지)
+    this._worldMatrix.elements = worldMatrix
+    this._worldMatrix.multiply(this.postMatrix)
+    this.el.object3D.matrix = this._worldMatrix
   },
 })
 /*

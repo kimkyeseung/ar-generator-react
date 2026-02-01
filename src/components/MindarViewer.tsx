@@ -53,6 +53,11 @@ interface Props {
 // billboard 컴포넌트를 모듈 로드 시점에 미리 등록 (flatView용)
 if (typeof AFRAME !== 'undefined' && !AFRAME.components['billboard']) {
   AFRAME.registerComponent('billboard', {
+    init: function () {
+      // GC 압박 방지: Quaternion 객체 사전 할당 (매 프레임 new 방지)
+      this._cameraQuaternion = new AFRAME.THREE.Quaternion()
+      this._parentQuaternion = new AFRAME.THREE.Quaternion()
+    },
     tick: function () {
       const camera = this.el.sceneEl?.camera
       if (!camera) return
@@ -60,20 +65,18 @@ if (typeof AFRAME !== 'undefined' && !AFRAME.components['billboard']) {
       const object3D = this.el.object3D
       if (!object3D) return
 
-      // 카메라의 world quaternion을 가져와서 적용
-      const cameraWorldQuaternion = new AFRAME.THREE.Quaternion()
-      camera.getWorldQuaternion(cameraWorldQuaternion)
+      // 사전 할당된 객체 재사용
+      camera.getWorldQuaternion(this._cameraQuaternion)
 
       // 부모의 world quaternion을 역으로 적용하여 로컬 회전 계산
       const parent = object3D.parent
       if (parent) {
-        const parentWorldQuaternion = new AFRAME.THREE.Quaternion()
-        parent.getWorldQuaternion(parentWorldQuaternion)
-        parentWorldQuaternion.invert()
-        cameraWorldQuaternion.premultiply(parentWorldQuaternion)
+        parent.getWorldQuaternion(this._parentQuaternion)
+        this._parentQuaternion.invert()
+        this._cameraQuaternion.premultiply(this._parentQuaternion)
       }
 
-      object3D.quaternion.copy(cameraWorldQuaternion)
+      object3D.quaternion.copy(this._cameraQuaternion)
     },
   })
 }
@@ -140,13 +143,20 @@ if (typeof AFRAME !== 'undefined' && !AFRAME.components['chromakey-material']) {
       }
     },
     tick: function () {
-      // 매 프레임마다 비디오 텍스처 갱신
+      // 비디오가 재생 중일 때만 텍스처 갱신 (불필요한 GPU 업로드 방지)
+      const video = this.data.src as HTMLVideoElement | null
+      if (!video || video.paused || video.ended) return
+
       if (this.material && this.material.uniforms.src.value) {
         this.material.uniforms.src.value.needsUpdate = true
       }
     },
     remove: function () {
       if (this.material) {
+        // 텍스처도 함께 dispose (GPU 메모리 누수 방지)
+        if (this.material.uniforms?.src?.value) {
+          this.material.uniforms.src.value.dispose()
+        }
         this.material.dispose()
       }
     },
@@ -279,7 +289,9 @@ const MindARViewer: React.FC<Props> = ({
 
     return () => {
       hdVideo.removeEventListener('canplaythrough', handleCanPlay)
+      hdVideo.pause()
       hdVideo.src = ''
+      hdVideo.load() // 버퍼된 데이터 해제
     }
   }, [videoUrl, previewVideoUrl, isHDReady])
 
@@ -291,18 +303,26 @@ const MindARViewer: React.FC<Props> = ({
     const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
     if (!video) return
 
-    // 현재 재생 시간 저장
-    const currentTime = video.currentTime
-    const wasPlaying = !video.paused
-
-    // 새 소스로 변경
+    // 새 소스로 변경 (버퍼링 대기 후 시크)
     if (video.src !== currentVideoUrl) {
+      const currentTime = video.currentTime
+      const wasPlaying = !video.paused
+
       console.log('[MindAR] Switching video source to:', currentVideoUrl.includes('preview') ? 'preview' : 'HD')
+      video.pause()
       video.src = currentVideoUrl
-      video.currentTime = currentTime
-      if (wasPlaying) {
-        video.play().catch(() => {})
+
+      // 버퍼링 완료 후 시크 및 재생 (끊김 방지)
+      const handleCanPlay = () => {
+        video.currentTime = currentTime
+        if (wasPlaying) {
+          video.play().catch(() => {})
+        }
+        video.removeEventListener('canplaythrough', handleCanPlay)
       }
+
+      video.addEventListener('canplaythrough', handleCanPlay)
+      video.load()
     }
   }, [currentVideoUrl])
 

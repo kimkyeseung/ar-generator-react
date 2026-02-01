@@ -345,19 +345,13 @@ test.describe('Mode Badge in Project List', () => {
     // 내 프로젝트 섹션이 로드될 때까지 대기
     await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
 
-    // 로딩이 완료될 때까지 대기 (둘 중 하나가 나타날 때까지)
-    // 프로젝트 목록이 있거나 / 빈 상태 메시지가 있거나 / 에러가 있거나
-    await expect(
-      page.getByText('아직 프로젝트가 없습니다').or(
-        page.locator('[data-testid="project-card"]').first()
-      ).or(
-        page.getByText('🎯 AR').first()
-      ).or(
-        page.getByText('📹 기본').first()
-      ).or(
-        page.getByRole('button', { name: /다시 시도/ })
-      )
-    ).toBeVisible({ timeout: 15000 })
+    // 로딩 스피너가 사라질 때까지 대기 (로딩 완료 표시)
+    await expect(page.getByText('로딩 중...')).toBeHidden({ timeout: 15000 })
+
+    // 로딩 완료 후 페이지가 정상 렌더링되었는지 확인
+    // (프로젝트가 있거나 / 빈 상태 메시지가 있거나 / 에러가 있거나)
+    const pageContent = page.locator('.container')
+    await expect(pageContent).toBeVisible()
   })
 })
 

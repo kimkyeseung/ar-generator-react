@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef } from 'react'
 import { FFmpeg } from '@ffmpeg/ffmpeg'
+import { VideoQuality } from '../types/project'
 
 interface CompressionResult {
-  previewFile: File
+  previewFile: File | null // null when quality is 'high' (no compression)
   originalFile: File
 }
 
@@ -59,7 +60,20 @@ export function useVideoCompressor() {
   }, [])
 
   const compressVideo = useCallback(
-    async (videoFile: File): Promise<CompressionResult> => {
+    async (videoFile: File, quality: VideoQuality = 'low'): Promise<CompressionResult> => {
+      // 고화질(압축x)인 경우 압축하지 않음
+      if (quality === 'high') {
+        setCompressionProgress({
+          stage: 'done',
+          progress: 100,
+          message: '고화질 모드 (압축 없음)',
+        })
+        return {
+          previewFile: null,
+          originalFile: videoFile,
+        }
+      }
+
       try {
         const ffmpeg = await loadFFmpeg()
 
@@ -75,27 +89,39 @@ export function useVideoCompressor() {
         const arrayBuffer = await videoFile.arrayBuffer()
         await ffmpeg.writeFile(inputName, new Uint8Array(arrayBuffer))
 
-        // 저화질 압축 (빠른 로딩용)
-        // -vf scale=480:-2: 가로 480px, 세로는 비율 유지 (짝수)
-        // -c:v libx264: H.264 코덱
-        // -crf 35: 낮은 품질 (높을수록 품질 낮음, 23이 기본)
-        // -preset ultrafast: 가장 빠른 인코딩
-        // -c:a aac -b:a 64k: 오디오 64kbps
+        // 품질별 압축 설정
+        // medium: 720p, CRF 28, 128kbps 오디오
+        // low: 480p, CRF 35, 64kbps 오디오
+        const qualitySettings = {
+          medium: {
+            scale: 'scale=1280:-2', // 720p
+            crf: '28',
+            audioBitrate: '128k',
+          },
+          low: {
+            scale: 'scale=480:-2', // 480p
+            crf: '35',
+            audioBitrate: '64k',
+          },
+        }
+
+        const settings = qualitySettings[quality]
+
         await ffmpeg.exec([
           '-i', inputName,
-          '-vf', 'scale=480:-2',
+          '-vf', settings.scale,
           '-c:v', 'libx264',
-          '-crf', '35',
+          '-crf', settings.crf,
           '-preset', 'ultrafast',
           '-c:a', 'aac',
-          '-b:a', '64k',
+          '-b:a', settings.audioBitrate,
           '-movflags', '+faststart', // 웹 스트리밍 최적화
           outputName,
         ])
 
         // 결과 파일 읽기
         const data = await ffmpeg.readFile(outputName)
-        const previewBlob = new Blob([data], { type: 'video/mp4' })
+        const previewBlob = new Blob([data as BlobPart], { type: 'video/mp4' })
         const previewFile = new File([previewBlob], 'preview.mp4', {
           type: 'video/mp4',
         })

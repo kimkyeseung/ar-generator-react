@@ -13,11 +13,12 @@ import PageBackground from '../components/home/PageBackground'
 import PublishSection from '../components/home/PublishSection'
 import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
+import VideoQualitySelector from '../components/home/VideoQualitySelector'
 import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
-import { CameraResolution, ProjectMode, VideoPosition } from '../types/project'
+import { CameraResolution, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
@@ -38,6 +39,9 @@ export default function CreateProjectPage() {
 
   // 카메라 해상도 선택
   const [cameraResolution, setCameraResolution] = useState<CameraResolution>('fhd')
+
+  // 영상 품질 선택
+  const [videoQuality, setVideoQuality] = useState<VideoQuality>('low')
 
   // 타겟 이미지 파일 (컴파일 전 원본) - AR 모드에서만 사용
   const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
@@ -104,14 +108,18 @@ export default function CreateProjectPage() {
 
       setVideoFile(file)
 
-      // 저화질 프리뷰 영상 생성 (백그라운드에서)
+      // 영상 품질에 따라 압축 (백그라운드에서)
       setIsCompressing(true)
       try {
-        const { previewFile } = await compressVideo(file)
+        const { previewFile } = await compressVideo(file, videoQuality)
         setPreviewVideoFile(previewFile)
-        console.log(
-          `[Compressor] Preview: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB, Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`
-        )
+        if (previewFile) {
+          console.log(
+            `[Compressor] Preview: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB, Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+          )
+        } else {
+          console.log('[Compressor] High quality mode - no compression')
+        }
       } catch (err) {
         console.warn('Preview compression failed, will upload without preview:', err)
       } finally {
@@ -136,7 +144,7 @@ export default function CreateProjectPage() {
     }
 
     await processVideo(input)
-  }, [compressVideo])
+  }, [compressVideo, videoQuality])
 
   // 퍼블리시 가능 여부
   // AR 모드: 타겟 이미지 파일 + 비디오 파일 필요
@@ -402,6 +410,15 @@ export default function CreateProjectPage() {
               <CameraResolutionSelector
                 resolution={cameraResolution}
                 onResolutionChange={setCameraResolution}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+            </div>
+
+            {/* 영상 품질 선택 */}
+            <div className='mb-6'>
+              <VideoQualitySelector
+                quality={videoQuality}
+                onQualityChange={setVideoQuality}
                 disabled={isUploading || isCompiling || isCompressing}
               />
             </div>

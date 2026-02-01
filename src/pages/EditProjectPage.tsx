@@ -11,9 +11,10 @@ import ModeSelector from '../components/home/ModeSelector'
 import PageBackground from '../components/home/PageBackground'
 import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
+import VideoQualitySelector from '../components/home/VideoQualitySelector'
 import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
-import { CameraResolution, Project, ProjectMode, VideoPosition } from '../types/project'
+import { CameraResolution, Project, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { Progress } from '../components/ui/progress'
@@ -39,6 +40,7 @@ export default function EditProjectPage() {
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState<ProjectMode>('ar')
   const [cameraResolution, setCameraResolution] = useState<CameraResolution>('fhd')
+  const [videoQuality, setVideoQuality] = useState<VideoQuality>('low')
   const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
@@ -150,11 +152,15 @@ export default function EditProjectPage() {
 
       setIsCompressing(true)
       try {
-        const { previewFile } = await compressVideo(file)
+        const { previewFile } = await compressVideo(file, videoQuality)
         setPreviewVideoFile(previewFile)
-        console.log(
-          `[Compressor] Preview: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB, Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`
-        )
+        if (previewFile) {
+          console.log(
+            `[Compressor] Preview: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB, Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`
+          )
+        } else {
+          console.log('[Compressor] High quality mode - no compression')
+        }
       } catch (err) {
         console.warn('Preview compression failed, will upload without preview:', err)
       } finally {
@@ -179,7 +185,7 @@ export default function EditProjectPage() {
     }
 
     await processVideo(input)
-  }, [compressVideo])
+  }, [compressVideo, videoQuality])
 
   const handleChromaKeyColorChange = (color: string) => {
     setChromaKeyColor(color)
@@ -434,6 +440,15 @@ export default function EditProjectPage() {
               <CameraResolutionSelector
                 resolution={cameraResolution}
                 onResolutionChange={setCameraResolution}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+            </div>
+
+            {/* 영상 품질 선택 */}
+            <div className='mb-6'>
+              <VideoQualitySelector
+                quality={videoQuality}
+                onQualityChange={setVideoQuality}
                 disabled={isUploading || isCompiling || isCompressing}
               />
             </div>

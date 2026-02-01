@@ -23,7 +23,7 @@ export interface Project {
   mode: ProjectMode // 'ar' | 'basic'
   cameraResolution: CameraResolution // '4k' | 'fhd' | 'hd'
   videoPosition: VideoPosition | null // 기본모드에서 비디오 위치
-  videoScale: number | null // 기본모드에서 비디오 크기 (0.1~2.0)
+  videoScale: number | null // 기본모드에서 비디오 크기 (0.2~5.0)
   createdAt: string
   updatedAt: string
 }

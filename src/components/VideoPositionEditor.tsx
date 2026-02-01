@@ -12,7 +12,7 @@ interface VideoPositionEditorProps {
 }
 
 const MIN_SCALE = 0.2
-const MAX_SCALE = 2.0
+const MAX_SCALE = 5.0 // 화면 가득 채울 수 있도록 500%까지
 const SCALE_STEP = 0.1
 
 type DragMode = 'none' | 'pan' | 'resize'

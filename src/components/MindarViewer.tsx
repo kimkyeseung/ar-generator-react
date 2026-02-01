@@ -701,7 +701,7 @@ const MindARViewer: React.FC<Props> = ({
         className='h-full w-full'
         style={{ width: '100%', height: '100%' }}
         ref={sceneRef}
-        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no; cameraResolution: ${cameraResolution};${stabilizationEnabled ? ` filterMinCF: ${filterMinCF}; filterBeta: ${filterBeta};` : ''}${highPrecision ? ' warmupTolerance: 2; missTolerance: 8;' : ''}`}
+        mindar-image={`imageTargetSrc: ${mindUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no; cameraResolution: ${cameraResolution};${stabilizationEnabled ? ` filterMinCF: ${filterMinCF}; filterBeta: ${filterBeta};` : ''}`}
         assettimeout='15000'
         color-space='sRGB'
         embedded

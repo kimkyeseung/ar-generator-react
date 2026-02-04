@@ -160,6 +160,7 @@ export default function MindARViewerPage() {
           scale={data.fileIds.videoScale || 1}
           chromaKeyColor={data.fileIds.chromaKeyColor}
           cameraResolution={data.fileIds.cameraResolution || 'fhd'}
+          debugMode={isDebugMode}
         />
         {isLogMode && <ConsoleLogOverlay />}
       </section>

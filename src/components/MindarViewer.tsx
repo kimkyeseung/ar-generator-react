@@ -596,19 +596,6 @@ const MindARViewer: React.FC<Props> = ({
         <SpeakerIcon muted={isMuted} />
       </button>
 
-      {/* HD 로딩 표시기 */}
-      {previewVideoUrl && !isHDReady && (
-        <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-          <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-400"></div>
-          <span>HD 로딩 중...</span>
-        </div>
-      )}
-      {previewVideoUrl && isHDReady && !debugMode && (
-        <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-          <div className="h-2 w-2 rounded-full bg-green-400"></div>
-          <span>HD</span>
-        </div>
-      )}
 
       {/* 디버그 패널 */}
       {debugMode && (
@@ -616,11 +603,16 @@ const MindARViewer: React.FC<Props> = ({
           <div className="mx-auto max-w-md space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">디버그 모드</span>
-              {previewVideoUrl && (
-                <span className={`text-xs px-2 py-0.5 rounded ${isHDReady ? 'bg-green-500' : 'bg-yellow-500'}`}>
-                  {isHDReady ? 'HD' : 'Preview'}
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2 py-0.5 rounded bg-blue-500">
+                  📷 {cameraResolution.toUpperCase()}
                 </span>
-              )}
+                {previewVideoUrl && (
+                  <span className={`text-xs px-2 py-0.5 rounded ${isHDReady ? 'bg-green-500' : 'bg-yellow-500'}`}>
+                    {isHDReady ? 'HD' : 'Preview'}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* 떨림 보정 토글 */}

@@ -9,6 +9,7 @@ interface Props {
   scale: number
   chromaKeyColor?: string
   cameraResolution?: CameraResolution
+  debugMode?: boolean
 }
 
 const BasicModeViewer: React.FC<Props> = ({
@@ -18,6 +19,7 @@ const BasicModeViewer: React.FC<Props> = ({
   scale,
   chromaKeyColor,
   cameraResolution = 'fhd',
+  debugMode = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const cameraRef = useRef<HTMLVideoElement>(null)
@@ -27,15 +29,14 @@ const BasicModeViewer: React.FC<Props> = ({
   const [isMuted, setIsMuted] = useState(true) // 항상 음소거로 시작 (자동 재생 지원)
   const [isLoading, setIsLoading] = useState(true)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
-  const [isHDReady, setIsHDReady] = useState(!previewVideoUrl)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [actualCameraResolution, setActualCameraResolution] = useState<string | null>(null)
 
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // 영상 비율 (width/height)
 
   // props 변경 시 상태 리셋
   useEffect(() => {
     setCurrentVideoUrl(previewVideoUrl || videoUrl)
-    setIsHDReady(!previewVideoUrl)
   }, [videoUrl, previewVideoUrl])
 
   // 카메라 시작
@@ -61,6 +62,13 @@ const BasicModeViewer: React.FC<Props> = ({
         })
         if (cameraRef.current) {
           cameraRef.current.srcObject = stream
+          // 실제 카메라 해상도 추적
+          const videoTrack = stream.getVideoTracks()[0]
+          if (videoTrack) {
+            const settings = videoTrack.getSettings()
+            setActualCameraResolution(`${settings.width}x${settings.height}`)
+            console.log(`[BasicMode Camera] Actual resolution: ${settings.width}x${settings.height}`)
+          }
         }
         setCameraError(null)
         setIsLoading(false)
@@ -80,9 +88,9 @@ const BasicModeViewer: React.FC<Props> = ({
     }
   }, [cameraResolution])
 
-  // HD 비디오 프리로드
+  // HD 비디오 프리로드 (백그라운드에서 HD 로드 후 전환)
   useEffect(() => {
-    if (!previewVideoUrl || isHDReady) return
+    if (!previewVideoUrl) return
 
     console.log('[BasicMode] Preloading HD video in background...')
     const hdVideo = document.createElement('video')
@@ -94,7 +102,6 @@ const BasicModeViewer: React.FC<Props> = ({
 
     const handleCanPlay = () => {
       console.log('[BasicMode] HD video ready, switching source...')
-      setIsHDReady(true)
       setCurrentVideoUrl(videoUrl)
     }
 
@@ -105,7 +112,7 @@ const BasicModeViewer: React.FC<Props> = ({
       hdVideo.removeEventListener('canplaythrough', handleCanPlay)
       hdVideo.src = ''
     }
-  }, [videoUrl, previewVideoUrl, isHDReady])
+  }, [videoUrl, previewVideoUrl])
 
   // 비디오 소스 설정 및 재생 (초기화 + 소스 변경)
   useEffect(() => {
@@ -340,17 +347,10 @@ const BasicModeViewer: React.FC<Props> = ({
         <SpeakerIcon muted={isMuted} />
       </button>
 
-      {/* HD 로딩 표시기 */}
-      {previewVideoUrl && !isHDReady && (
+      {/* 디버그 모드: 카메라 해상도 표시 */}
+      {debugMode && actualCameraResolution && (
         <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-          <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-400"></div>
-          <span>HD 로딩 중...</span>
-        </div>
-      )}
-      {previewVideoUrl && isHDReady && (
-        <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-          <div className="h-2 w-2 rounded-full bg-green-400"></div>
-          <span>HD</span>
+          <span>📷 {actualCameraResolution}</span>
         </div>
       )}
 

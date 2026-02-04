@@ -11,6 +11,7 @@ export interface Project {
   id: string
   folderId: string
   videoFileId: string
+  previewVideoFileId: string | null // 압축된 프리뷰 영상 (저화질/중화질 모드에서 사용)
   targetFileId: string | null // 기본모드에서는 null
   targetImageFileId: string | null
   thumbnailFileId: string | null // 정사각형 썸네일 (미설정시 영상 첫화면 사용)

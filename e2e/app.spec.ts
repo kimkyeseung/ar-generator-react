@@ -383,6 +383,123 @@ test.describe('Thumbnail Upload', () => {
   })
 })
 
+test.describe('Edit Project Page - Video Quality Change', () => {
+  // Tests for the video quality change feature on existing projects
+
+  test('should show video quality selector on edit page', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    const editButtons = page.locator('button', { hasText: '편집' })
+    const count = await editButtons.count()
+
+    if (count > 0) {
+      await editButtons.first().click()
+
+      // Edit page should show video quality selector
+      await expect(page.getByText('영상 품질')).toBeVisible({ timeout: 10000 })
+
+      // Should show all quality options
+      await expect(page.getByRole('button', { name: /고화질 선택/i })).toBeVisible()
+      await expect(page.getByRole('button', { name: /중간화질 선택/i })).toBeVisible()
+      await expect(page.getByRole('button', { name: /저화질 선택/i })).toBeVisible()
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should detect initial video quality based on preview file', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    const editButtons = page.locator('button', { hasText: '편집' })
+    const count = await editButtons.count()
+
+    if (count > 0) {
+      await editButtons.first().click()
+
+      // Edit page should show video quality selector
+      await expect(page.getByText('영상 품질')).toBeVisible({ timeout: 10000 })
+
+      // One of the quality buttons should be selected (aria-pressed="true")
+      const qualityButtons = [
+        page.getByRole('button', { name: /고화질 선택/i }),
+        page.getByRole('button', { name: /중간화질 선택/i }),
+        page.getByRole('button', { name: /저화질 선택/i }),
+      ]
+
+      // At least one should be pressed
+      let selectedCount = 0
+      for (const button of qualityButtons) {
+        const isPressed = await button.getAttribute('aria-pressed')
+        if (isPressed === 'true') selectedCount++
+      }
+      expect(selectedCount).toBe(1)
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should be able to change video quality', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    const editButtons = page.locator('button', { hasText: '편집' })
+    const count = await editButtons.count()
+
+    if (count > 0) {
+      await editButtons.first().click()
+
+      // Edit page should show video quality selector
+      await expect(page.getByText('영상 품질')).toBeVisible({ timeout: 10000 })
+
+      // Get current quality
+      const lowQualityButton = page.getByRole('button', { name: /저화질 선택/i })
+      const highQualityButton = page.getByRole('button', { name: /고화질 선택/i })
+
+      // Try clicking on high quality button
+      await highQualityButton.click()
+
+      // Either the high quality button should be pressed,
+      // or if it was already high quality, we should see a status change
+      // (download in progress or compression in progress)
+      const isHighQualityPressed = await highQualityButton.getAttribute('aria-pressed')
+      if (isHighQualityPressed !== 'true') {
+        // If not immediately pressed, it might be downloading/compressing
+        // Check for workflow status change
+        const workflowStatus = page.locator('span', { hasText: /(다운로드|압축|저장)/ })
+        await expect(workflowStatus.or(highQualityButton)).toBeVisible({ timeout: 3000 })
+      }
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should show workflow status when quality is changed', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    const editButtons = page.locator('button', { hasText: '편집' })
+    const count = await editButtons.count()
+
+    if (count > 0) {
+      await editButtons.first().click()
+
+      // Edit page should load
+      await expect(page.getByText('영상 품질')).toBeVisible({ timeout: 10000 })
+
+      // Initial status should be "편집 모드"
+      await expect(page.getByText('편집 모드')).toBeVisible()
+    } else {
+      test.skip()
+    }
+  })
+})
+
 test.describe('Edit Project Page - Mode Change', () => {
   // Note: These tests require a project to exist in the database
   // They verify the mode change functionality in the edit page

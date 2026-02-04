@@ -41,9 +41,12 @@ export default function EditProjectPage() {
   const [mode, setMode] = useState<ProjectMode>('ar')
   const [cameraResolution, setCameraResolution] = useState<CameraResolution>('fhd')
   const [videoQuality, setVideoQuality] = useState<VideoQuality>('low')
+  const [initialVideoQuality, setInitialVideoQuality] = useState<VideoQuality>('low') // 초기 품질 (변경 감지용)
   const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [previewVideoFile, setPreviewVideoFile] = useState<File | null>(null)
+  const [existingVideoFile, setExistingVideoFile] = useState<File | null>(null) // 기존 영상 다운로드용
+  const [isDownloadingVideo, setIsDownloadingVideo] = useState(false)
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [useChromaKey, setUseChromaKey] = useState(false)
@@ -100,6 +103,10 @@ export default function EditProjectPage() {
         if (data.videoScale != null) {
           setVideoScale(data.videoScale)
         }
+        // 기존 영상 품질 감지 (previewVideoFileId가 있으면 압축됨)
+        const detectedQuality: VideoQuality = data.previewVideoFileId ? 'low' : 'high'
+        setVideoQuality(detectedQuality)
+        setInitialVideoQuality(detectedQuality)
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
       } finally {
@@ -121,11 +128,34 @@ export default function EditProjectPage() {
     }
   }, [])
 
-  // 영상 품질 변경 시 재압축 (비디오가 이미 선택된 경우)
+  // 기존 영상 다운로드 (품질 변경 시 필요)
+  const downloadExistingVideo = useCallback(async (): Promise<File | null> => {
+    if (!project?.videoFileId) return null
+    if (existingVideoFile) return existingVideoFile // 이미 다운로드됨
+
+    try {
+      setIsDownloadingVideo(true)
+      console.log('[Edit] Downloading existing video for re-compression...')
+      const res = await fetch(`${API_URL}/file/${project.videoFileId}`)
+      if (!res.ok) throw new Error('Failed to download existing video')
+      const blob = await res.blob()
+      const file = new File([blob], 'existing-video.mp4', { type: blob.type || 'video/mp4' })
+      setExistingVideoFile(file)
+      console.log(`[Edit] Downloaded existing video: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
+      return file
+    } catch (err) {
+      console.error('[Edit] Failed to download existing video:', err)
+      return null
+    } finally {
+      setIsDownloadingVideo(false)
+    }
+  }, [project?.videoFileId, existingVideoFile])
+
+  // 영상 품질 변경 시 재압축
   const handleVideoQualityChange = useCallback(async (quality: VideoQuality) => {
     setVideoQuality(quality)
 
-    // 새로 선택된 비디오가 있으면 재압축
+    // 새로 선택된 비디오가 있으면 새 비디오 재압축
     if (videoFile) {
       setIsCompressing(true)
       resetProgress()
@@ -134,7 +164,7 @@ export default function EditProjectPage() {
         setPreviewVideoFile(previewFile)
         if (previewFile) {
           console.log(
-            `[Compressor] Re-compressed with ${quality}: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB`
+            `[Compressor] Re-compressed new video with ${quality}: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB`
           )
         } else {
           console.log('[Compressor] High quality mode - no compression')
@@ -144,8 +174,41 @@ export default function EditProjectPage() {
       } finally {
         setIsCompressing(false)
       }
+      return
     }
-  }, [videoFile, compressVideo, resetProgress])
+
+    // 기존 영상의 품질 변경 (새 영상이 없는 경우)
+    if (project?.videoFileId && quality !== initialVideoQuality) {
+      setIsCompressing(true)
+      resetProgress()
+      try {
+        // 기존 영상 다운로드
+        const existingFile = await downloadExistingVideo()
+        if (!existingFile) {
+          console.warn('[Edit] Could not download existing video for re-compression')
+          return
+        }
+
+        // 재압축
+        const { previewFile } = await compressVideo(existingFile, quality)
+        setPreviewVideoFile(previewFile)
+        // 기존 영상을 videoFile로 설정 (업로드 시 사용)
+        setVideoFile(existingFile)
+
+        if (previewFile) {
+          console.log(
+            `[Compressor] Re-compressed existing video with ${quality}: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB`
+          )
+        } else {
+          console.log('[Compressor] High quality mode - will re-upload original without preview')
+        }
+      } catch (err) {
+        console.warn('Re-compression of existing video failed:', err)
+      } finally {
+        setIsCompressing(false)
+      }
+    }
+  }, [videoFile, project?.videoFileId, initialVideoQuality, compressVideo, resetProgress, downloadExistingVideo])
 
   const handleTargetImageSelect = useCallback((files: File[]) => {
     setTargetImageFiles(files)
@@ -229,6 +292,7 @@ export default function EditProjectPage() {
     !isUploading &&
     !isCompiling &&
     !isCompressing &&
+    !isDownloadingVideo &&
     (!useChromaKey || isValidHexColor(chromaKeyColor)) &&
     !needsTargetImage
 
@@ -370,11 +434,12 @@ export default function EditProjectPage() {
 
   // 워크플로우 상태
   const workflowStatus = useMemo(() => {
+    if (isDownloadingVideo) return '기존 영상 다운로드 중...'
     if (isCompiling) return `타겟 변환 중 (${Math.round(compileProgress)}%)`
     if (isCompressing) return compressionProgress?.message || '영상 압축 중'
     if (isUploading) return `저장 중 (${progress}%)`
     return '편집 모드'
-  }, [isCompiling, isCompressing, isUploading, compileProgress, compressionProgress, progress])
+  }, [isDownloadingVideo, isCompiling, isCompressing, isUploading, compileProgress, compressionProgress, progress])
 
   if (isLoading) {
     return (
@@ -636,7 +701,7 @@ export default function EditProjectPage() {
                   disabled={!canSave}
                   className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
                 >
-                  {isCompiling ? '컴파일 중...' : isUploading ? '저장 중...' : isCompressing ? '압축 완료 후 저장' : '저장'}
+                  {isDownloadingVideo ? '다운로드 중...' : isCompiling ? '컴파일 중...' : isUploading ? '저장 중...' : isCompressing ? '압축 완료 후 저장' : '저장'}
                 </Button>
               </div>
             </div>

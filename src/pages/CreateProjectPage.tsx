@@ -440,15 +440,6 @@ export default function CreateProjectPage() {
               />
             </div>
 
-            {/* 영상 품질 선택 */}
-            <div className='mb-6'>
-              <VideoQualitySelector
-                quality={videoQuality}
-                onQualityChange={handleVideoQualityChange}
-                disabled={isUploading || isCompiling || isCompressing}
-              />
-            </div>
-
             {/* AR 설정 - AR 모드에서만 표시 */}
             {mode === 'ar' && (
               <div className='mb-6'>
@@ -499,6 +490,15 @@ export default function CreateProjectPage() {
                 />
               </div>
             )}
+
+            {/* 영상 품질 선택 (로딩바와 함께 보이도록 최하단 배치) */}
+            <div className='mt-6'>
+              <VideoQualitySelector
+                quality={videoQuality}
+                onQualityChange={handleVideoQualityChange}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+            </div>
 
             {/* 배포 섹션 */}
             <PublishSection

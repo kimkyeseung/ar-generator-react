@@ -535,15 +535,6 @@ export default function EditProjectPage() {
               />
             </div>
 
-            {/* 영상 품질 선택 */}
-            <div className='mb-6'>
-              <VideoQualitySelector
-                quality={videoQuality}
-                onQualityChange={handleVideoQualityChange}
-                disabled={isUploading || isCompiling || isCompressing}
-              />
-            </div>
-
             {/* 현재 에셋 미리보기 */}
             <div className='mb-6'>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -642,6 +633,15 @@ export default function EditProjectPage() {
                 />
               </div>
             )}
+
+            {/* 영상 품질 선택 (로딩바와 함께 보이도록 최하단 배치) */}
+            <div className='mb-6'>
+              <VideoQualitySelector
+                quality={videoQuality}
+                onQualityChange={handleVideoQualityChange}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+            </div>
 
             {/* 저장 버튼 */}
             <div className='mt-8'>

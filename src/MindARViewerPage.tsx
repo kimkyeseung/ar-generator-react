@@ -82,6 +82,71 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
   }
 }
 
+// 화면 방향을 세로로 고정
+function useLockPortraitOrientation() {
+  useEffect(() => {
+    const lockOrientation = async () => {
+      try {
+        // Screen Orientation API (표준)
+        const orientation = window.screen?.orientation
+        if (orientation && 'lock' in orientation) {
+          await orientation.lock('portrait')
+          console.log('[Orientation] Locked to portrait')
+        }
+      } catch (e) {
+        // 지원하지 않거나 권한 없음 (일부 브라우저에서는 fullscreen 필요)
+        console.log('[Orientation] Lock not supported or denied:', e)
+      }
+    }
+
+    lockOrientation()
+
+    return () => {
+      // 컴포넌트 언마운트 시 잠금 해제
+      try {
+        const orientation = window.screen?.orientation
+        if (orientation && 'unlock' in orientation) {
+          orientation.unlock()
+        }
+      } catch (e) {
+        // 무시
+      }
+    }
+  }, [])
+}
+
+// 가로 모드 경고 오버레이 (Screen Orientation API가 작동하지 않는 브라우저용 fallback)
+function LandscapeWarningOverlay() {
+  return (
+    <div className="fixed inset-0 z-[9999] hidden landscape:flex items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
+      <div className="flex flex-col items-center text-center px-8">
+        <div className="mb-6 text-6xl">📱</div>
+        <h2 className="text-xl font-bold text-white mb-2">
+          세로 모드로 전환해주세요
+        </h2>
+        <p className="text-white/80 text-sm">
+          AR 경험은 세로 모드에서만 지원됩니다
+        </p>
+        <div className="mt-6 animate-bounce">
+          <svg
+            className="w-8 h-8 text-white rotate-90"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // 카메라 권한을 미리 요청
 function usePrefetchCamera() {
   const [cameraReady, setCameraReady] = useState(false)
@@ -120,6 +185,9 @@ export default function MindARViewerPage() {
     throw new Error('folderId가 없습니다.')
   }
 
+  // 화면 방향 세로 고정 (AR 앱은 세로 모드가 권장됨)
+  useLockPortraitOrientation()
+
   // 카메라 권한 미리 요청 (에셋 로딩과 병렬)
   const cameraReady = usePrefetchCamera()
 
@@ -138,12 +206,15 @@ export default function MindARViewerPage() {
 
   if (!isReady) {
     return (
-      <div className="flex h-[100dvh] w-full items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
-        <div className="flex flex-col items-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
-          <p className="text-lg font-medium text-white">AR 준비 중...</p>
+      <>
+        <LandscapeWarningOverlay />
+        <div className="flex h-[100dvh] w-full items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
+          <div className="flex flex-col items-center">
+            <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
+            <p className="text-lg font-medium text-white">AR 준비 중...</p>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -152,38 +223,44 @@ export default function MindARViewerPage() {
   // 기본 모드: BasicModeViewer 렌더링
   if (isBasicMode) {
     return (
-      <section className="relative flex h-[100dvh] w-full overflow-hidden">
-        <BasicModeViewer
-          videoUrl={data.assets.videoUrl}
-          previewVideoUrl={data.assets.previewVideoUrl}
-          position={data.fileIds.videoPosition || { x: 0.5, y: 0.5 }}
-          scale={data.fileIds.videoScale || 1}
-          chromaKeyColor={data.fileIds.chromaKeyColor}
-          cameraResolution={data.fileIds.cameraResolution || 'fhd'}
-          debugMode={isDebugMode}
-        />
-        {isLogMode && <ConsoleLogOverlay />}
-      </section>
+      <>
+        <LandscapeWarningOverlay />
+        <section className="relative flex h-[100dvh] w-full overflow-hidden">
+          <BasicModeViewer
+            videoUrl={data.assets.videoUrl}
+            previewVideoUrl={data.assets.previewVideoUrl}
+            position={data.fileIds.videoPosition || { x: 0.5, y: 0.5 }}
+            scale={data.fileIds.videoScale || 1}
+            chromaKeyColor={data.fileIds.chromaKeyColor}
+            cameraResolution={data.fileIds.cameraResolution || 'fhd'}
+            debugMode={isDebugMode}
+          />
+          {isLogMode && <ConsoleLogOverlay />}
+        </section>
+      </>
     )
   }
 
   // AR 모드: MindARViewer 렌더링
   return (
-    <section className="relative flex h-[100dvh] w-full overflow-hidden">
-      <div className="absolute inset-0">
-        <MindARViewer
-          mindUrl={data.assets.mindUrl!}
-          videoUrl={data.assets.videoUrl}
-          previewVideoUrl={data.assets.previewVideoUrl}
-          targetImageUrl={data.assets.targetImageUrl!}
-          chromaKeyColor={data.fileIds.chromaKeyColor}
-          flatView={data.fileIds.flatView}
-          highPrecision={data.fileIds.highPrecision}
-          cameraResolution={data.fileIds.cameraResolution || 'fhd'}
-          debugMode={isDebugMode}
-        />
-      </div>
-      {isLogMode && <ConsoleLogOverlay />}
-    </section>
+    <>
+      <LandscapeWarningOverlay />
+      <section className="relative flex h-[100dvh] w-full overflow-hidden">
+        <div className="absolute inset-0">
+          <MindARViewer
+            mindUrl={data.assets.mindUrl!}
+            videoUrl={data.assets.videoUrl}
+            previewVideoUrl={data.assets.previewVideoUrl}
+            targetImageUrl={data.assets.targetImageUrl!}
+            chromaKeyColor={data.fileIds.chromaKeyColor}
+            flatView={data.fileIds.flatView}
+            highPrecision={data.fileIds.highPrecision}
+            cameraResolution={data.fileIds.cameraResolution || 'fhd'}
+            debugMode={isDebugMode}
+          />
+        </div>
+        {isLogMode && <ConsoleLogOverlay />}
+      </section>
+    </>
   )
 }

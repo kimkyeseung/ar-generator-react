@@ -198,6 +198,11 @@ AFRAME.registerSystem('mindar-image-system', {
 
     this._resize()
     window.addEventListener('resize', this._resize.bind(this))
+    // 모바일 가로/세로 전환 시 orientationchange 이벤트 핸들링
+    window.addEventListener('orientationchange', () => {
+      // 레이아웃이 업데이트될 시간을 주고 리사이즈 실행
+      setTimeout(() => this._resize(), 100)
+    })
 
     const { dimensions: imageTargetDimensions } =
       await this.controller.addImageTargets(this.imageTargetSrc)

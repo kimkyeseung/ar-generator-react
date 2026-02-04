@@ -138,7 +138,7 @@ export default function MindARViewerPage() {
 
   if (!isReady) {
     return (
-      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
+      <div className="flex h-[100dvh] w-full items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
         <div className="flex flex-col items-center">
           <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
           <p className="text-lg font-medium text-white">AR 준비 중...</p>
@@ -152,7 +152,7 @@ export default function MindARViewerPage() {
   // 기본 모드: BasicModeViewer 렌더링
   if (isBasicMode) {
     return (
-      <section className="relative flex min-h-[100dvh] w-full">
+      <section className="relative flex h-[100dvh] w-full overflow-hidden">
         <BasicModeViewer
           videoUrl={data.assets.videoUrl}
           previewVideoUrl={data.assets.previewVideoUrl}
@@ -169,7 +169,7 @@ export default function MindARViewerPage() {
 
   // AR 모드: MindARViewer 렌더링
   return (
-    <section className="relative flex min-h-[100dvh] w-full">
+    <section className="relative flex h-[100dvh] w-full overflow-hidden">
       <div className="absolute inset-0">
         <MindARViewer
           mindUrl={data.assets.mindUrl!}

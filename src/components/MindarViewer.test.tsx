@@ -265,6 +265,53 @@ describe('MindARViewer', () => {
       expect(document.body).toBeInTheDocument()
     })
   })
+
+  describe('orientation change handling', () => {
+    let addEventListenerSpy: jest.SpyInstance
+    let removeEventListenerSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      addEventListenerSpy = jest.spyOn(window, 'addEventListener')
+      removeEventListenerSpy = jest.spyOn(window, 'removeEventListener')
+    })
+
+    afterEach(() => {
+      addEventListenerSpy.mockRestore()
+      removeEventListenerSpy.mockRestore()
+    })
+
+    it('should add orientationchange event listener on mount', () => {
+      const MindARViewer = MindARViewerModule().default
+      render(<MindARViewer {...defaultProps} />)
+
+      const orientationChangeCalls = addEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'orientationchange'
+      )
+      expect(orientationChangeCalls.length).toBeGreaterThan(0)
+    })
+
+    it('should add resize event listener on mount', () => {
+      const MindARViewer = MindARViewerModule().default
+      render(<MindARViewer {...defaultProps} />)
+
+      const resizeCalls = addEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'resize'
+      )
+      expect(resizeCalls.length).toBeGreaterThan(0)
+    })
+
+    it('should remove orientationchange event listener on unmount', () => {
+      const MindARViewer = MindARViewerModule().default
+      const { unmount } = render(<MindARViewer {...defaultProps} />)
+
+      unmount()
+
+      const orientationChangeCalls = removeEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'orientationchange'
+      )
+      expect(orientationChangeCalls.length).toBeGreaterThan(0)
+    })
+  })
 })
 
 describe('AFRAME component registration', () => {

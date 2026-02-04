@@ -327,6 +327,29 @@ const BasicModeViewer: React.FC<Props> = ({
     }
   }, [currentVideoUrl])
 
+  // 가로/세로 전환 시 레이아웃 강제 갱신
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      console.log('[BasicMode] Orientation changed, forcing layout update...')
+      // 레이아웃이 업데이트될 시간을 주고 강제 리렌더
+      setTimeout(() => {
+        // 비디오 요소들의 스타일을 강제로 다시 적용
+        if (cameraRef.current) {
+          cameraRef.current.style.width = '100%'
+          cameraRef.current.style.height = '100%'
+        }
+        if (canvasRef.current && chromaKeyColor) {
+          // 캔버스 크기는 processFrame에서 자동 조정되므로 별도 처리 불필요
+        }
+      }, 100)
+    }
+
+    window.addEventListener('orientationchange', handleOrientationChange)
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange)
+    }
+  }, [chromaKeyColor])
+
   return (
     <>
       {/* 로딩 화면 */}

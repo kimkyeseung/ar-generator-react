@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import BasicModeViewer from './BasicModeViewer'
 
 // Mock navigator.mediaDevices
@@ -21,6 +21,11 @@ Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
   value: jest.fn(),
 })
 
+Object.defineProperty(HTMLMediaElement.prototype, 'load', {
+  configurable: true,
+  value: jest.fn(),
+})
+
 describe('BasicModeViewer', () => {
   const defaultProps = {
     videoUrl: 'https://example.com/video.mp4',
@@ -31,7 +36,8 @@ describe('BasicModeViewer', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetUserMedia.mockResolvedValue({
-      getTracks: () => [{ stop: jest.fn() }],
+      getTracks: () => [{ stop: jest.fn(), getSettings: () => ({ width: 1920, height: 1080 }) }],
+      getVideoTracks: () => [{ getSettings: () => ({ width: 1920, height: 1080 }) }],
     })
   })
 
@@ -69,8 +75,8 @@ describe('BasicModeViewer', () => {
     })
   })
 
-  it('shows HD loading indicator when previewVideoUrl is provided', async () => {
-    render(
+  it('should use previewVideoUrl initially when provided', async () => {
+    const { container } = render(
       <BasicModeViewer
         {...defaultProps}
         previewVideoUrl="https://example.com/preview.mp4"
@@ -78,7 +84,9 @@ describe('BasicModeViewer', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('HD 로딩 중...')).toBeInTheDocument()
+      // Should use preview URL initially
+      const video = container.querySelector('video[src="https://example.com/preview.mp4"]')
+      expect(video).toBeInTheDocument()
     })
   })
 
@@ -117,6 +125,88 @@ describe('BasicModeViewer', () => {
     await waitFor(() => {
       const canvas = container.querySelector('canvas')
       expect(canvas).toBeInTheDocument()
+    })
+  })
+
+  describe('orientation change handling', () => {
+    let addEventListenerSpy: jest.SpyInstance
+    let removeEventListenerSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      addEventListenerSpy = jest.spyOn(window, 'addEventListener')
+      removeEventListenerSpy = jest.spyOn(window, 'removeEventListener')
+    })
+
+    afterEach(() => {
+      addEventListenerSpy.mockRestore()
+      removeEventListenerSpy.mockRestore()
+    })
+
+    it('should add orientationchange event listener on mount', async () => {
+      render(<BasicModeViewer {...defaultProps} />)
+
+      await waitFor(() => {
+        const orientationChangeCalls = addEventListenerSpy.mock.calls.filter(
+          (call) => call[0] === 'orientationchange'
+        )
+        expect(orientationChangeCalls.length).toBeGreaterThan(0)
+      })
+    })
+
+    it('should remove orientationchange event listener on unmount', async () => {
+      const { unmount } = render(<BasicModeViewer {...defaultProps} />)
+
+      await waitFor(() => {
+        // Wait for component to fully mount
+        expect(screen.getByRole('button', { name: /소리/i })).toBeInTheDocument()
+      })
+
+      unmount()
+
+      const orientationChangeCalls = removeEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'orientationchange'
+      )
+      expect(orientationChangeCalls.length).toBeGreaterThan(0)
+    })
+
+    it('should handle orientationchange event without errors', async () => {
+      render(<BasicModeViewer {...defaultProps} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /소리/i })).toBeInTheDocument()
+      })
+
+      // Trigger orientationchange event
+      expect(() => {
+        window.dispatchEvent(new Event('orientationchange'))
+      }).not.toThrow()
+    })
+  })
+
+  describe('debug mode', () => {
+    it('should show camera resolution in debug mode', async () => {
+      render(<BasicModeViewer {...defaultProps} debugMode={true} />)
+
+      await waitFor(() => {
+        // Wait for camera to be ready (loading disappears)
+        expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
+      })
+
+      // Check for camera resolution display
+      const debugDisplay = screen.queryByText(/📷/)
+      expect(debugDisplay).toBeInTheDocument()
+    })
+
+    it('should not show camera resolution in non-debug mode', async () => {
+      render(<BasicModeViewer {...defaultProps} debugMode={false} />)
+
+      await waitFor(() => {
+        expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
+      })
+
+      // Camera resolution should not be shown
+      const debugDisplay = screen.queryByText(/1920x1080/)
+      expect(debugDisplay).not.toBeInTheDocument()
     })
   })
 })

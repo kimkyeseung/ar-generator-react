@@ -424,6 +424,12 @@ const MindARViewer: React.FC<Props> = ({
       observer.observe(containerEl, { childList: true, subtree: true })
     }
     window.addEventListener('resize', styleCameraFeed)
+    // 모바일 가로/세로 전환 시 orientationchange 이벤트 핸들링
+    const handleOrientationChange = () => {
+      // 레이아웃이 업데이트될 시간을 주고 스타일 적용
+      setTimeout(styleCameraFeed, 100)
+    }
+    window.addEventListener('orientationchange', handleOrientationChange)
 
     /** ---------- 비디오 재생 보장 ---------- **/
     const ensureVideoPlayback = () => {
@@ -562,6 +568,7 @@ const MindARViewer: React.FC<Props> = ({
 
       observer?.disconnect()
       window.removeEventListener('resize', styleCameraFeed)
+      window.removeEventListener('orientationchange', handleOrientationChange)
       targetEntity?.removeEventListener('targetFound', handleTargetFound)
       targetEntity?.removeEventListener('targetLost', handleTargetLost)
       document.removeEventListener('touchend', handleUserGesture)

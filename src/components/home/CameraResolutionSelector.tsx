@@ -21,26 +21,8 @@ const resolutionOptions: {
   {
     value: 'hd',
     label: 'HD',
-    description: '일반 화질',
+    description: '일반 화질 (배터리 절약)',
     specs: '1280x720',
-  },
-  {
-    value: 'nhd',
-    label: 'nHD',
-    description: '저화질 (배터리 절약)',
-    specs: '640x360',
-  },
-  {
-    value: 'vga',
-    label: 'VGA',
-    description: '저화질',
-    specs: '640x480',
-  },
-  {
-    value: 'qvga',
-    label: 'QVGA',
-    description: '최저화질 (배터리 절약 최대)',
-    specs: '320x240',
   },
 ]
 
@@ -52,7 +34,7 @@ export default function CameraResolutionSelector({
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
       <h3 className="text-sm font-semibold text-gray-700">카메라 화질</h3>
-      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {resolutionOptions.map((option) => (
           <button
             key={option.value}

@@ -1,5 +1,5 @@
 export type ProjectMode = 'ar' | 'basic'
-export type CameraResolution = 'fhd' | 'hd' | 'nhd' | 'vga' | 'qvga'
+export type CameraResolution = 'fhd' | 'hd'
 export type VideoQuality = 'high' | 'medium' | 'low' // 고화질(압축x), 중간화질, 저화질
 
 export interface VideoPosition {

@@ -104,13 +104,10 @@ AFRAME.registerSystem('mindar-image-system', {
     }
 
     // 해상도 설정에 따른 카메라 크기 (iPhone 브라우저 최대 FHD 지원)
-    // 기존 프로젝트가 4k/qhd를 가지고 있어도 fallback으로 fhd 사용
+    // 기존 프로젝트가 다른 해상도를 가지고 있어도 fallback으로 fhd 사용
     const resolutionMap = {
       'fhd': { width: 1920, height: 1080 },
       'hd': { width: 1280, height: 720 },
-      'nhd': { width: 640, height: 360 },
-      'vga': { width: 640, height: 480 },
-      'qvga': { width: 320, height: 240 },
     }
     const { width: cameraWidth, height: cameraHeight } = resolutionMap[this.cameraResolution] || resolutionMap['fhd']
     console.log(`[MindAR Camera] Requested resolution: ${this.cameraResolution} (${cameraWidth}x${cameraHeight})`)

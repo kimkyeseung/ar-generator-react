@@ -53,14 +53,30 @@ process.env.REACT_APP_API_URL = 'http://localhost:4000'
 const mockFetch = jest.fn()
 global.fetch = mockFetch
 
-// Suppress image loading errors in jsdom
+// Mock navigator.mediaDevices.getUserMedia
+Object.defineProperty(navigator, 'mediaDevices', {
+  value: {
+    getUserMedia: jest.fn().mockRejectedValue(new Error('Camera not available in test')),
+  },
+})
+
+// Mock HTMLMediaElement.prototype.load
+Object.defineProperty(HTMLMediaElement.prototype, 'load', {
+  configurable: true,
+  value: jest.fn(),
+})
+
+// Suppress image/canvas/media loading errors in jsdom
 const originalError = console.error
 beforeAll(() => {
   console.error = (...args) => {
     if (
       args[0]?.includes?.('Error loading image') ||
       args[0]?.includes?.('canvas') ||
-      args[0]?.includes?.('img')
+      args[0]?.includes?.('img') ||
+      args[0]?.includes?.('Camera') ||
+      args[0]?.includes?.('Not implemented') ||
+      args[0]?.includes?.('HTMLMediaElement')
     ) {
       return
     }
@@ -643,6 +659,148 @@ describe('EditProjectPage', () => {
         const saveButton = screen.getByRole('button', { name: '저장' })
         expect(saveButton).toBeDisabled()
       })
+    })
+  })
+
+  describe('Chroma Key Settings', () => {
+    it('should load chroma key settings from project data', async () => {
+      const projectWithChromaKey = {
+        ...mockBasicModeProject,
+        chromaKeyColor: '#00FF00',
+        chromaKeySimilarity: 0.5,
+        chromaKeySmoothness: 0.15,
+      }
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/projects/test-project-id')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(projectWithChromaKey),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
+      render(<EditProjectPage />)
+
+      await waitFor(() => {
+        // Chroma key should be enabled
+        const chromaKeyCheckbox = screen.getByLabelText('크로마키 적용')
+        expect(chromaKeyCheckbox).toBeChecked()
+      })
+
+      // Check color value
+      const colorInput = screen.getByPlaceholderText('#00FF00')
+      expect(colorInput).toHaveValue('#00FF00')
+
+      // Check similarity slider value (0.5 = 50%)
+      const similaritySlider = screen.getByLabelText('색상 범위')
+      expect(similaritySlider).toHaveValue('0.5')
+
+      // Check smoothness slider value (0.15)
+      const smoothnessSlider = screen.getByLabelText('경계 부드러움')
+      expect(smoothnessSlider).toHaveValue('0.15')
+    })
+
+    it('should use default values when chroma key settings are null', async () => {
+      const projectWithChromaKeyNoSettings = {
+        ...mockBasicModeProject,
+        chromaKeyColor: '#FF0000',
+        chromaKeySimilarity: null,
+        chromaKeySmoothness: null,
+      }
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/projects/test-project-id')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(projectWithChromaKeyNoSettings),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
+      render(<EditProjectPage />)
+
+      await waitFor(() => {
+        const chromaKeyCheckbox = screen.getByLabelText('크로마키 적용')
+        expect(chromaKeyCheckbox).toBeChecked()
+      })
+
+      // Should use default values (0.4 for similarity, 0.08 for smoothness)
+      const similaritySlider = screen.getByLabelText('색상 범위')
+      expect(similaritySlider).toHaveValue('0.4')
+
+      const smoothnessSlider = screen.getByLabelText('경계 부드러움')
+      expect(smoothnessSlider).toHaveValue('0.08')
+    })
+
+    it('should update similarity when slider is changed', async () => {
+      const projectWithChromaKey = {
+        ...mockBasicModeProject,
+        chromaKeyColor: '#00FF00',
+        chromaKeySimilarity: 0.4,
+        chromaKeySmoothness: 0.08,
+      }
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/projects/test-project-id')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(projectWithChromaKey),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
+      render(<EditProjectPage />)
+
+      await waitFor(() => {
+        const chromaKeyCheckbox = screen.getByLabelText('크로마키 적용')
+        expect(chromaKeyCheckbox).toBeChecked()
+      })
+
+      const similaritySlider = screen.getByLabelText('색상 범위')
+      fireEvent.change(similaritySlider, { target: { value: '0.6' } })
+
+      expect(similaritySlider).toHaveValue('0.6')
+    })
+
+    it('should reset to default values when reset button is clicked', async () => {
+      const projectWithChromaKey = {
+        ...mockBasicModeProject,
+        chromaKeyColor: '#00FF00',
+        chromaKeySimilarity: 0.6,
+        chromaKeySmoothness: 0.2,
+      }
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/projects/test-project-id')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(projectWithChromaKey),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
+      render(<EditProjectPage />)
+
+      await waitFor(() => {
+        const chromaKeyCheckbox = screen.getByLabelText('크로마키 적용')
+        expect(chromaKeyCheckbox).toBeChecked()
+      })
+
+      // Find and click reset button
+      const resetButton = screen.getByText('기본값으로 복원')
+      fireEvent.click(resetButton)
+
+      // Should reset to default values
+      const similaritySlider = screen.getByLabelText('색상 범위')
+      expect(similaritySlider).toHaveValue('0.4')
+
+      const smoothnessSlider = screen.getByLabelText('경계 부드러움')
+      expect(smoothnessSlider).toHaveValue('0.08')
     })
   })
 })

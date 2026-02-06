@@ -77,7 +77,7 @@ export default function EditProjectPage() {
     const fetchProject = async () => {
       try {
         setIsLoading(true)
-        const res = await fetch(`${API_URL}/projects/${id}`)
+        const res = await fetch(`${API_URL}/projects/${id}`, { cache: 'no-store' })
         if (!res.ok) throw new Error('프로젝트를 불러오지 못했습니다.')
         const data: Project = await res.json()
         setProject(data)

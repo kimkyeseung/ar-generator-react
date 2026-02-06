@@ -27,7 +27,7 @@ export default function ProjectListPage() {
   const fetchProjects = async () => {
     try {
       setIsLoading(true)
-      const res = await fetch(`${API_URL}/projects`)
+      const res = await fetch(`${API_URL}/projects`, { cache: 'no-store' })
       if (!res.ok) throw new Error('프로젝트 목록을 불러오는데 실패했습니다.')
       const data = await res.json()
       setProjects(data)

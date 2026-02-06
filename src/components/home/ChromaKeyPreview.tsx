@@ -32,23 +32,27 @@ export default function ChromaKeyPreview({
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
+  const [corsError, setCorsError] = useState(false)
+  const [isExternalUrl, setIsExternalUrl] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // 비디오 URL 생성
   useEffect(() => {
+    setCorsError(false)
     // 외부 URL이 있으면 그것을 사용
     if (externalVideoUrl) {
       setVideoUrl(externalVideoUrl)
+      setIsExternalUrl(true)
       return
     }
     // 파일이 있으면 ObjectURL 생성
     if (videoFile) {
       const url = URL.createObjectURL(videoFile)
       setVideoUrl(url)
+      setIsExternalUrl(false)
       return () => URL.revokeObjectURL(url)
     }
   }, [videoFile, externalVideoUrl])
-
-  if (!videoFile && !externalVideoUrl) return null
 
   // 크로마키 처리 렌더링 루프
   useEffect(() => {
@@ -78,32 +82,42 @@ export default function ChromaKeyPreview({
       ctx.drawImage(video, 0, 0)
 
       // 크로마키 처리
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const data = imageData.data
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
 
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i]
-        const g = data[i + 1]
-        const b = data[i + 2]
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i]
+          const g = data[i + 1]
+          const b = data[i + 2]
 
-        // 색상 거리 계산 (정규화)
-        const distance =
-          Math.sqrt(
-            Math.pow(r - keyColor.r, 2) +
-            Math.pow(g - keyColor.g, 2) +
-            Math.pow(b - keyColor.b, 2)
-          ) / Math.sqrt(3) / 255
+          // 색상 거리 계산 (정규화)
+          const distance =
+            Math.sqrt(
+              Math.pow(r - keyColor.r, 2) +
+              Math.pow(g - keyColor.g, 2) +
+              Math.pow(b - keyColor.b, 2)
+            ) / Math.sqrt(3) / 255
 
-        // 알파 계산
-        if (distance < similarity) {
-          data[i + 3] = 0
-        } else if (distance < similarity + smoothness) {
-          const alpha = (distance - similarity) / smoothness
-          data[i + 3] = Math.round(alpha * 255)
+          // 알파 계산
+          if (distance < similarity) {
+            data[i + 3] = 0
+          } else if (distance < similarity + smoothness) {
+            const alpha = (distance - similarity) / smoothness
+            data[i + 3] = Math.round(alpha * 255)
+          }
         }
-      }
 
-      ctx.putImageData(imageData, 0, 0)
+        ctx.putImageData(imageData, 0, 0)
+      } catch (err) {
+        // CORS 오류 발생 시 (SecurityError)
+        if (err instanceof DOMException && err.name === 'SecurityError') {
+          setCorsError(true)
+          isRunning = false
+          return
+        }
+        throw err
+      }
       animationId = requestAnimationFrame(processFrame)
     }
 
@@ -137,21 +151,44 @@ export default function ChromaKeyPreview({
     <div className='space-y-2 pt-3 border-t border-gray-200'>
       <div className='flex items-center justify-between'>
         <p className='text-sm font-medium text-gray-700'>미리보기</p>
-        <label className='flex items-center gap-2 text-xs text-gray-500'>
-          <input
-            type='checkbox'
-            checked={showOriginal}
-            onChange={(e) => setShowOriginal(e.target.checked)}
-            className='h-3 w-3 rounded border-gray-300 text-purple-600'
-          />
-          원본 보기
-        </label>
+        <div className='flex items-center gap-3'>
+          <label className='flex items-center gap-2 text-xs text-gray-500'>
+            <input
+              type='checkbox'
+              checked={showOriginal}
+              onChange={(e) => setShowOriginal(e.target.checked)}
+              className='h-3 w-3 rounded border-gray-300 text-purple-600'
+            />
+            원본 보기
+          </label>
+          <button
+            type='button'
+            onClick={() => setIsExpanded(!isExpanded)}
+            className='flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700'
+          >
+            {isExpanded ? (
+              <>
+                <svg className='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 9L4 4m0 0v5m0-5h5m6 6l5 5m0 0v-5m0 5h-5' />
+                </svg>
+                축소
+              </>
+            ) : (
+              <>
+                <svg className='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4' />
+                </svg>
+                확대
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* 미리보기 영역 */}
-      <div className='relative aspect-video bg-[#1a1a2e] rounded-lg overflow-hidden'>
+      <div className={`relative bg-[#1a1a2e] rounded-lg overflow-hidden ${isExpanded ? 'aspect-[9/16] max-w-sm mx-auto' : 'aspect-video'}`}>
         {/* 체커보드 패턴 배경 (투명 영역 표시) */}
-        {!showOriginal && (
+        {!showOriginal && !corsError && (
           <div
             className='absolute inset-0'
             style={{
@@ -171,7 +208,8 @@ export default function ChromaKeyPreview({
         <video
           ref={videoRef}
           src={videoUrl}
-          className={showOriginal ? 'w-full h-full object-contain' : 'hidden'}
+          crossOrigin={isExternalUrl ? 'anonymous' : undefined}
+          className={showOriginal || corsError ? 'w-full h-full object-contain' : 'hidden'}
           loop
           muted
           playsInline
@@ -180,7 +218,7 @@ export default function ChromaKeyPreview({
         />
 
         {/* 크로마키 적용된 캔버스 */}
-        {!showOriginal && (
+        {!showOriginal && !corsError && (
           <canvas
             ref={canvasRef}
             className='absolute inset-0 w-full h-full object-contain'
@@ -216,9 +254,15 @@ export default function ChromaKeyPreview({
         )}
       </div>
 
-      <p className='text-xs text-gray-400'>
-        체커보드 패턴은 투명하게 처리된 영역입니다
-      </p>
+      {corsError ? (
+        <p className='text-xs text-amber-600'>
+          크로마키 미리보기를 사용할 수 없습니다. 실제 AR 뷰어에서 크로마키가 적용됩니다.
+        </p>
+      ) : (
+        <p className='text-xs text-gray-400'>
+          체커보드 패턴은 투명하게 처리된 영역입니다
+        </p>
+      )}
     </div>
   )
 }

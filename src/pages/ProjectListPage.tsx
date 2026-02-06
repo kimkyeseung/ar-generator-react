@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Project } from '../types/project'
 import { API_URL } from '../config/api'
+import { verifyPassword } from '../utils/auth'
 
 export default function ProjectListPage() {
   const navigate = useNavigate()
@@ -43,21 +44,6 @@ export default function ProjectListPage() {
     setDeleteTargetId(id)
     setPasswordError(null)
     setShowPasswordModal(true)
-  }
-
-  // 비밀번호 검증 API 호출
-  const verifyPassword = async (password: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`${API_URL}/verify-password`, {
-        method: 'POST',
-        headers: {
-          'X-Admin-Password': password,
-        },
-      })
-      return res.ok
-    } catch {
-      return false
-    }
   }
 
   // 비밀번호 확인 후 실제 삭제

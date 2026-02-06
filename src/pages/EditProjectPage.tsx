@@ -20,6 +20,7 @@ import { useImageCompiler } from '../hooks/useImageCompiler'
 import { Progress } from '../components/ui/progress'
 import { API_URL } from '../config/api'
 import { isValidHexColor } from '../utils/validation'
+import { verifyPassword } from '../utils/auth'
 
 const MAX_VIDEO_SIZE_MB = 32
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
@@ -309,21 +310,6 @@ export default function EditProjectPage() {
 
     setPasswordError(null)
     setShowPasswordModal(true)
-  }
-
-  // 비밀번호 검증 API 호출
-  const verifyPassword = async (password: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`${API_URL}/verify-password`, {
-        method: 'POST',
-        headers: {
-          'X-Admin-Password': password,
-        },
-      })
-      return res.ok
-    } catch {
-      return false
-    }
   }
 
   // 비밀번호 확인 후 (필요시 컴파일 +) 업로드

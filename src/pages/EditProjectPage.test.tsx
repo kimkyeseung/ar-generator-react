@@ -97,6 +97,7 @@ const mockBasicModeProject: Project = {
   flatView: false,
   highPrecision: false,
   cameraResolution: 'fhd',
+  videoQuality: 'low',
   videoPosition: { x: 0.5, y: 0.5 },
   videoScale: 1,
   createdAt: '2024-01-01T00:00:00Z',
@@ -181,19 +182,51 @@ describe('EditProjectPage', () => {
   })
 
   describe('Video Quality Detection', () => {
-    it('should detect initial video quality as "low" when previewVideoFileId exists', async () => {
+    it('should load video quality from DB when videoQuality field exists', async () => {
+      const projectWithMediumQuality = { ...mockBasicModeProject, videoQuality: 'medium' }
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/projects/test-project-id')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(projectWithMediumQuality),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
       render(<EditProjectPage />)
 
       await waitFor(() => {
-        // Should have detected quality as 'low' since previewVideoFileId exists
-        // The button should be pressed (aria-pressed="true")
+        // Should load 'medium' quality from DB
+        const mediumQualityButton = screen.getByRole('button', { name: /중간화질 선택/i })
+        expect(mediumQualityButton).toHaveAttribute('aria-pressed', 'true')
+      })
+    })
+
+    it('should detect initial video quality as "low" when previewVideoFileId exists but videoQuality is not set', async () => {
+      // Simulate old project without videoQuality field
+      const oldProject = { ...mockBasicModeProject, videoQuality: undefined }
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/projects/test-project-id')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(oldProject),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
+      render(<EditProjectPage />)
+
+      await waitFor(() => {
+        // Should fallback to detecting 'low' since previewVideoFileId exists
         const lowQualityButton = screen.getByRole('button', { name: /저화질 선택/i })
         expect(lowQualityButton).toHaveAttribute('aria-pressed', 'true')
       })
     })
 
-    it('should detect initial video quality as "high" when previewVideoFileId does not exist', async () => {
-      const projectWithoutPreview = { ...mockBasicModeProject, previewVideoFileId: undefined }
+    it('should detect initial video quality as "high" when previewVideoFileId does not exist and videoQuality is not set', async () => {
+      const projectWithoutPreview = { ...mockBasicModeProject, previewVideoFileId: undefined, videoQuality: undefined }
       mockFetch.mockImplementation((url: string) => {
         if (url.includes('/projects/test-project-id')) {
           return Promise.resolve({
@@ -209,6 +242,37 @@ describe('EditProjectPage', () => {
       await waitFor(() => {
         const highQualityButton = screen.getByRole('button', { name: /고화질 선택/i })
         expect(highQualityButton).toHaveAttribute('aria-pressed', 'true')
+      })
+    })
+
+    it('should preserve medium quality from DB (regression test for quality reset bug)', async () => {
+      // This test ensures that when a user selected 'medium' quality,
+      // it is correctly loaded when re-entering the edit page
+      const projectWithMediumQuality = {
+        ...mockBasicModeProject,
+        videoQuality: 'medium',
+        previewVideoFileId: 'preview-123', // Both medium and low have previewVideoFileId
+      }
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('/projects/test-project-id')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(projectWithMediumQuality),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
+      render(<EditProjectPage />)
+
+      await waitFor(() => {
+        // Should correctly show 'medium' instead of defaulting to 'low'
+        const mediumQualityButton = screen.getByRole('button', { name: /중간화질 선택/i })
+        expect(mediumQualityButton).toHaveAttribute('aria-pressed', 'true')
+
+        // 'low' should NOT be selected
+        const lowQualityButton = screen.getByRole('button', { name: /저화질 선택/i })
+        expect(lowQualityButton).toHaveAttribute('aria-pressed', 'false')
       })
     })
   })
@@ -352,6 +416,104 @@ describe('EditProjectPage', () => {
           blob: () => Promise.resolve(videoBlob),
         })
       })
+    })
+
+    it('should send clearPreviewVideo flag when changing from low to high quality', async () => {
+      // Project with low quality and existing preview
+      const projectWithLowQuality = {
+        ...mockBasicModeProject,
+        videoQuality: 'low',
+        previewVideoFileId: 'preview-123',
+      }
+
+      let savedFormData: FormData | null = null
+      const videoBlob = new Blob(['video-content'], { type: 'video/mp4' })
+
+      mockFetch.mockImplementation((url: string, options?: any) => {
+        if (url.includes('/projects/test-project-id') && !options?.method) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(projectWithLowQuality),
+          })
+        }
+        if (url.includes('/file/video-123')) {
+          return Promise.resolve({
+            ok: true,
+            blob: () => Promise.resolve(videoBlob),
+          })
+        }
+        if (url.includes('/verify-password')) {
+          return Promise.resolve({ ok: true })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      })
+
+      // Mock XMLHttpRequest to capture FormData
+      const mockXHR = {
+        open: jest.fn(),
+        send: jest.fn((data: FormData) => {
+          savedFormData = data
+          // Simulate successful response
+          mockXHR.status = 200
+          mockXHR.response = { folderId: 'test-folder-id' }
+          mockXHR.onload?.()
+        }),
+        setRequestHeader: jest.fn(),
+        upload: { onprogress: null },
+        onload: null as (() => void) | null,
+        onerror: null,
+        status: 0,
+        response: null,
+        responseType: '',
+      }
+      global.XMLHttpRequest = jest.fn(() => mockXHR) as any
+
+      render(<EditProjectPage />)
+
+      // Wait for project to load
+      await waitFor(() => {
+        const lowQualityButton = screen.getByRole('button', { name: /저화질 선택/i })
+        expect(lowQualityButton).toHaveAttribute('aria-pressed', 'true')
+      })
+
+      // Change to high quality
+      const highQualityButton = screen.getByRole('button', { name: /고화질 선택/i })
+      await act(async () => {
+        fireEvent.click(highQualityButton)
+        await new Promise(r => setTimeout(r, 200))
+      })
+
+      // Wait for compression to complete
+      await waitFor(() => {
+        expect(mockCompressVideo).toHaveBeenCalledWith(expect.any(File), 'high')
+      }, { timeout: 3000 })
+
+      // Click save button
+      const saveButton = await screen.findByRole('button', { name: '저장' })
+      await act(async () => {
+        fireEvent.click(saveButton)
+      })
+
+      // Enter password and submit
+      await waitFor(() => {
+        expect(screen.getByText('비밀번호 입력')).toBeInTheDocument()
+      })
+
+      const passwordInput = screen.getByPlaceholderText('비밀번호를 입력하세요')
+      const submitButton = screen.getByRole('button', { name: '확인' })
+
+      await act(async () => {
+        fireEvent.change(passwordInput, { target: { value: 'test-password' } })
+        fireEvent.click(submitButton)
+        await new Promise(r => setTimeout(r, 100))
+      })
+
+      // Verify clearPreviewVideo flag was sent
+      await waitFor(() => {
+        expect(savedFormData).not.toBeNull()
+        expect(savedFormData?.get('clearPreviewVideo')).toBe('true')
+        expect(savedFormData?.get('videoQuality')).toBe('high')
+      }, { timeout: 3000 })
     })
 
     it('should not re-download video if already downloaded', async () => {

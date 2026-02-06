@@ -103,10 +103,10 @@ export default function EditProjectPage() {
         if (data.videoScale != null) {
           setVideoScale(data.videoScale)
         }
-        // 기존 영상 품질 감지 (previewVideoFileId가 있으면 압축됨)
-        const detectedQuality: VideoQuality = data.previewVideoFileId ? 'low' : 'high'
-        setVideoQuality(detectedQuality)
-        setInitialVideoQuality(detectedQuality)
+        // DB에 저장된 영상 품질 불러오기
+        const savedQuality: VideoQuality = data.videoQuality || (data.previewVideoFileId ? 'low' : 'high')
+        setVideoQuality(savedQuality)
+        setInitialVideoQuality(savedQuality)
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
       } finally {
@@ -347,6 +347,7 @@ export default function EditProjectPage() {
       formData.append('title', title)
       formData.append('mode', mode)
       formData.append('cameraResolution', cameraResolution)
+      formData.append('videoQuality', videoQuality)
       formData.append('width', '1')
       const heightValue = videoAspectRatio ?? project?.height ?? 1
       formData.append('height', heightValue.toString())
@@ -382,6 +383,11 @@ export default function EditProjectPage() {
         if (previewVideoFile) {
           formData.append('previewVideo', previewVideoFile)
         }
+      }
+
+      // 고화질(압축x)로 변경 시 기존 프리뷰 삭제 요청
+      if (videoQuality === 'high' && project.previewVideoFileId) {
+        formData.append('clearPreviewVideo', 'true')
       }
 
       // 업로드

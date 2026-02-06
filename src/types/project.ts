@@ -24,6 +24,7 @@ export interface Project {
   highPrecision: boolean
   mode: ProjectMode // 'ar' | 'basic'
   cameraResolution: CameraResolution // '4k' | 'fhd' | 'hd'
+  videoQuality: VideoQuality // 'high' | 'medium' | 'low' - 영상 품질
   videoPosition: VideoPosition | null // 기본모드에서 비디오 위치
   videoScale: number | null // 기본모드에서 비디오 크기 (0.2~5.0)
   createdAt: string

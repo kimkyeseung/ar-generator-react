@@ -264,6 +264,8 @@ export default function CreateProjectPage() {
       if (previewVideoFile) {
         formData.append('previewVideo', previewVideoFile)
       }
+      // 영상 품질 전송
+      formData.append('videoQuality', videoQuality)
 
       // 비디오 비율 전송 (width=1 고정, height=종횡비)
       formData.append('width', '1')

@@ -1,6 +1,7 @@
 import { FileUpload } from '../FileUpload'
 import StatusCallout from './StatusCallout'
 import VideoLimitNotice from './VideoLimitNotice'
+import { isValidHexColor } from '../../utils/validation'
 
 type VideoUploadSectionProps = {
   isTargetReady: boolean
@@ -16,11 +17,6 @@ type VideoUploadSectionProps = {
   flatView: boolean
   onFlatViewChange: (value: boolean) => void
   showFlatView?: boolean // AR 모드에서만 표시
-}
-
-// 유효한 hex 색상인지 검증
-function isValidHexColor(color: string): boolean {
-  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)
 }
 
 export default function VideoUploadSection({

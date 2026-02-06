@@ -20,13 +20,10 @@ import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { CameraResolution, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
 import { API_URL } from '../config/api'
+import { isValidHexColor } from '../utils/validation'
+
 const MAX_VIDEO_SIZE_MB = 32
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
-
-// 유효한 hex 색상인지 검증
-function isValidHexColor(color: string): boolean {
-  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)
-}
 
 export default function CreateProjectPage() {
   const [progress, setProgress] = useState<number>(0)

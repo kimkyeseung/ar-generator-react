@@ -76,8 +76,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import EditProjectPage from './EditProjectPage'
 import { Project } from '../types/project'
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000'
+import { API_URL } from '../config/api'
 
 // Sample project data (basic mode to avoid image loading issues)
 const mockBasicModeProject: Project = {
@@ -455,7 +454,7 @@ describe('EditProjectPage', () => {
           savedFormData = data
           // Simulate successful response
           mockXHR.status = 200
-          mockXHR.response = { folderId: 'test-folder-id' }
+          mockXHR.response = { folderId: 'test-folder-id' } as any
           mockXHR.onload?.()
         }),
         setRequestHeader: jest.fn(),
@@ -463,7 +462,7 @@ describe('EditProjectPage', () => {
         onload: null as (() => void) | null,
         onerror: null,
         status: 0,
-        response: null,
+        response: null as any,
         responseType: '',
       }
       global.XMLHttpRequest = jest.fn(() => mockXHR) as any

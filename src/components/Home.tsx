@@ -10,6 +10,7 @@ import StepIndicator from './home/StepIndicator'
 import UploadCard from './home/UploadCard'
 import VideoUploadSection from './home/VideoUploadSection'
 import { useImageCompiler } from '../hooks/useImageCompiler'
+import { API_URL } from '../config/api'
 
 const STEPS = [
   { label: '타겟 업로드', description: '이미지 파일' },
@@ -23,7 +24,6 @@ const stepMessageMap = {
   3: 'Step 3. 배포 버튼을 클릭하세요.',
 }
 
-const API_URL = process.env.REACT_APP_API_URL
 const MAX_VIDEO_SIZE_MB = 32
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
 

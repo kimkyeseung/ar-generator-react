@@ -5,8 +5,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { CameraResolution, ProjectMode, VideoPosition, VideoQuality } from './types/project'
-
-const API_URL = process.env.REACT_APP_API_URL
+import { API_URL } from './config/api'
 
 interface ArFilesResponse {
   mindFileId?: string // 기본 모드에서는 null

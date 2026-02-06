@@ -6,8 +6,7 @@ import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Project } from '../types/project'
-
-const API_URL = process.env.REACT_APP_API_URL
+import { API_URL } from '../config/api'
 
 export default function ProjectListPage() {
   const navigate = useNavigate()

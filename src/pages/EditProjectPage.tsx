@@ -18,8 +18,7 @@ import { CameraResolution, Project, ProjectMode, VideoPosition, VideoQuality } f
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { Progress } from '../components/ui/progress'
-
-const API_URL = process.env.REACT_APP_API_URL
+import { API_URL } from '../config/api'
 const MAX_VIDEO_SIZE_MB = 32
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
 
@@ -386,7 +385,7 @@ export default function EditProjectPage() {
       }
 
       // 고화질(압축x)로 변경 시 기존 프리뷰 삭제 요청
-      if (videoQuality === 'high' && project.previewVideoFileId) {
+      if (videoQuality === 'high' && project?.previewVideoFileId) {
         formData.append('clearPreviewVideo', 'true')
       }
 

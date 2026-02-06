@@ -19,8 +19,7 @@ import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { CameraResolution, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
-
-const API_URL = process.env.REACT_APP_API_URL
+import { API_URL } from '../config/api'
 const MAX_VIDEO_SIZE_MB = 32
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
 

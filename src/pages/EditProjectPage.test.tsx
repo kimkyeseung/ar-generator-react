@@ -93,6 +93,8 @@ const mockBasicModeProject: Project = {
   targetImageFileId: null,
   thumbnailFileId: null,
   chromaKeyColor: null,
+  chromaKeySimilarity: null,
+  chromaKeySmoothness: null,
   flatView: false,
   highPrecision: false,
   cameraResolution: 'fhd',

@@ -14,7 +14,7 @@ import VideoUploadSection from '../components/home/VideoUploadSection'
 import VideoQualitySelector from '../components/home/VideoQualitySelector'
 import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
-import { CameraResolution, Project, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, Project, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { Progress } from '../components/ui/progress'
@@ -48,6 +48,7 @@ export default function EditProjectPage() {
   const [videoError, setVideoError] = useState<string | null>(null)
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
+  const [chromaKeySettings, setChromaKeySettings] = useState<ChromaKeySettings>(DEFAULT_CHROMAKEY_SETTINGS)
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
   const [highPrecision, setHighPrecision] = useState(false)
@@ -86,6 +87,10 @@ export default function EditProjectPage() {
         if (data.chromaKeyColor) {
           setUseChromaKey(true)
           setChromaKeyColor(data.chromaKeyColor)
+          setChromaKeySettings({
+            similarity: data.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
+            smoothness: data.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
+          })
         }
         if (data.flatView) {
           setFlatView(data.flatView)
@@ -349,6 +354,10 @@ export default function EditProjectPage() {
       const heightValue = videoAspectRatio ?? project?.height ?? 1
       formData.append('height', heightValue.toString())
       formData.append('chromaKeyColor', useChromaKey ? chromaKeyColor : '')
+      if (useChromaKey) {
+        formData.append('chromaKeySimilarity', chromaKeySettings.similarity.toString())
+        formData.append('chromaKeySmoothness', chromaKeySettings.smoothness.toString())
+      }
       formData.append('flatView', flatView ? 'true' : 'false')
       formData.append('highPrecision', highPrecision ? 'true' : 'false')
 
@@ -615,6 +624,8 @@ export default function EditProjectPage() {
                 onUseChromaKeyChange={setUseChromaKey}
                 chromaKeyColor={chromaKeyColor}
                 onChromaKeyColorChange={handleChromaKeyColorChange}
+                chromaKeySettings={chromaKeySettings}
+                onChromaKeySettingsChange={setChromaKeySettings}
                 chromaKeyError={chromaKeyError}
                 flatView={flatView}
                 onFlatViewChange={setFlatView}

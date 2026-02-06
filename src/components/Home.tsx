@@ -12,6 +12,7 @@ import VideoUploadSection from './home/VideoUploadSection'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { API_URL } from '../config/api'
 import { isValidHexColor } from '../utils/validation'
+import { ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS } from '../types/project'
 
 const STEPS = [
   { label: '타겟 업로드', description: '이미지 파일' },
@@ -46,6 +47,7 @@ export default function App() {
   // 옵션 상태
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
+  const [chromaKeySettings, setChromaKeySettings] = useState<ChromaKeySettings>(DEFAULT_CHROMAKEY_SETTINGS)
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
   const [highPrecision, setHighPrecision] = useState(false)
@@ -255,6 +257,8 @@ export default function App() {
               onUseChromaKeyChange={setUseChromaKey}
               chromaKeyColor={chromaKeyColor}
               onChromaKeyColorChange={handleChromaKeyColorChange}
+              chromaKeySettings={chromaKeySettings}
+              onChromaKeySettingsChange={setChromaKeySettings}
               chromaKeyError={chromaKeyError}
               flatView={flatView}
               onFlatViewChange={setFlatView}

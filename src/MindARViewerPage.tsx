@@ -4,7 +4,7 @@ import ConsoleLogOverlay from './components/ConsoleLogOverlay'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { CameraResolution, ProjectMode, VideoPosition, VideoQuality } from './types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, ProjectMode, VideoPosition, VideoQuality } from './types/project'
 import { API_URL } from './config/api'
 
 interface ArFilesResponse {
@@ -13,6 +13,8 @@ interface ArFilesResponse {
   previewVideoFileId?: string
   targetImageFileId?: string
   chromaKeyColor?: string
+  chromaKeySimilarity?: number // 크로마키 색상 범위 (0.0~1.0)
+  chromaKeySmoothness?: number // 크로마키 경계 부드러움 (0.0~0.5)
   flatView?: boolean
   highPrecision?: boolean
   mode?: ProjectMode // 'ar' | 'basic'
@@ -232,6 +234,10 @@ export default function MindARViewerPage() {
             position={data.fileIds.videoPosition || { x: 0.5, y: 0.5 }}
             scale={data.fileIds.videoScale || 1}
             chromaKeyColor={data.fileIds.chromaKeyColor}
+            chromaKeySettings={{
+              similarity: data.fileIds.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
+              smoothness: data.fileIds.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
+            }}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
             videoQuality={data.fileIds.videoQuality || 'low'}
             debugMode={isDebugMode}
@@ -254,6 +260,10 @@ export default function MindARViewerPage() {
             previewVideoUrl={data.assets.previewVideoUrl}
             targetImageUrl={data.assets.targetImageUrl!}
             chromaKeyColor={data.fileIds.chromaKeyColor}
+            chromaKeySettings={{
+              similarity: data.fileIds.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
+              smoothness: data.fileIds.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
+            }}
             flatView={data.fileIds.flatView}
             highPrecision={data.fileIds.highPrecision}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}

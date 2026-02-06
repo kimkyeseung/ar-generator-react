@@ -18,7 +18,7 @@ import PasswordModal from '../components/PasswordModal'
 import { Button } from '../components/ui/button'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
-import { CameraResolution, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
 import { API_URL } from '../config/api'
 import { isValidHexColor } from '../utils/validation'
 
@@ -62,6 +62,7 @@ export default function CreateProjectPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [useChromaKey, setUseChromaKey] = useState(false)
   const [chromaKeyColor, setChromaKeyColor] = useState('#00FF00')
+  const [chromaKeySettings, setChromaKeySettings] = useState<ChromaKeySettings>(DEFAULT_CHROMAKEY_SETTINGS)
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
   const [highPrecision, setHighPrecision] = useState(false)
@@ -269,9 +270,11 @@ export default function CreateProjectPage() {
       if (title) {
         formData.append('title', title)
       }
-      // 크로마키 색상 전송
+      // 크로마키 설정 전송
       if (useChromaKey && chromaKeyColor) {
         formData.append('chromaKeyColor', chromaKeyColor)
+        formData.append('chromaKeySimilarity', chromaKeySettings.similarity.toString())
+        formData.append('chromaKeySmoothness', chromaKeySettings.smoothness.toString())
       }
       // 정면 고정 옵션 전송 (AR 모드에서만)
       if (mode === 'ar' && flatView) {
@@ -469,6 +472,8 @@ export default function CreateProjectPage() {
               onUseChromaKeyChange={setUseChromaKey}
               chromaKeyColor={chromaKeyColor}
               onChromaKeyColorChange={handleChromaKeyColorChange}
+              chromaKeySettings={chromaKeySettings}
+              onChromaKeySettingsChange={setChromaKeySettings}
               chromaKeyError={chromaKeyError}
               flatView={flatView}
               onFlatViewChange={setFlatView}

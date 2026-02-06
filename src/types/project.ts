@@ -7,6 +7,17 @@ export interface VideoPosition {
   y: number // 0~1 범위 (화면 비율 기준)
 }
 
+// 크로마키 강도 설정
+export interface ChromaKeySettings {
+  similarity: number // 0.0~1.0, 기본값 0.4 - 색상 범위 (높을수록 더 넓은 범위 제거)
+  smoothness: number // 0.0~0.5, 기본값 0.08 - 경계 부드러움 (높을수록 부드러운 경계)
+}
+
+export const DEFAULT_CHROMAKEY_SETTINGS: ChromaKeySettings = {
+  similarity: 0.4,
+  smoothness: 0.08,
+}
+
 export interface Project {
   id: string
   folderId: string
@@ -20,6 +31,8 @@ export interface Project {
   title: string | null
   description: string | null
   chromaKeyColor: string | null
+  chromaKeySimilarity: number | null // 크로마키 색상 범위 (0.0~1.0)
+  chromaKeySmoothness: number | null // 크로마키 경계 부드러움 (0.0~0.5)
   flatView: boolean
   highPrecision: boolean
   mode: ProjectMode // 'ar' | 'basic'

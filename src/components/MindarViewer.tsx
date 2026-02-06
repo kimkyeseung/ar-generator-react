@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import 'aframe'
 import '../lib/image-target/aframe.js'
-import { CameraResolution, VideoQuality } from '../types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoQuality } from '../types/project'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 
 declare const DeviceMotionEvent: any
@@ -44,6 +44,7 @@ interface Props {
   previewVideoUrl?: string
   targetImageUrl: string
   chromaKeyColor?: string
+  chromaKeySettings?: ChromaKeySettings
   flatView?: boolean
   highPrecision?: boolean
   cameraResolution?: CameraResolution
@@ -177,6 +178,7 @@ const MindARViewer: React.FC<Props> = ({
   previewVideoUrl,
   targetImageUrl,
   chromaKeyColor,
+  chromaKeySettings = DEFAULT_CHROMAKEY_SETTINGS,
   flatView,
   highPrecision,
   cameraResolution = 'fhd',
@@ -724,7 +726,7 @@ const MindARViewer: React.FC<Props> = ({
               height='1'
               width='1'
               rotation='0 0 0'
-              chromakey-material={`src: #ar-video; color: ${chromaKeyColor}`}
+              chromakey-material={`src: #ar-video; color: ${chromaKeyColor}; similarity: ${chromaKeySettings.similarity}; smoothness: ${chromaKeySettings.smoothness}`}
               {...(flatView ? { billboard: '' } : {})}
             ></a-plane>
           ) : (

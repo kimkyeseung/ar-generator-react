@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { CameraResolution, VideoPosition, VideoQuality } from '../types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoPosition, VideoQuality } from '../types/project'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   position: VideoPosition
   scale: number
   chromaKeyColor?: string
+  chromaKeySettings?: ChromaKeySettings
   cameraResolution?: CameraResolution
   videoQuality?: VideoQuality
   debugMode?: boolean
@@ -19,6 +20,7 @@ const BasicModeViewer: React.FC<Props> = ({
   position,
   scale,
   chromaKeyColor,
+  chromaKeySettings = DEFAULT_CHROMAKEY_SETTINGS,
   cameraResolution = 'fhd',
   videoQuality = 'low',
   debugMode = false,
@@ -203,8 +205,7 @@ const BasicModeViewer: React.FC<Props> = ({
     }
 
     const keyColor = hexToRgb(chromaKeyColor)
-    const similarity = 0.4
-    const smoothness = 0.08
+    const { similarity, smoothness } = chromaKeySettings
 
     let animationId: number
     let isRunning = true

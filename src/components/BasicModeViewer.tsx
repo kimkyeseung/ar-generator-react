@@ -11,6 +11,8 @@ interface Props {
   chromaKeySettings?: ChromaKeySettings
   cameraResolution?: CameraResolution
   videoQuality?: VideoQuality
+  overlayImageUrl?: string // 오버레이 이미지 URL
+  overlayLinkUrl?: string // 오버레이 이미지 클릭 시 열릴 URL
   debugMode?: boolean
 }
 
@@ -23,6 +25,8 @@ const BasicModeViewer: React.FC<Props> = ({
   chromaKeySettings = DEFAULT_CHROMAKEY_SETTINGS,
   cameraResolution = 'fhd',
   videoQuality = 'low',
+  overlayImageUrl,
+  overlayLinkUrl,
   debugMode = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -280,6 +284,13 @@ const BasicModeViewer: React.FC<Props> = ({
     }
   }, [isMuted])
 
+  // 오버레이 이미지 클릭 핸들러
+  const handleOverlayClick = useCallback(() => {
+    if (overlayLinkUrl) {
+      window.open(overlayLinkUrl, '_blank', 'noopener,noreferrer')
+    }
+  }, [overlayLinkUrl])
+
   // 음소거 토글
   const handleToggleMute = useCallback(async () => {
     const video = videoRef.current
@@ -463,6 +474,41 @@ const BasicModeViewer: React.FC<Props> = ({
             />
           )}
         </div>
+
+        {/* 오버레이 이미지 버튼 */}
+        {overlayImageUrl && (
+          <button
+            onClick={handleOverlayClick}
+            className="fixed bottom-20 right-4 z-30 rounded-xl overflow-hidden shadow-lg transition-transform active:scale-95 hover:scale-105"
+            style={{
+              cursor: overlayLinkUrl ? 'pointer' : 'default',
+            }}
+            aria-label={overlayLinkUrl ? '링크 열기' : '오버레이 이미지'}
+          >
+            <img
+              src={overlayImageUrl}
+              alt="오버레이 이미지"
+              className="w-16 h-16 object-contain bg-white/90 backdrop-blur-sm"
+            />
+            {overlayLinkUrl && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+              </div>
+            )}
+          </button>
+        )}
       </div>
     </>
   )

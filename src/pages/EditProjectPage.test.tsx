@@ -108,6 +108,8 @@ const mockBasicModeProject: Project = {
   targetFileId: null,
   targetImageFileId: null,
   thumbnailFileId: null,
+  overlayImageFileId: null,
+  overlayLinkUrl: null,
   chromaKeyColor: null,
   chromaKeySimilarity: null,
   chromaKeySmoothness: null,

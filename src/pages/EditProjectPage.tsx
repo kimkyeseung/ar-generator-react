@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
+import OverlayImageUpload from '../components/OverlayImageUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import CameraResolutionSelector from '../components/home/CameraResolutionSelector'
@@ -57,6 +58,10 @@ export default function EditProjectPage() {
   const [videoScale, setVideoScale] = useState(1)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
 
+  // 오버레이 이미지 상태
+  const [overlayImageFile, setOverlayImageFile] = useState<File | null>(null)
+  const [overlayLinkUrl, setOverlayLinkUrl] = useState<string>('')
+
   // Upload state
   const [progress, setProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -110,6 +115,10 @@ export default function EditProjectPage() {
         const savedQuality: VideoQuality = data.videoQuality || (data.previewVideoFileId ? 'low' : 'high')
         setVideoQuality(savedQuality)
         setInitialVideoQuality(savedQuality)
+        // 오버레이 링크 URL 불러오기
+        if (data.overlayLinkUrl) {
+          setOverlayLinkUrl(data.overlayLinkUrl)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
       } finally {
@@ -358,6 +367,12 @@ export default function EditProjectPage() {
       if (thumbnailFile) {
         formData.append('thumbnail', thumbnailFile)
       }
+      // 오버레이 이미지 전송 (있는 경우)
+      if (overlayImageFile) {
+        formData.append('overlayImage', overlayImageFile)
+      }
+      // 오버레이 링크 URL 전송
+      formData.append('overlayLinkUrl', overlayLinkUrl)
 
       // 새 타겟 이미지가 있으면 컴파일 후 추가
       if (targetImageFiles.length > 0) {
@@ -634,6 +649,18 @@ export default function EditProjectPage() {
                 />
               </div>
             )}
+
+            {/* 오버레이 이미지 편집 */}
+            <div className='mb-6'>
+              <OverlayImageUpload
+                file={overlayImageFile}
+                linkUrl={overlayLinkUrl}
+                existingImageUrl={project.overlayImageFileId ? `${API_URL}/file/${project.overlayImageFileId}` : undefined}
+                onFileSelect={setOverlayImageFile}
+                onLinkUrlChange={setOverlayLinkUrl}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+            </div>
 
             {/* 영상 품질 선택 (로딩바와 함께 보이도록 최하단 배치) */}
             <div className='mb-6'>

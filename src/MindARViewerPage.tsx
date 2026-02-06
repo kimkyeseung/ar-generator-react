@@ -12,6 +12,8 @@ interface ArFilesResponse {
   videoFileId: string
   previewVideoFileId?: string
   targetImageFileId?: string
+  overlayImageFileId?: string // 오버레이 이미지 ID
+  overlayLinkUrl?: string // 오버레이 이미지 클릭 시 열릴 URL
   chromaKeyColor?: string
   chromaKeySimilarity?: number // 크로마키 색상 범위 (0.0~1.0)
   chromaKeySmoothness?: number // 크로마키 경계 부드러움 (0.0~0.5)
@@ -29,6 +31,7 @@ interface ArAssets {
   videoUrl: string
   previewVideoUrl?: string
   targetImageUrl?: string // 기본 모드에서는 undefined
+  overlayImageUrl?: string // 오버레이 이미지 URL
 }
 
 // 단일 fetch + blob 변환
@@ -80,6 +83,9 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
         ? `${API_URL}/stream/${fileIds.previewVideoFileId}?t=${cacheBuster}`
         : undefined,
       targetImageUrl,
+      overlayImageUrl: fileIds.overlayImageFileId
+        ? `${API_URL}/file/${fileIds.overlayImageFileId}?t=${cacheBuster}`
+        : undefined,
     },
   }
 }
@@ -240,6 +246,8 @@ export default function MindARViewerPage() {
             }}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
             videoQuality={data.fileIds.videoQuality || 'low'}
+            overlayImageUrl={data.assets.overlayImageUrl}
+            overlayLinkUrl={data.fileIds.overlayLinkUrl}
             debugMode={isDebugMode}
           />
           {isLogMode && <ConsoleLogOverlay />}
@@ -268,6 +276,8 @@ export default function MindARViewerPage() {
             highPrecision={data.fileIds.highPrecision}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
             videoQuality={data.fileIds.videoQuality || 'low'}
+            overlayImageUrl={data.assets.overlayImageUrl}
+            overlayLinkUrl={data.fileIds.overlayLinkUrl}
             debugMode={isDebugMode}
           />
         </div>

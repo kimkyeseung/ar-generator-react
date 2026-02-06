@@ -18,6 +18,12 @@ export const DEFAULT_CHROMAKEY_SETTINGS: ChromaKeySettings = {
   smoothness: 0.08,
 }
 
+// 오버레이 이미지 (클릭 시 링크 열림)
+export interface OverlayImage {
+  fileId: string | null
+  linkUrl: string | null
+}
+
 export interface Project {
   id: string
   folderId: string
@@ -26,6 +32,8 @@ export interface Project {
   targetFileId: string | null // 기본모드에서는 null
   targetImageFileId: string | null
   thumbnailFileId: string | null // 정사각형 썸네일 (미설정시 영상 첫화면 사용)
+  overlayImageFileId: string | null // 오버레이 이미지 (클릭 시 링크 열림)
+  overlayLinkUrl: string | null // 오버레이 이미지 클릭 시 열릴 URL
   width: number | null
   height: number | null
   title: string | null

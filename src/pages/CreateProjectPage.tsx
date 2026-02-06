@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
+import OverlayImageUpload from '../components/OverlayImageUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import CameraResolutionSelector from '../components/home/CameraResolutionSelector'
@@ -67,6 +68,10 @@ export default function CreateProjectPage() {
   const [chromaKeyError, setChromaKeyError] = useState<string | null>(null)
   const [flatView, setFlatView] = useState(false)
   const [highPrecision, setHighPrecision] = useState(false)
+
+  // 오버레이 이미지 상태
+  const [overlayImageFile, setOverlayImageFile] = useState<File | null>(null)
+  const [overlayLinkUrl, setOverlayLinkUrl] = useState<string>('')
 
   // 비밀번호 모달 상태
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -279,6 +284,14 @@ export default function CreateProjectPage() {
       if (thumbnailFile) {
         formData.append('thumbnail', thumbnailFile)
       }
+      // 오버레이 이미지 전송 (있는 경우)
+      if (overlayImageFile) {
+        formData.append('overlayImage', overlayImageFile)
+      }
+      // 오버레이 링크 URL 전송 (있는 경우)
+      if (overlayLinkUrl) {
+        formData.append('overlayLinkUrl', overlayLinkUrl)
+      }
 
       // 3. 업로드
       const res = await uploadWithProgress(formData, password)
@@ -479,6 +492,17 @@ export default function CreateProjectPage() {
                 />
               </div>
             )}
+
+            {/* 오버레이 이미지 업로드 */}
+            <div className='mt-6'>
+              <OverlayImageUpload
+                file={overlayImageFile}
+                linkUrl={overlayLinkUrl}
+                onFileSelect={setOverlayImageFile}
+                onLinkUrlChange={setOverlayLinkUrl}
+                disabled={isUploading || isCompiling || isCompressing}
+              />
+            </div>
 
             {/* 영상 품질 선택 (로딩바와 함께 보이도록 최하단 배치) */}
             <div className='mt-6'>

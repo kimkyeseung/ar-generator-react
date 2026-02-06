@@ -617,6 +617,7 @@ export default function EditProjectPage() {
               <VideoUploadSection
                 isTargetReady={true}
                 videoFile={videoFile}
+                existingVideoUrl={!videoFile && project?.videoFileId ? `${API_URL}/stream/${project.videoFileId}` : undefined}
                 onFileSelect={handleVideoSelect}
                 limitMb={MAX_VIDEO_SIZE_MB}
                 videoError={videoError}

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FileUpload } from '../FileUpload'
 import StatusCallout from './StatusCallout'
 import VideoLimitNotice from './VideoLimitNotice'
@@ -8,6 +9,7 @@ import { ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/proje
 type VideoUploadSectionProps = {
   isTargetReady: boolean
   videoFile: File | null
+  existingVideoUrl?: string // 편집 시 기존 비디오 URL
   onFileSelect: (file: File | File[] | null) => void
   limitMb: number
   videoError: string | null
@@ -26,6 +28,7 @@ type VideoUploadSectionProps = {
 export default function VideoUploadSection({
   isTargetReady,
   videoFile,
+  existingVideoUrl,
   onFileSelect,
   limitMb,
   videoError,
@@ -40,6 +43,8 @@ export default function VideoUploadSection({
   onFlatViewChange,
   showFlatView = true,
 }: VideoUploadSectionProps) {
+  const [showPreview, setShowPreview] = useState(false)
+
   if (!isTargetReady) {
     return (
       <StatusCallout message='타겟 이미지를 업로드해 .mind 파일을 생성하면 비디오를 연결할 수 있습니다.' />
@@ -204,12 +209,28 @@ export default function VideoUploadSection({
               >
                 기본값으로 복원
               </button>
+
+              {/* 미리보기 버튼 */}
+              {(videoFile || existingVideoUrl) && (
+                <button
+                  type='button'
+                  onClick={() => setShowPreview(!showPreview)}
+                  className='w-full mt-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors flex items-center justify-center gap-2'
+                >
+                  <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' />
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' />
+                  </svg>
+                  {showPreview ? '미리보기 닫기' : '미리보기'}
+                </button>
+              )}
             </div>
 
             {/* 크로마키 미리보기 */}
-            {videoFile && (
+            {(videoFile || existingVideoUrl) && showPreview && (
               <ChromaKeyPreview
-                videoFile={videoFile}
+                videoFile={videoFile ?? undefined}
+                videoUrl={existingVideoUrl}
                 chromaKeyColor={chromaKeyColor}
                 chromaKeySettings={chromaKeySettings}
               />

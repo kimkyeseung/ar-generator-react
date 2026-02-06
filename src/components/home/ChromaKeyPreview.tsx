@@ -3,7 +3,8 @@ import { ChromaKeySettings } from '../../types/project'
 import { isValidHexColor } from '../../utils/validation'
 
 interface ChromaKeyPreviewProps {
-  videoFile: File
+  videoFile?: File
+  videoUrl?: string // 기존 비디오 URL (편집 시)
   chromaKeyColor: string
   chromaKeySettings: ChromaKeySettings
 }
@@ -22,6 +23,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 export default function ChromaKeyPreview({
   videoFile,
+  videoUrl: externalVideoUrl,
   chromaKeyColor,
   chromaKeySettings,
 }: ChromaKeyPreviewProps) {
@@ -33,10 +35,20 @@ export default function ChromaKeyPreview({
 
   // 비디오 URL 생성
   useEffect(() => {
-    const url = URL.createObjectURL(videoFile)
-    setVideoUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [videoFile])
+    // 외부 URL이 있으면 그것을 사용
+    if (externalVideoUrl) {
+      setVideoUrl(externalVideoUrl)
+      return
+    }
+    // 파일이 있으면 ObjectURL 생성
+    if (videoFile) {
+      const url = URL.createObjectURL(videoFile)
+      setVideoUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+  }, [videoFile, externalVideoUrl])
+
+  if (!videoFile && !externalVideoUrl) return null
 
   // 크로마키 처리 렌더링 루프
   useEffect(() => {

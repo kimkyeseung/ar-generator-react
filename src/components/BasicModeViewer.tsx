@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { CameraResolution, VideoPosition } from '../types/project'
+import { CameraResolution, VideoPosition, VideoQuality } from '../types/project'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   scale: number
   chromaKeyColor?: string
   cameraResolution?: CameraResolution
+  videoQuality?: VideoQuality
   debugMode?: boolean
 }
 
@@ -19,6 +20,7 @@ const BasicModeViewer: React.FC<Props> = ({
   scale,
   chromaKeyColor,
   cameraResolution = 'fhd',
+  videoQuality = 'low',
   debugMode = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -370,10 +372,27 @@ const BasicModeViewer: React.FC<Props> = ({
         <SpeakerIcon muted={isMuted} />
       </button>
 
-      {/* 디버그 모드: 카메라 해상도 표시 */}
-      {debugMode && actualCameraResolution && (
-        <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-          <span>📷 {actualCameraResolution}</span>
+      {/* 디버그 모드: 상태 표시 */}
+      {debugMode && (
+        <div className="fixed bottom-4 left-4 z-40 flex flex-wrap items-center gap-2 rounded-lg bg-black/70 px-3 py-2 text-xs text-white backdrop-blur-sm">
+          {actualCameraResolution && (
+            <span className="px-2 py-0.5 rounded bg-blue-500">
+              📷 {actualCameraResolution}
+            </span>
+          )}
+          <span className={`px-2 py-0.5 rounded ${
+            videoQuality === 'high' ? 'bg-purple-500' :
+            videoQuality === 'medium' ? 'bg-blue-500' : 'bg-orange-500'
+          }`}>
+            🎬 {videoQuality === 'high' ? '고화질' : videoQuality === 'medium' ? '중화질' : '저화질'}
+          </span>
+          {previewVideoUrl && (
+            <span className={`px-2 py-0.5 rounded ${
+              currentVideoUrl === videoUrl ? 'bg-green-500' : 'bg-yellow-500'
+            }`}>
+              {currentVideoUrl === videoUrl ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
+            </span>
+          )}
         </div>
       )}
 

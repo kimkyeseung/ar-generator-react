@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import 'aframe'
 import '../lib/image-target/aframe.js'
-import { CameraResolution } from '../types/project'
+import { CameraResolution, VideoQuality } from '../types/project'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 
 declare const DeviceMotionEvent: any
@@ -47,6 +47,7 @@ interface Props {
   flatView?: boolean
   highPrecision?: boolean
   cameraResolution?: CameraResolution
+  videoQuality?: VideoQuality
   debugMode?: boolean
 }
 
@@ -179,6 +180,7 @@ const MindARViewer: React.FC<Props> = ({
   flatView,
   highPrecision,
   cameraResolution = 'fhd',
+  videoQuality = 'low',
   debugMode = false,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
@@ -614,9 +616,15 @@ const MindARViewer: React.FC<Props> = ({
                 <span className="text-xs px-2 py-0.5 rounded bg-blue-500">
                   📷 {cameraResolution.toUpperCase()}
                 </span>
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  videoQuality === 'high' ? 'bg-purple-500' :
+                  videoQuality === 'medium' ? 'bg-blue-500' : 'bg-orange-500'
+                }`}>
+                  🎬 {videoQuality === 'high' ? '고화질' : videoQuality === 'medium' ? '중화질' : '저화질'}
+                </span>
                 {previewVideoUrl && (
                   <span className={`text-xs px-2 py-0.5 rounded ${isHDReady ? 'bg-green-500' : 'bg-yellow-500'}`}>
-                    {isHDReady ? 'HD' : 'Preview'}
+                    {isHDReady ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
                   </span>
                 )}
               </div>

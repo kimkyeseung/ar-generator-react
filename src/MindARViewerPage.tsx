@@ -4,7 +4,7 @@ import ConsoleLogOverlay from './components/ConsoleLogOverlay'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { CameraResolution, ProjectMode, VideoPosition } from './types/project'
+import { CameraResolution, ProjectMode, VideoPosition, VideoQuality } from './types/project'
 
 const API_URL = process.env.REACT_APP_API_URL
 
@@ -18,6 +18,7 @@ interface ArFilesResponse {
   highPrecision?: boolean
   mode?: ProjectMode // 'ar' | 'basic'
   cameraResolution?: CameraResolution // '4k' | 'fhd' | 'hd'
+  videoQuality?: VideoQuality // 'high' | 'medium' | 'low'
   videoPosition?: VideoPosition // 기본 모드용
   videoScale?: number // 기본 모드용
 }
@@ -233,6 +234,7 @@ export default function MindARViewerPage() {
             scale={data.fileIds.videoScale || 1}
             chromaKeyColor={data.fileIds.chromaKeyColor}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
+            videoQuality={data.fileIds.videoQuality || 'low'}
             debugMode={isDebugMode}
           />
           {isLogMode && <ConsoleLogOverlay />}
@@ -256,6 +258,7 @@ export default function MindARViewerPage() {
             flatView={data.fileIds.flatView}
             highPrecision={data.fileIds.highPrecision}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
+            videoQuality={data.fileIds.videoQuality || 'low'}
             debugMode={isDebugMode}
           />
         </div>

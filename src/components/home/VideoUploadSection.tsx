@@ -1,6 +1,7 @@
 import { FileUpload } from '../FileUpload'
 import StatusCallout from './StatusCallout'
 import VideoLimitNotice from './VideoLimitNotice'
+import ChromaKeyPreview from './ChromaKeyPreview'
 import { isValidHexColor } from '../../utils/validation'
 import { ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'
 
@@ -204,6 +205,15 @@ export default function VideoUploadSection({
                 기본값으로 복원
               </button>
             </div>
+
+            {/* 크로마키 미리보기 */}
+            {videoFile && (
+              <ChromaKeyPreview
+                videoFile={videoFile}
+                chromaKeyColor={chromaKeyColor}
+                chromaKeySettings={chromaKeySettings}
+              />
+            )}
           </div>
         )}
       </div>

@@ -61,7 +61,12 @@ export default function PublishSection({
       )}
 
       {isUploading && (
-        <StatusCallout message='영상과 타겟 파일을 업로드하는 중입니다. 잠시만 기다려주세요.' />
+        <div className='space-y-2'>
+          <StatusCallout message='AR이 생성되기전까지 잠시만 기다려주세요!' />
+          <p className='text-xs text-gray-500 text-center'>
+            (데이터에 따라 속도가 지연될 수 있습니다)
+          </p>
+        </div>
       )}
 
       {progress > 0 && (

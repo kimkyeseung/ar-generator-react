@@ -110,6 +110,7 @@ const mockBasicModeProject: Project = {
   thumbnailFileId: null,
   overlayImageFileId: null,
   overlayLinkUrl: null,
+  guideImageFileId: null,
   chromaKeyColor: null,
   chromaKeySimilarity: null,
   chromaKeySmoothness: null,
@@ -119,6 +120,7 @@ const mockBasicModeProject: Project = {
   videoQuality: 'low',
   videoPosition: { x: 0.5, y: 0.5 },
   videoScale: 1,
+  mediaItems: [],
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 }

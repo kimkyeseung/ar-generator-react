@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
 import OverlayImageUpload from '../components/OverlayImageUpload'
+import GuideImageUpload from '../components/GuideImageUpload'
 import VideoPositionEditor from '../components/VideoPositionEditor'
 import ArOptionsSection from '../components/home/ArOptionsSection'
 import CameraResolutionSelector from '../components/home/CameraResolutionSelector'
@@ -14,11 +15,24 @@ import UploadCard from '../components/home/UploadCard'
 import VideoUploadSection from '../components/home/VideoUploadSection'
 import VideoQualitySelector from '../components/home/VideoQualitySelector'
 import PasswordModal from '../components/PasswordModal'
+import MediaItemList from '../components/media/MediaItemList'
+import UnifiedPreviewCanvas from '../components/preview/UnifiedPreviewCanvas'
+import TwoColumnLayout from '../components/layout/TwoColumnLayout'
+import { CollapsibleSection } from '../components/ui/CollapsibleSection'
 import { Button } from '../components/ui/button'
-import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, Project, ProjectMode, VideoPosition, VideoQuality } from '../types/project'
+import { Progress } from '../components/ui/progress'
+import {
+  CameraResolution,
+  ChromaKeySettings,
+  DEFAULT_CHROMAKEY_SETTINGS,
+  Project,
+  ProjectMode,
+  VideoPosition,
+  VideoQuality,
+  MediaItem,
+} from '../types/project'
 import { useVideoCompressor } from '../hooks/useVideoCompressor'
 import { useImageCompiler } from '../hooks/useImageCompiler'
-import { Progress } from '../components/ui/progress'
 import { API_URL } from '../config/api'
 import { isValidHexColor } from '../utils/validation'
 import { verifyPassword } from '../utils/auth'
@@ -61,6 +75,16 @@ export default function EditProjectPage() {
   // 오버레이 이미지 상태
   const [overlayImageFile, setOverlayImageFile] = useState<File | null>(null)
   const [overlayLinkUrl, setOverlayLinkUrl] = useState<string>('')
+
+  // 안내문구 이미지 상태
+  const [guideImageFile, setGuideImageFile] = useState<File | null>(null)
+
+  // 멀티 미디어 아이템 상태
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
+  const [selectedMediaItemId, setSelectedMediaItemId] = useState<string | null>(null)
+
+  // 미리보기 줌
+  const [previewZoom, setPreviewZoom] = useState(1)
 
   // Upload state
   const [progress, setProgress] = useState(0)
@@ -118,6 +142,36 @@ export default function EditProjectPage() {
         // 오버레이 링크 URL 불러오기
         if (data.overlayLinkUrl) {
           setOverlayLinkUrl(data.overlayLinkUrl)
+        }
+        // 멀티 미디어 아이템 로드 (있는 경우)
+        if (data.mediaItems && data.mediaItems.length > 0) {
+          const loadedItems: MediaItem[] = data.mediaItems.map(item => ({
+            id: item.id,
+            type: item.type as 'video' | 'image',
+            mode: item.mode as 'tracking' | 'basic',
+            file: null,
+            previewFile: null,
+            existingFileId: item.fileId,
+            existingPreviewFileId: item.previewFileId,
+            aspectRatio: item.aspectRatio ?? 16 / 9,
+            position: {
+              x: item.positionX ?? 0.5,
+              y: item.positionY ?? 0.5,
+            },
+            scale: item.scale ?? 1,
+            chromaKeyEnabled: item.chromaKeyEnabled ?? false,
+            chromaKeyColor: item.chromaKeyColor ?? '#00FF00',
+            chromaKeySettings: {
+              similarity: item.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
+              smoothness: item.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
+            },
+            flatView: item.flatView ?? false,
+            linkUrl: item.linkUrl ?? '',
+            linkEnabled: item.linkEnabled ?? false,
+            order: item.order ?? 0,
+            isCollapsed: true,
+          }))
+          setMediaItems(loadedItems)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
@@ -297,6 +351,24 @@ export default function EditProjectPage() {
     }
   }
 
+  // 멀티 미디어 아이템 위치 변경
+  const handleMediaItemPositionChange = useCallback((id: string, position: { x: number; y: number }) => {
+    setMediaItems(items =>
+      items.map(item =>
+        item.id === id ? { ...item, position } : item
+      )
+    )
+  }, [])
+
+  // 멀티 미디어 아이템 스케일 변경
+  const handleMediaItemScaleChange = useCallback((id: string, scale: number) => {
+    setMediaItems(items =>
+      items.map(item =>
+        item.id === id ? { ...item, scale } : item
+      )
+    )
+  }, [])
+
   // AR 모드로 변경 시 타겟 이미지가 필요한지 확인
   const needsTargetImage = mode === 'ar' && !project?.targetImageFileId && targetImageFiles.length === 0
 
@@ -373,6 +445,10 @@ export default function EditProjectPage() {
       }
       // 오버레이 링크 URL 전송
       formData.append('overlayLinkUrl', overlayLinkUrl)
+      // 안내문구 이미지 전송 (있는 경우)
+      if (guideImageFile) {
+        formData.append('guideImage', guideImageFile)
+      }
 
       // 새 타겟 이미지가 있으면 컴파일 후 추가
       if (targetImageFiles.length > 0) {
@@ -481,10 +557,282 @@ export default function EditProjectPage() {
     )
   }
 
+  // 설정 패널 (좌측)
+  const settingsPanel = (
+    <UploadCard
+      stepMessage='프로젝트 편집'
+      status={workflowStatus}
+    >
+      {/* 기본 정보 */}
+      <CollapsibleSection title="기본 정보" defaultOpen={true}>
+        <div className='space-y-4'>
+          {/* 프로젝트 제목 */}
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-2'>
+              프로젝트 제목
+            </label>
+            <input
+              type='text'
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder='프로젝트 제목을 입력하세요'
+              className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+            />
+          </div>
+
+          {/* 썸네일 이미지 업로드 */}
+          <ThumbnailUpload
+            file={thumbnailFile}
+            existingThumbnailUrl={project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined}
+            onFileSelect={setThumbnailFile}
+            disabled={isUploading || isCompiling || isCompressing}
+          />
+
+          {/* 모드 선택 */}
+          <ModeSelector
+            mode={mode}
+            onModeChange={handleModeChange}
+            disabled={isUploading || isCompiling || isCompressing}
+          />
+          {mode === 'ar' && project.mode === 'basic' && (
+            <p className='text-xs text-amber-600'>
+              AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
+            </p>
+          )}
+
+          {/* 카메라 해상도 선택 */}
+          <CameraResolutionSelector
+            resolution={cameraResolution}
+            onResolutionChange={setCameraResolution}
+            disabled={isUploading || isCompiling || isCompressing}
+          />
+        </div>
+      </CollapsibleSection>
+
+      {/* 현재 에셋 미리보기 */}
+      <CollapsibleSection title="현재 에셋" defaultOpen={true} className="mt-4">
+        <div className='flex gap-4 flex-wrap'>
+          {/* AR 모드에서만 타겟 이미지 표시 */}
+          {mode === 'ar' && project.targetImageFileId && targetImageFiles.length === 0 && (
+            <div className='flex flex-col items-center'>
+              <img
+                src={`${API_URL}/file/${project.targetImageFileId}`}
+                alt='현재 타겟 이미지'
+                className='w-32 h-32 object-cover rounded-lg border border-gray-200'
+              />
+              <span className='text-xs text-gray-500 mt-1'>타겟 이미지</span>
+            </div>
+          )}
+          {project.videoFileId && !videoFile && (
+            <div className='flex flex-col items-center'>
+              <video
+                src={`${API_URL}/file/${project.videoFileId}`}
+                className='w-32 h-32 object-cover rounded-lg border border-gray-200'
+                controls
+                playsInline
+                webkit-playsinline='true'
+                preload='metadata'
+              />
+              <span className='text-xs text-gray-500 mt-1'>현재 비디오</span>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+
+      {/* AR 설정 (AR 모드에서만) */}
+      {mode === 'ar' && (
+        <CollapsibleSection title="AR 설정" defaultOpen={true} className="mt-4">
+          <div className='space-y-4'>
+            <ArOptionsSection
+              highPrecision={highPrecision}
+              onHighPrecisionChange={setHighPrecision}
+            />
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                타겟 이미지 {needsTargetImage ? '(필수)' : '변경 (선택)'}
+                {needsTargetImage && <span className='text-red-500 ml-1'>*</span>}
+              </label>
+              <TargetImageUpload
+                files={targetImageFiles}
+                onFileSelect={handleTargetImageSelect}
+              />
+              {needsTargetImage && (
+                <p className='text-xs text-red-500 mt-1'>
+                  AR 모드에서는 타겟 이미지가 필요합니다.
+                </p>
+              )}
+            </div>
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* 비디오 변경 */}
+      <CollapsibleSection title="영상 설정" defaultOpen={true} className="mt-4">
+        <div className='space-y-4'>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-2'>
+              비디오 변경 (선택)
+            </label>
+            <VideoUploadSection
+              isTargetReady={true}
+              videoFile={videoFile}
+              existingVideoUrl={!videoFile && project?.videoFileId ? `${API_URL}/stream/${project.videoFileId}` : undefined}
+              onFileSelect={handleVideoSelect}
+              limitMb={MAX_VIDEO_SIZE_MB}
+              videoError={videoError}
+              useChromaKey={useChromaKey}
+              onUseChromaKeyChange={setUseChromaKey}
+              chromaKeyColor={chromaKeyColor}
+              onChromaKeyColorChange={handleChromaKeyColorChange}
+              chromaKeySettings={chromaKeySettings}
+              onChromaKeySettingsChange={setChromaKeySettings}
+              chromaKeyError={chromaKeyError}
+              flatView={flatView}
+              onFlatViewChange={setFlatView}
+              showFlatView={mode === 'ar'}
+            />
+          </div>
+
+          {/* 비디오 위치/크기 조정 (기본 모드에서만) */}
+          {mode === 'basic' && (videoFile || project.videoFileId) && (
+            <VideoPositionEditor
+              videoFile={videoFile ?? undefined}
+              videoSrc={!videoFile && project.videoFileId ? `${API_URL}/file/${project.videoFileId}` : undefined}
+              position={videoPosition}
+              scale={videoScale}
+              onPositionChange={setVideoPosition}
+              onScaleChange={setVideoScale}
+              chromaKeyColor={useChromaKey ? chromaKeyColor : undefined}
+            />
+          )}
+
+          {/* 영상 품질 선택 */}
+          <VideoQualitySelector
+            quality={videoQuality}
+            onQualityChange={handleVideoQualityChange}
+            disabled={isUploading || isCompiling || isCompressing}
+          />
+        </div>
+      </CollapsibleSection>
+
+      {/* 멀티 미디어 아이템 */}
+      <CollapsibleSection title="추가 미디어" defaultOpen={mediaItems.length > 0} className="mt-4">
+        <MediaItemList
+          items={mediaItems}
+          onItemsChange={setMediaItems}
+          disabled={isUploading || isCompiling || isCompressing}
+          selectedItemId={selectedMediaItemId}
+          onItemSelect={setSelectedMediaItemId}
+        />
+      </CollapsibleSection>
+
+      {/* 추가 옵션 */}
+      <CollapsibleSection title="추가 옵션" defaultOpen={false} className="mt-4">
+        <div className='space-y-4'>
+          {/* 안내문구 이미지 */}
+          <GuideImageUpload
+            file={guideImageFile}
+            existingImageUrl={project.guideImageFileId ? `${API_URL}/file/${project.guideImageFileId}` : undefined}
+            onFileSelect={setGuideImageFile}
+            disabled={isUploading || isCompiling || isCompressing}
+          />
+
+          {/* 오버레이 이미지 편집 */}
+          <OverlayImageUpload
+            file={overlayImageFile}
+            linkUrl={overlayLinkUrl}
+            existingImageUrl={project.overlayImageFileId ? `${API_URL}/file/${project.overlayImageFileId}` : undefined}
+            onFileSelect={setOverlayImageFile}
+            onLinkUrlChange={setOverlayLinkUrl}
+            disabled={isUploading || isCompiling || isCompressing}
+          />
+        </div>
+      </CollapsibleSection>
+
+      {/* 저장 버튼 */}
+      <div className='mt-8'>
+        {uploadError && (
+          <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
+            {uploadError}
+          </div>
+        )}
+
+        {isCompiling && (
+          <div className='mb-4 space-y-2'>
+            <p className='text-sm text-purple-600'>
+              타겟 이미지를 컴파일하고 있습니다...
+            </p>
+            <Progress value={compileProgress} />
+          </div>
+        )}
+
+        {isCompressing && (
+          <div className='mb-4 space-y-2'>
+            <p className='text-sm text-amber-600'>
+              빠른 로딩을 위해 영상을 압축하고 있습니다...
+            </p>
+            <div className='flex items-center justify-between text-xs text-gray-500'>
+              <span>압축 진행률</span>
+              <span>{compressionProgress?.progress ?? 0}%</span>
+            </div>
+            <Progress value={compressionProgress?.progress ?? 0} />
+          </div>
+        )}
+
+        {isUploading && (
+          <div className='mb-4'>
+            <div className='h-2 bg-gray-200 rounded-full overflow-hidden'>
+              <div
+                className='h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300'
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className='text-sm text-gray-500 mt-2 text-center'>
+              {progress}% 업로드 중...
+            </p>
+          </div>
+        )}
+
+        <div className='flex gap-4'>
+          <Button
+            variant='outline'
+            onClick={() => navigate('/')}
+            className='flex-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            disabled={isUploading || isCompiling}
+          >
+            취소
+          </Button>
+          <Button
+            onClick={handleSaveClick}
+            disabled={!canSave}
+            className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+          >
+            {isDownloadingVideo ? '다운로드 중...' : isCompiling ? '컴파일 중...' : isUploading ? '저장 중...' : isCompressing ? '압축 완료 후 저장' : '저장'}
+          </Button>
+        </div>
+      </div>
+    </UploadCard>
+  )
+
+  // 미리보기 패널 (우측)
+  const previewPanel = (
+    <UnifiedPreviewCanvas
+      items={mediaItems}
+      selectedItemId={selectedMediaItemId}
+      onItemSelect={setSelectedMediaItemId}
+      onItemPositionChange={handleMediaItemPositionChange}
+      onItemScaleChange={handleMediaItemScaleChange}
+      targetImageFile={targetImageFiles[0]}
+      targetImageUrl={project.targetImageFileId ? `${API_URL}/file/${project.targetImageFileId}` : undefined}
+      zoom={previewZoom}
+      onZoomChange={setPreviewZoom}
+    />
+  )
+
   return (
     <PageBackground>
       <div className='container mx-auto px-4 py-12'>
-        <div className='mx-auto max-w-2xl space-y-10'>
+        <div className='mx-auto max-w-6xl space-y-10'>
           <div className='flex items-center justify-between'>
             <Button
               variant='ghost'
@@ -497,243 +845,10 @@ export default function EditProjectPage() {
 
           <HeroHeader />
 
-          <UploadCard
-            stepMessage='프로젝트 편집'
-            status={workflowStatus}
-          >
-            {/* 프로젝트 제목 */}
-            <div className='mb-6'>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                프로젝트 제목
-              </label>
-              <input
-                type='text'
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder='프로젝트 제목을 입력하세요'
-                className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-              />
-            </div>
-
-            {/* 썸네일 이미지 업로드 */}
-            <div className='mb-6'>
-              <ThumbnailUpload
-                file={thumbnailFile}
-                existingThumbnailUrl={project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined}
-                onFileSelect={setThumbnailFile}
-                disabled={isUploading || isCompiling || isCompressing}
-              />
-            </div>
-
-            {/* 모드 선택 */}
-            <div className='mb-6'>
-              <ModeSelector
-                mode={mode}
-                onModeChange={handleModeChange}
-                disabled={isUploading || isCompiling || isCompressing}
-              />
-              {mode === 'ar' && project.mode === 'basic' && (
-                <p className='text-xs text-amber-600 mt-2'>
-                  AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
-                </p>
-              )}
-            </div>
-
-            {/* 카메라 해상도 선택 */}
-            <div className='mb-6'>
-              <CameraResolutionSelector
-                resolution={cameraResolution}
-                onResolutionChange={setCameraResolution}
-                disabled={isUploading || isCompiling || isCompressing}
-              />
-            </div>
-
-            {/* 현재 에셋 미리보기 */}
-            <div className='mb-6'>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                현재 에셋
-              </label>
-              <div className='flex gap-4 flex-wrap'>
-                {/* AR 모드에서만 타겟 이미지 표시 */}
-                {mode === 'ar' && project.targetImageFileId && targetImageFiles.length === 0 && (
-                  <div className='flex flex-col items-center'>
-                    <img
-                      src={`${API_URL}/file/${project.targetImageFileId}`}
-                      alt='현재 타겟 이미지'
-                      className='w-32 h-32 object-cover rounded-lg border border-gray-200'
-                    />
-                    <span className='text-xs text-gray-500 mt-1'>타겟 이미지</span>
-                  </div>
-                )}
-                {project.videoFileId && !videoFile && (
-                  <div className='flex flex-col items-center'>
-                    <video
-                      src={`${API_URL}/file/${project.videoFileId}`}
-                      className='w-32 h-32 object-cover rounded-lg border border-gray-200'
-                      controls
-                      playsInline
-                      webkit-playsinline='true'
-                      preload='metadata'
-                    />
-                    <span className='text-xs text-gray-500 mt-1'>현재 비디오</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* AR 설정 (AR 모드에서만) */}
-            {mode === 'ar' && (
-              <div className='mb-6'>
-                <ArOptionsSection
-                  highPrecision={highPrecision}
-                  onHighPrecisionChange={setHighPrecision}
-                />
-              </div>
-            )}
-
-            {/* 타겟 이미지 변경 (AR 모드에서만) */}
-            {mode === 'ar' && (
-              <div className='mb-6'>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  타겟 이미지 {needsTargetImage ? '(필수)' : '변경 (선택)'}
-                  {needsTargetImage && <span className='text-red-500 ml-1'>*</span>}
-                </label>
-                <TargetImageUpload
-                  files={targetImageFiles}
-                  onFileSelect={handleTargetImageSelect}
-                />
-                {needsTargetImage && (
-                  <p className='text-xs text-red-500 mt-1'>
-                    AR 모드에서는 타겟 이미지가 필요합니다.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* 비디오 변경 */}
-            <div className='mb-6'>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                비디오 변경 (선택)
-              </label>
-              <VideoUploadSection
-                isTargetReady={true}
-                videoFile={videoFile}
-                existingVideoUrl={!videoFile && project?.videoFileId ? `${API_URL}/stream/${project.videoFileId}` : undefined}
-                onFileSelect={handleVideoSelect}
-                limitMb={MAX_VIDEO_SIZE_MB}
-                videoError={videoError}
-                useChromaKey={useChromaKey}
-                onUseChromaKeyChange={setUseChromaKey}
-                chromaKeyColor={chromaKeyColor}
-                onChromaKeyColorChange={handleChromaKeyColorChange}
-                chromaKeySettings={chromaKeySettings}
-                onChromaKeySettingsChange={setChromaKeySettings}
-                chromaKeyError={chromaKeyError}
-                flatView={flatView}
-                onFlatViewChange={setFlatView}
-                showFlatView={mode === 'ar'}
-              />
-            </div>
-
-            {/* 비디오 위치/크기 조정 (기본 모드에서만) */}
-            {mode === 'basic' && (videoFile || project.videoFileId) && (
-              <div className='mb-6'>
-                <VideoPositionEditor
-                  videoFile={videoFile ?? undefined}
-                  videoSrc={!videoFile && project.videoFileId ? `${API_URL}/file/${project.videoFileId}` : undefined}
-                  position={videoPosition}
-                  scale={videoScale}
-                  onPositionChange={setVideoPosition}
-                  onScaleChange={setVideoScale}
-                  chromaKeyColor={useChromaKey ? chromaKeyColor : undefined}
-                />
-              </div>
-            )}
-
-            {/* 오버레이 이미지 편집 */}
-            <div className='mb-6'>
-              <OverlayImageUpload
-                file={overlayImageFile}
-                linkUrl={overlayLinkUrl}
-                existingImageUrl={project.overlayImageFileId ? `${API_URL}/file/${project.overlayImageFileId}` : undefined}
-                onFileSelect={setOverlayImageFile}
-                onLinkUrlChange={setOverlayLinkUrl}
-                disabled={isUploading || isCompiling || isCompressing}
-              />
-            </div>
-
-            {/* 영상 품질 선택 (로딩바와 함께 보이도록 최하단 배치) */}
-            <div className='mb-6'>
-              <VideoQualitySelector
-                quality={videoQuality}
-                onQualityChange={handleVideoQualityChange}
-                disabled={isUploading || isCompiling || isCompressing}
-              />
-            </div>
-
-            {/* 저장 버튼 */}
-            <div className='mt-8'>
-              {uploadError && (
-                <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
-                  {uploadError}
-                </div>
-              )}
-
-              {isCompiling && (
-                <div className='mb-4 space-y-2'>
-                  <p className='text-sm text-purple-600'>
-                    타겟 이미지를 컴파일하고 있습니다...
-                  </p>
-                  <Progress value={compileProgress} />
-                </div>
-              )}
-
-              {isCompressing && (
-                <div className='mb-4 space-y-2'>
-                  <p className='text-sm text-amber-600'>
-                    빠른 로딩을 위해 영상을 압축하고 있습니다...
-                  </p>
-                  <div className='flex items-center justify-between text-xs text-gray-500'>
-                    <span>압축 진행률</span>
-                    <span>{compressionProgress?.progress ?? 0}%</span>
-                  </div>
-                  <Progress value={compressionProgress?.progress ?? 0} />
-                </div>
-              )}
-
-              {isUploading && (
-                <div className='mb-4'>
-                  <div className='h-2 bg-gray-200 rounded-full overflow-hidden'>
-                    <div
-                      className='h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300'
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <p className='text-sm text-gray-500 mt-2 text-center'>
-                    {progress}% 업로드 중...
-                  </p>
-                </div>
-              )}
-
-              <div className='flex gap-4'>
-                <Button
-                  variant='outline'
-                  onClick={() => navigate('/')}
-                  className='flex-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-                  disabled={isUploading || isCompiling}
-                >
-                  취소
-                </Button>
-                <Button
-                  onClick={handleSaveClick}
-                  disabled={!canSave}
-                  className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
-                >
-                  {isDownloadingVideo ? '다운로드 중...' : isCompiling ? '컴파일 중...' : isUploading ? '저장 중...' : isCompressing ? '압축 완료 후 저장' : '저장'}
-                </Button>
-              </div>
-            </div>
-          </UploadCard>
+          <TwoColumnLayout
+            leftPanel={settingsPanel}
+            rightPanel={previewPanel}
+          />
         </div>
       </div>
 

@@ -34,9 +34,102 @@ jest.mock('../hooks/useVideoCompressor', () => ({
   }),
 }))
 
+// Mock @tanstack/react-query
+const mockQueryClient = {
+  invalidateQueries: jest.fn().mockResolvedValue(undefined),
+}
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => mockQueryClient,
+}))
+
+// Mock ThumbnailUpload component to avoid Image loading issues
+jest.mock('../components/ThumbnailUpload', () => {
+  return function MockThumbnailUpload({ file, onFileSelect, disabled }: any) {
+    return (
+      <div data-testid="thumbnail-upload">
+        <input
+          type="file"
+          accept="image/*"
+          data-testid="thumbnail-input"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) onFileSelect(f)
+          }}
+          disabled={disabled}
+        />
+        {file && <span>Thumbnail: {file.name}</span>}
+      </div>
+    )
+  }
+})
+
+// Mock GuideImageUpload component to avoid Image loading issues
+jest.mock('../components/GuideImageUpload', () => {
+  return function MockGuideImageUpload({ file, onFileSelect, disabled }: any) {
+    return (
+      <div data-testid="guide-image-upload">
+        <input
+          type="file"
+          accept="image/*"
+          data-testid="guide-image-input"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) onFileSelect(f)
+          }}
+          disabled={disabled}
+        />
+        {file && <span>Guide: {file.name}</span>}
+      </div>
+    )
+  }
+})
+
+// Mock UnifiedPreviewCanvas to avoid canvas/Image issues
+jest.mock('../components/preview/UnifiedPreviewCanvas', () => {
+  return function MockUnifiedPreviewCanvas() {
+    return <div data-testid="unified-preview-canvas">Preview Canvas</div>
+  }
+})
+
 // Mock URL APIs
 global.URL.createObjectURL = jest.fn().mockReturnValue('blob:mock-url')
 global.URL.revokeObjectURL = jest.fn()
+
+// Mock navigator.mediaDevices.getUserMedia
+Object.defineProperty(navigator, 'mediaDevices', {
+  value: {
+    getUserMedia: jest.fn().mockRejectedValue(new Error('Camera not available in test')),
+  },
+})
+
+// Mock HTMLMediaElement.prototype.load
+Object.defineProperty(HTMLMediaElement.prototype, 'load', {
+  configurable: true,
+  value: jest.fn(),
+})
+
+// Suppress image/canvas/media loading errors in jsdom
+const originalError = console.error
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      args[0]?.includes?.('Error loading image') ||
+      args[0]?.includes?.('canvas') ||
+      args[0]?.includes?.('img') ||
+      args[0]?.includes?.('Camera') ||
+      args[0]?.includes?.('Not implemented') ||
+      args[0]?.includes?.('HTMLMediaElement') ||
+      args[0]?.includes?.('ReactDOM.render')
+    ) {
+      return
+    }
+    originalError.call(console, ...args)
+  }
+})
+
+afterAll(() => {
+  console.error = originalError
+})
 
 import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
@@ -84,7 +177,9 @@ describe('CreateProjectPage', () => {
 
     it('should show AR settings section with highPrecision option', () => {
       render(<CreateProjectPage />)
-      expect(screen.getByText('AR 설정')).toBeInTheDocument()
+      // Use getAllByText and check if at least one exists (due to 2-column layout)
+      const arSettingsElements = screen.getAllByText('AR 설정')
+      expect(arSettingsElements.length).toBeGreaterThan(0)
       expect(screen.getByText('추적 정확도 향상')).toBeInTheDocument()
     })
 
@@ -146,25 +241,32 @@ describe('CreateProjectPage', () => {
     it('should show step 2 after target image is selected', async () => {
       render(<CreateProjectPage />)
 
-      // Find the file input and simulate file selection
-      const input = document.querySelector(
-        'input[type="file"][accept="image/*"]'
-      ) as HTMLInputElement
-      expect(input).toBeTruthy()
+      // Find the target image file input
+      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+      // Find the one inside FileUpload (Target Image), not the mocked ones
+      let targetInput: HTMLInputElement | null = null
+      inputs.forEach((input) => {
+        if (!input.hasAttribute('data-testid')) {
+          targetInput = input as HTMLInputElement
+        }
+      })
+      expect(targetInput).toBeTruthy()
 
       const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(input, 'files', {
+      Object.defineProperty(targetInput, 'files', {
         value: [file],
         configurable: true,
       })
 
       await act(async () => {
-        fireEvent.change(input)
+        fireEvent.change(targetInput!)
       })
 
-      expect(
-        await screen.findByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
-      ).toBeInTheDocument()
+      await waitFor(() => {
+        expect(
+          screen.getByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
+        ).toBeInTheDocument()
+      })
     })
   })
 
@@ -172,41 +274,55 @@ describe('CreateProjectPage', () => {
     it('should show flatView checkbox after target is selected', async () => {
       render(<CreateProjectPage />)
 
-      // Select target image
-      const input = document.querySelector(
-        'input[type="file"][accept="image/*"]'
-      ) as HTMLInputElement
+      // Find the target image file input
+      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+      let targetInput: HTMLInputElement | null = null
+      inputs.forEach((input) => {
+        if (!input.hasAttribute('data-testid')) {
+          targetInput = input as HTMLInputElement
+        }
+      })
+
       const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(input, 'files', {
+      Object.defineProperty(targetInput, 'files', {
         value: [file],
         configurable: true,
       })
 
       await act(async () => {
-        fireEvent.change(input)
+        fireEvent.change(targetInput!)
       })
 
-      expect(await screen.findByText('항상 정면으로 표시')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText('항상 정면으로 표시')).toBeInTheDocument()
+      })
     })
 
     it('should toggle flatView checkbox', async () => {
       render(<CreateProjectPage />)
 
-      // Select target image
-      const input = document.querySelector(
-        'input[type="file"][accept="image/*"]'
-      ) as HTMLInputElement
+      // Find the target image file input
+      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+      let targetInput: HTMLInputElement | null = null
+      inputs.forEach((input) => {
+        if (!input.hasAttribute('data-testid')) {
+          targetInput = input as HTMLInputElement
+        }
+      })
+
       const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(input, 'files', {
+      Object.defineProperty(targetInput, 'files', {
         value: [file],
         configurable: true,
       })
 
       await act(async () => {
-        fireEvent.change(input)
+        fireEvent.change(targetInput!)
       })
 
-      await screen.findByText('항상 정면으로 표시')
+      await waitFor(() => {
+        expect(screen.getByText('항상 정면으로 표시')).toBeInTheDocument()
+      })
 
       const flatViewCheckbox = screen.getByLabelText('항상 정면으로 표시')
       expect(flatViewCheckbox).not.toBeChecked()
@@ -220,41 +336,55 @@ describe('CreateProjectPage', () => {
     it('should show chromaKey checkbox after target is selected', async () => {
       render(<CreateProjectPage />)
 
-      // Select target image
-      const input = document.querySelector(
-        'input[type="file"][accept="image/*"]'
-      ) as HTMLInputElement
+      // Find the target image file input
+      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+      let targetInput: HTMLInputElement | null = null
+      inputs.forEach((input) => {
+        if (!input.hasAttribute('data-testid')) {
+          targetInput = input as HTMLInputElement
+        }
+      })
+
       const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(input, 'files', {
+      Object.defineProperty(targetInput, 'files', {
         value: [file],
         configurable: true,
       })
 
       await act(async () => {
-        fireEvent.change(input)
+        fireEvent.change(targetInput!)
       })
 
-      expect(await screen.findByText('크로마키 적용')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText('크로마키 적용')).toBeInTheDocument()
+      })
     })
 
     it('should show color picker when chromaKey is enabled', async () => {
       render(<CreateProjectPage />)
 
-      // Select target image
-      const input = document.querySelector(
-        'input[type="file"][accept="image/*"]'
-      ) as HTMLInputElement
+      // Find the target image file input
+      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+      let targetInput: HTMLInputElement | null = null
+      inputs.forEach((input) => {
+        if (!input.hasAttribute('data-testid')) {
+          targetInput = input as HTMLInputElement
+        }
+      })
+
       const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(input, 'files', {
+      Object.defineProperty(targetInput, 'files', {
         value: [file],
         configurable: true,
       })
 
       await act(async () => {
-        fireEvent.change(input)
+        fireEvent.change(targetInput!)
       })
 
-      await screen.findByText('크로마키 적용')
+      await waitFor(() => {
+        expect(screen.getByText('크로마키 적용')).toBeInTheDocument()
+      })
 
       const chromaKeyCheckbox = screen.getByLabelText('크로마키 적용')
       fireEvent.click(chromaKeyCheckbox)
@@ -274,10 +404,15 @@ describe('CreateProjectPage', () => {
     it('should enable publish button after target image and video are selected', async () => {
       render(<CreateProjectPage />)
 
-      // Select target image
-      const imageInput = document.querySelector(
-        'input[type="file"][accept="image/*"]'
-      ) as HTMLInputElement
+      // Find the target image file input
+      const imageInputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+      let imageInput: HTMLInputElement | null = null
+      imageInputs.forEach((input) => {
+        if (!input.hasAttribute('data-testid')) {
+          imageInput = input as HTMLInputElement
+        }
+      })
+
       const imageFile = new File(['test'], 'test.png', { type: 'image/png' })
       Object.defineProperty(imageInput, 'files', {
         value: [imageFile],
@@ -285,11 +420,15 @@ describe('CreateProjectPage', () => {
       })
 
       await act(async () => {
-        fireEvent.change(imageInput)
+        fireEvent.change(imageInput!)
       })
 
       // Wait for step 2 to appear
-      await screen.findByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
+      await waitFor(() => {
+        expect(
+          screen.getByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
+        ).toBeInTheDocument()
+      })
 
       // Select video
       const videoInput = document.querySelector(
@@ -319,10 +458,15 @@ describe('CreateProjectPage', () => {
     it('should open password modal when publish is clicked', async () => {
       render(<CreateProjectPage />)
 
-      // Select target image
-      const imageInput = document.querySelector(
-        'input[type="file"][accept="image/*"]'
-      ) as HTMLInputElement
+      // Find the target image file input
+      const imageInputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+      let imageInput: HTMLInputElement | null = null
+      imageInputs.forEach((input) => {
+        if (!input.hasAttribute('data-testid')) {
+          imageInput = input as HTMLInputElement
+        }
+      })
+
       const imageFile = new File(['test'], 'test.png', { type: 'image/png' })
       Object.defineProperty(imageInput, 'files', {
         value: [imageFile],
@@ -330,11 +474,17 @@ describe('CreateProjectPage', () => {
       })
 
       await act(async () => {
-        fireEvent.change(imageInput)
+        fireEvent.change(imageInput!)
+      })
+
+      // Wait for step 2 to appear
+      await waitFor(() => {
+        expect(
+          screen.getByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
+        ).toBeInTheDocument()
       })
 
       // Select video
-      await screen.findByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
       const videoInput = document.querySelector(
         'input[type="file"][accept="video/*"]'
       ) as HTMLInputElement
@@ -378,10 +528,15 @@ describe('New Publish Flow (Compile + Upload)', () => {
     // This test verifies the new flow where compile happens during publish
     render(<CreateProjectPage />)
 
-    // Select target image
-    const imageInput = document.querySelector(
-      'input[type="file"][accept="image/*"]'
-    ) as HTMLInputElement
+    // Find the target image file input
+    const imageInputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
+    let imageInput: HTMLInputElement | null = null
+    imageInputs.forEach((input) => {
+      if (!input.hasAttribute('data-testid')) {
+        imageInput = input as HTMLInputElement
+      }
+    })
+
     const imageFile = new File(['test'], 'test.png', { type: 'image/png' })
     Object.defineProperty(imageInput, 'files', {
       value: [imageFile],
@@ -389,7 +544,7 @@ describe('New Publish Flow (Compile + Upload)', () => {
     })
 
     await act(async () => {
-      fireEvent.change(imageInput)
+      fireEvent.change(imageInput!)
     })
 
     // Verify compile has not been called yet (deferred to publish)

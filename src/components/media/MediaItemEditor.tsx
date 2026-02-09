@@ -1,8 +1,13 @@
-import React, { useCallback, useRef } from 'react'
-import { ArrowUp, ArrowDown, Upload, X } from 'lucide-react'
+import React, { useCallback, useRef, useState } from 'react'
+import { ArrowUp, ArrowDown, Upload, X, Move, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/button'
-import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'
+import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS, VideoPosition } from '../../types/project'
 import { isValidHexColor } from '../../utils/validation'
+import { API_URL } from '../../config/api'
+
+const MIN_SCALE = 0.2
+const MAX_SCALE = 5.0
+const SCALE_STEP = 0.1
 
 interface MediaItemEditorProps {
   item: MediaItem
@@ -144,6 +149,109 @@ export default function MediaItemEditor({
             : '화면에 항상 표시됩니다'}
         </p>
       </div>
+
+      {/* 위치/크기 조정 (기본 모드에서만) */}
+      {item.mode === 'basic' && (
+        <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+              <Move size={12} />
+              위치 / 크기
+            </label>
+            <button
+              type="button"
+              onClick={() => onChange({ position: { x: 0.5, y: 0.5 }, scale: 1 })}
+              disabled={disabled}
+              className="text-xs text-purple-600 hover:text-purple-700"
+            >
+              초기화
+            </button>
+          </div>
+
+          {/* 위치 조정 */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-gray-500">X 위치</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={item.position.x}
+                onChange={(e) =>
+                  onChange({
+                    position: { ...item.position, x: parseFloat(e.target.value) },
+                  })
+                }
+                disabled={disabled}
+                className="w-full"
+              />
+              <div className="text-xs text-gray-400 text-center">
+                {Math.round(item.position.x * 100)}%
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Y 위치</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={item.position.y}
+                onChange={(e) =>
+                  onChange({
+                    position: { ...item.position, y: parseFloat(e.target.value) },
+                  })
+                }
+                disabled={disabled}
+                className="w-full"
+              />
+              <div className="text-xs text-gray-400 text-center">
+                {Math.round(item.position.y * 100)}%
+              </div>
+            </div>
+          </div>
+
+          {/* 크기 조정 */}
+          <div>
+            <label className="text-xs text-gray-500 flex items-center gap-1">
+              <Maximize2 size={10} />
+              크기
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onChange({ scale: Math.max(MIN_SCALE, item.scale - SCALE_STEP) })}
+                disabled={disabled || item.scale <= MIN_SCALE}
+                className="flex h-6 w-6 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
+              >
+                -
+              </button>
+              <input
+                type="range"
+                min={MIN_SCALE}
+                max={MAX_SCALE}
+                step={SCALE_STEP}
+                value={item.scale}
+                onChange={(e) => onChange({ scale: parseFloat(e.target.value) })}
+                disabled={disabled}
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => onChange({ scale: Math.min(MAX_SCALE, item.scale + SCALE_STEP) })}
+                disabled={disabled || item.scale >= MAX_SCALE}
+                className="flex h-6 w-6 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
+              >
+                +
+              </button>
+              <span className="w-12 text-right text-xs text-gray-500">
+                {Math.round(item.scale * 100)}%
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 파일 업로드 */}
       <div>

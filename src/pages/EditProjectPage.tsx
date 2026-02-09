@@ -473,6 +473,40 @@ export default function EditProjectPage() {
         formData.append('clearPreviewVideo', 'true')
       }
 
+      // 멀티 미디어 아이템 추가
+      if (mediaItems.length > 0) {
+        // 미디어 아이템 메타데이터 JSON
+        const mediaItemsMetadata = mediaItems.map((item, index) => ({
+          id: item.existingFileId ? item.id : undefined, // 기존 아이템만 ID 전송
+          type: item.type,
+          mode: item.mode,
+          positionX: item.position.x,
+          positionY: item.position.y,
+          scale: item.scale,
+          aspectRatio: item.aspectRatio,
+          chromaKeyEnabled: item.chromaKeyEnabled,
+          chromaKeyColor: item.chromaKeyColor,
+          chromaKeySimilarity: item.chromaKeySettings?.similarity,
+          chromaKeySmoothness: item.chromaKeySettings?.smoothness,
+          flatView: item.flatView,
+          linkEnabled: item.linkEnabled,
+          linkUrl: item.linkUrl,
+          order: index,
+        }))
+        formData.append('mediaItems', JSON.stringify(mediaItemsMetadata))
+
+        // 미디어 파일 추가
+        for (let i = 0; i < mediaItems.length; i++) {
+          const item = mediaItems[i]
+          if (item.file) {
+            formData.append(`media_${i}_file`, item.file)
+          }
+          if (item.previewFile) {
+            formData.append(`media_${i}_preview`, item.previewFile)
+          }
+        }
+      }
+
       // 업로드
       setProgress(0)
       setIsUploading(true)

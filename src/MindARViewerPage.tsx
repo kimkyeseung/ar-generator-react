@@ -282,12 +282,6 @@ export default function MindARViewerPage() {
 
   const isBasicMode = data.fileIds.mode === 'basic'
 
-  // 디버그: 미디어 아이템 데이터 출력
-  console.log('[MindARViewerPage] mediaItems:', JSON.stringify(data.assets.mediaItems, null, 2))
-  data.assets.mediaItems.forEach((item, i) => {
-    console.log(`[MediaItem ${i}] id=${item.id}, type=${item.type}, chromaKeyEnabled=${item.chromaKeyEnabled}, chromaKeyColor=${item.chromaKeyColor}`)
-  })
-
   // 기본 모드: BasicModeViewer 렌더링
   if (isBasicMode) {
     return (

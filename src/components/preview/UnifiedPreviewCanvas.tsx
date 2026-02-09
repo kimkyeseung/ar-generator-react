@@ -1,8 +1,11 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { MediaItem } from '../../types/project'
-import { ZoomIn, ZoomOut, Move } from 'lucide-react'
+import { ZoomIn, ZoomOut, Move, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { API_URL } from '../../config/api'
+
+const MIN_SCALE = 0.2
+const MAX_SCALE = 5.0
 
 interface UnifiedPreviewCanvasProps {
   items: MediaItem[]
@@ -40,7 +43,9 @@ export default function UnifiedPreviewCanvas({
   const [mediaPreviewsMap, setMediaPreviewsMap] = useState<Map<string, MediaPreview>>(new Map())
   const [targetImageElement, setTargetImageElement] = useState<HTMLImageElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [initialScale, setInitialScale] = useState(1)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const animationRef = useRef<number>()
@@ -254,9 +259,30 @@ export default function UnifiedPreviewCanvas({
     }
   }, [render])
 
-  // 드래그 핸들러
+  // 선택된 아이템의 위치와 크기 계산 (리사이즈 핸들 오버레이용)
+  const selectedItemBounds = useMemo(() => {
+    if (!selectedItemId) return null
+
+    const selectedItem = items.find((item) => item.id === selectedItemId)
+    if (!selectedItem) return null
+
+    const mediaWidth = CANVAS_WIDTH * 0.4 * selectedItem.scale * zoom
+    const mediaHeight = mediaWidth / selectedItem.aspectRatio
+
+    const mediaX = selectedItem.position.x * CANVAS_WIDTH - mediaWidth / 2
+    const mediaY = selectedItem.position.y * CANVAS_HEIGHT - mediaHeight / 2
+
+    return {
+      left: mediaX,
+      top: mediaY,
+      width: mediaWidth,
+      height: mediaHeight,
+    }
+  }, [selectedItemId, items, zoom])
+
+  // 드래그 핸들러 (위치 이동)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!selectedItemId) return
+    if (!selectedItemId || isResizing) return
 
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return
@@ -268,30 +294,82 @@ export default function UnifiedPreviewCanvas({
     setDragStart({ x, y })
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !selectedItemId) return
+  // 리사이즈 핸들러
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
 
-    const rect = canvasRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    const x = (e.clientX - rect.left) / rect.width
-    const y = (e.clientY - rect.top) / rect.height
-
-    const dx = x - dragStart.x
-    const dy = y - dragStart.y
+    if (!selectedItemId) return
 
     const selectedItem = items.find((item) => item.id === selectedItemId)
     if (!selectedItem) return
 
-    const newX = Math.max(0, Math.min(1, selectedItem.position.x + dx))
-    const newY = Math.max(0, Math.min(1, selectedItem.position.y + dy))
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
 
-    onItemPositionChange?.(selectedItemId, { x: newX, y: newY })
-    setDragStart({ x, y })
+    setIsResizing(true)
+    setDragStart({ x: clientX, y: clientY })
+    setInitialScale(selectedItem.scale)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!selectedItemId) return
+
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    if (isResizing) {
+      // 리사이즈 모드
+      const deltaX = e.clientX - dragStart.x
+      const deltaY = e.clientY - dragStart.y
+      const diagonal = (deltaX + deltaY) / 2
+      const scaleDelta = diagonal / (rect.width * 0.25)
+
+      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, initialScale + scaleDelta))
+      onItemScaleChange?.(selectedItemId, newScale)
+    } else if (isDragging) {
+      // 위치 이동 모드
+      const x = (e.clientX - rect.left) / rect.width
+      const y = (e.clientY - rect.top) / rect.height
+
+      const dx = x - dragStart.x
+      const dy = y - dragStart.y
+
+      const selectedItem = items.find((item) => item.id === selectedItemId)
+      if (!selectedItem) return
+
+      const newX = Math.max(0, Math.min(1, selectedItem.position.x + dx))
+      const newY = Math.max(0, Math.min(1, selectedItem.position.y + dy))
+
+      onItemPositionChange?.(selectedItemId, { x: newX, y: newY })
+      setDragStart({ x, y })
+    }
   }
 
   const handleMouseUp = () => {
     setIsDragging(false)
+    setIsResizing(false)
+  }
+
+  // 터치 이벤트 핸들러 (리사이즈용)
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isResizing || !selectedItemId) return
+
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - dragStart.x
+    const deltaY = touch.clientY - dragStart.y
+    const diagonal = (deltaX + deltaY) / 2
+    const scaleDelta = diagonal / (rect.width * 0.25)
+
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, initialScale + scaleDelta))
+    onItemScaleChange?.(selectedItemId, newScale)
+  }
+
+  const handleTouchEnd = () => {
+    setIsResizing(false)
   }
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -337,6 +415,35 @@ export default function UnifiedPreviewCanvas({
           onMouseLeave={handleMouseUp}
           onClick={handleCanvasClick}
         />
+
+        {/* 리사이즈 핸들 오버레이 (선택된 아이템이 있을 때만) */}
+        {selectedItemId && selectedItemBounds && (
+          <div
+            className="absolute pointer-events-none border-2 border-purple-500 border-dashed"
+            style={{
+              left: `${(selectedItemBounds.left / CANVAS_WIDTH) * 100}%`,
+              top: `${(selectedItemBounds.top / CANVAS_HEIGHT) * 100}%`,
+              width: `${(selectedItemBounds.width / CANVAS_WIDTH) * 100}%`,
+              height: `${(selectedItemBounds.height / CANVAS_HEIGHT) * 100}%`,
+            }}
+          >
+            {/* 우하단 리사이즈 핸들 */}
+            <div
+              className="absolute -bottom-2 -right-2 w-5 h-5 bg-purple-500 rounded-tl-md cursor-nwse-resize pointer-events-auto flex items-center justify-center shadow-md hover:bg-purple-600 active:bg-purple-700 transition-colors"
+              onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <Maximize2 size={10} className="text-white rotate-90" />
+            </div>
+            {/* 중앙 이동 아이콘 */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/40 flex items-center justify-center">
+              <Move size={12} className="text-white" />
+            </div>
+          </div>
+        )}
+
         {/* 숨겨진 카메라 비디오 */}
         {showCamera && (
           <video
@@ -391,7 +498,10 @@ export default function UnifiedPreviewCanvas({
       {selectedItemId && (
         <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
           <Move size={14} />
-          <span>선택된 아이템을 드래그하여 위치를 조정하세요</span>
+          <span>드래그: 위치 이동</span>
+          <span className="text-gray-300">|</span>
+          <Maximize2 size={14} />
+          <span>우하단 모서리: 크기 조절</span>
         </div>
       )}
     </div>

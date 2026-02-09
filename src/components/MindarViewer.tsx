@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import 'aframe'
 import '../lib/image-target/aframe.js'
 import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoQuality } from '../types/project'
+import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 
 declare const DeviceMotionEvent: any
@@ -51,6 +52,7 @@ interface Props {
   videoQuality?: VideoQuality
   overlayImageUrl?: string // 오버레이 이미지 URL
   overlayLinkUrl?: string // 오버레이 이미지 클릭 시 열릴 URL
+  mediaItems?: ProcessedMediaItem[] // 멀티 미디어 아이템
   debugMode?: boolean
 }
 
@@ -187,6 +189,7 @@ const MindARViewer: React.FC<Props> = ({
   videoQuality = 'low',
   overlayImageUrl,
   overlayLinkUrl,
+  mediaItems = [],
   debugMode = false,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
@@ -652,6 +655,58 @@ const MindARViewer: React.FC<Props> = ({
           )}
         </button>
       )}
+
+      {/* 멀티 미디어 아이템 (기본 모드용 - 화면에 고정) */}
+      {mediaItems
+        .filter((item) => item.mode === 'basic')
+        .map((item) => (
+          <div
+            key={item.id}
+            className="fixed"
+            style={{
+              left: `${item.position.x * 100}%`,
+              top: `${item.position.y * 100}%`,
+              transform: `translate(-50%, -50%) scale(${item.scale})`,
+              width: item.aspectRatio >= 1 ? '50vw' : `${50 * item.aspectRatio}vw`,
+              aspectRatio: `${item.aspectRatio}`,
+              zIndex: 30 + item.order, // 오버레이 이미지보다 위 (z-40)보다는 아래
+            }}
+          >
+            {item.type === 'image' ? (
+              item.linkEnabled && item.linkUrl ? (
+                <a
+                  href={item.linkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full"
+                >
+                  <img
+                    src={item.fileUrl}
+                    alt={`Media item ${item.order}`}
+                    className="w-full h-full object-contain"
+                  />
+                </a>
+              ) : (
+                <img
+                  src={item.fileUrl}
+                  alt={`Media item ${item.order}`}
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+              )
+            ) : (
+              // 비디오 미디어 아이템 (추후 구현)
+              <video
+                src={item.previewFileUrl || item.fileUrl}
+                loop
+                muted
+                playsInline
+                autoPlay
+                crossOrigin="anonymous"
+                className="w-full h-full object-contain pointer-events-none"
+              />
+            )}
+          </div>
+        ))}
 
       {/* 디버그 패널 */}
       {debugMode && (

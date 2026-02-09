@@ -4,8 +4,27 @@ import ConsoleLogOverlay from './components/ConsoleLogOverlay'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, ProjectMode, VideoPosition, VideoQuality } from './types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, MediaItemResponse, MediaMode, MediaType, ProjectMode, VideoPosition, VideoQuality } from './types/project'
 import { API_URL } from './config/api'
+
+// 뷰어용 처리된 미디어 아이템 (URL 포함)
+export interface ProcessedMediaItem {
+  id: string
+  type: MediaType
+  mode: MediaMode
+  fileUrl: string
+  previewFileUrl?: string
+  position: VideoPosition
+  scale: number
+  aspectRatio: number
+  chromaKeyEnabled: boolean
+  chromaKeyColor?: string
+  chromaKeySettings: ChromaKeySettings
+  flatView: boolean
+  linkEnabled: boolean
+  linkUrl?: string
+  order: number
+}
 
 interface ArFilesResponse {
   mindFileId?: string // 기본 모드에서는 null
@@ -14,6 +33,7 @@ interface ArFilesResponse {
   targetImageFileId?: string
   overlayImageFileId?: string // 오버레이 이미지 ID
   overlayLinkUrl?: string // 오버레이 이미지 클릭 시 열릴 URL
+  guideImageFileId?: string // 안내문구 이미지 ID
   chromaKeyColor?: string
   chromaKeySimilarity?: number // 크로마키 색상 범위 (0.0~1.0)
   chromaKeySmoothness?: number // 크로마키 경계 부드러움 (0.0~0.5)
@@ -24,6 +44,7 @@ interface ArFilesResponse {
   videoQuality?: VideoQuality // 'high' | 'medium' | 'low'
   videoPosition?: VideoPosition // 기본 모드용
   videoScale?: number // 기본 모드용
+  mediaItems?: MediaItemResponse[] // 멀티 미디어 아이템
 }
 
 interface ArAssets {
@@ -32,6 +53,7 @@ interface ArAssets {
   previewVideoUrl?: string
   targetImageUrl?: string // 기본 모드에서는 undefined
   overlayImageUrl?: string // 오버레이 이미지 URL
+  mediaItems: ProcessedMediaItem[] // 멀티 미디어 아이템
 }
 
 // 단일 fetch + blob 변환
@@ -74,6 +96,37 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
   // 캐시 버스터 추가 (브라우저 HTTP 캐싱 방지)
   const cacheBuster = Date.now()
 
+  // 미디어 아이템 URL 처리
+  const processedMediaItems: ProcessedMediaItem[] = (fileIds.mediaItems || [])
+    .sort((a, b) => a.order - b.order)
+    .map((item) => ({
+      id: item.id,
+      type: item.type,
+      mode: item.mode,
+      fileUrl: item.type === 'video'
+        ? `${API_URL}/stream/${item.fileId}?t=${cacheBuster}`
+        : `${API_URL}/file/${item.fileId}?t=${cacheBuster}`,
+      previewFileUrl: item.previewFileId
+        ? `${API_URL}/stream/${item.previewFileId}?t=${cacheBuster}`
+        : undefined,
+      position: {
+        x: item.positionX ?? 0.5,
+        y: item.positionY ?? 0.5,
+      },
+      scale: item.scale ?? 1,
+      aspectRatio: item.aspectRatio ?? 16 / 9,
+      chromaKeyEnabled: item.chromaKeyEnabled,
+      chromaKeyColor: item.chromaKeyColor ?? undefined,
+      chromaKeySettings: {
+        similarity: item.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
+        smoothness: item.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
+      },
+      flatView: item.flatView,
+      linkEnabled: item.linkEnabled,
+      linkUrl: item.linkUrl ?? undefined,
+      order: item.order,
+    }))
+
   return {
     fileIds,
     assets: {
@@ -86,6 +139,7 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       overlayImageUrl: fileIds.overlayImageFileId
         ? `${API_URL}/file/${fileIds.overlayImageFileId}?t=${cacheBuster}`
         : undefined,
+      mediaItems: processedMediaItems,
     },
   }
 }
@@ -248,6 +302,7 @@ export default function MindARViewerPage() {
             videoQuality={data.fileIds.videoQuality || 'low'}
             overlayImageUrl={data.assets.overlayImageUrl}
             overlayLinkUrl={data.fileIds.overlayLinkUrl}
+            mediaItems={data.assets.mediaItems}
             debugMode={isDebugMode}
           />
           {isLogMode && <ConsoleLogOverlay />}
@@ -278,6 +333,7 @@ export default function MindARViewerPage() {
             videoQuality={data.fileIds.videoQuality || 'low'}
             overlayImageUrl={data.assets.overlayImageUrl}
             overlayLinkUrl={data.fileIds.overlayLinkUrl}
+            mediaItems={data.assets.mediaItems}
             debugMode={isDebugMode}
           />
         </div>

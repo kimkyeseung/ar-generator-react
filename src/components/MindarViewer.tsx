@@ -4,6 +4,7 @@ import '../lib/image-target/aframe.js'
 import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoQuality } from '../types/project'
 import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
+import ChromaKeyVideo from './ChromaKeyVideo'
 
 declare const DeviceMotionEvent: any
 declare const DeviceOrientationEvent: any
@@ -693,8 +694,16 @@ const MindARViewer: React.FC<Props> = ({
                   className="w-full h-full object-contain pointer-events-none"
                 />
               )
+            ) : item.chromaKeyEnabled && item.chromaKeyColor ? (
+              // 크로마키가 활성화된 비디오
+              <ChromaKeyVideo
+                src={item.previewFileUrl || item.fileUrl}
+                chromaKeyColor={item.chromaKeyColor}
+                chromaKeySettings={item.chromaKeySettings}
+                className="w-full h-full object-contain pointer-events-none"
+              />
             ) : (
-              // 비디오 미디어 아이템 (추후 구현)
+              // 일반 비디오
               <video
                 src={item.previewFileUrl || item.fileUrl}
                 loop

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoPosition, VideoQuality } from '../types/project'
 import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
+import ChromaKeyVideo from './ChromaKeyVideo'
 
 interface Props {
   videoUrl: string
@@ -516,8 +517,16 @@ const BasicModeViewer: React.FC<Props> = ({
                     className="w-full h-full object-contain"
                   />
                 )
+              ) : item.chromaKeyEnabled && item.chromaKeyColor ? (
+                // 크로마키가 활성화된 비디오
+                <ChromaKeyVideo
+                  src={item.previewFileUrl || item.fileUrl}
+                  chromaKeyColor={item.chromaKeyColor}
+                  chromaKeySettings={item.chromaKeySettings}
+                  className="w-full h-full object-contain"
+                />
               ) : (
-                // 비디오 미디어 아이템 (추후 구현)
+                // 일반 비디오
                 <video
                   src={item.previewFileUrl || item.fileUrl}
                   loop

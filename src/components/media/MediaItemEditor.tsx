@@ -305,8 +305,8 @@ export default function MediaItemEditor({
         )}
       </div>
 
-      {/* 크로마키 설정 (트래킹 모드에서만) */}
-      {item.type === 'video' && item.mode === 'tracking' && (
+      {/* 크로마키 설정 (영상에서만) */}
+      {item.type === 'video' && (
         <div>
           <div className="flex items-center gap-2 mb-2">
             <input

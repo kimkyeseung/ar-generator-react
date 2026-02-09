@@ -42,13 +42,25 @@ export default function UnifiedPreviewCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const [mediaPreviewsMap, setMediaPreviewsMap] = useState<Map<string, MediaPreview>>(new Map())
   const [targetImageElement, setTargetImageElement] = useState<HTMLImageElement | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
-  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-  const [initialScale, setInitialScale] = useState(1)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const animationRef = useRef<number>()
+
+  // 드래그 상태를 ref로 관리 (리렌더링 방지)
+  const dragStateRef = useRef({
+    isDragging: false,
+    isResizing: false,
+    startX: 0,
+    startY: 0,
+    initialPosition: { x: 0.5, y: 0.5 },
+    initialScale: 1,
+  })
+
+  // 로컬 오버라이드 (드래그 중 부모 업데이트 없이 렌더링)
+  const [localOverride, setLocalOverride] = useState<{
+    position?: { x: number; y: number }
+    scale?: number
+  } | null>(null)
 
   // 캔버스 크기
   const CANVAS_WIDTH = 360
@@ -228,16 +240,21 @@ export default function UnifiedPreviewCanvas({
 
       const element = preview.element
 
+      // 드래그 중인 선택된 아이템은 로컬 오버라이드 값 사용
+      const isSelected = selectedItemId === item.id
+      const position = isSelected && localOverride?.position ? localOverride.position : item.position
+      const scale = isSelected && localOverride?.scale !== undefined ? localOverride.scale : item.scale
+
       // 미디어 크기 계산
-      const mediaWidth = CANVAS_WIDTH * 0.4 * item.scale * zoom
+      const mediaWidth = CANVAS_WIDTH * 0.4 * scale * zoom
       const mediaHeight = mediaWidth / item.aspectRatio
 
       // 위치 계산 (normalized coordinates)
-      const mediaX = item.position.x * CANVAS_WIDTH - mediaWidth / 2
-      const mediaY = item.position.y * CANVAS_HEIGHT - mediaHeight / 2
+      const mediaX = position.x * CANVAS_WIDTH - mediaWidth / 2
+      const mediaY = position.y * CANVAS_HEIGHT - mediaHeight / 2
 
       // 선택된 아이템 하이라이트
-      if (selectedItemId === item.id) {
+      if (isSelected) {
         ctx.strokeStyle = '#8B5CF6'
         ctx.lineWidth = 2
         ctx.strokeRect(mediaX - 2, mediaY - 2, mediaWidth + 4, mediaHeight + 4)
@@ -248,7 +265,7 @@ export default function UnifiedPreviewCanvas({
     })
 
     animationRef.current = requestAnimationFrame(render)
-  }, [items, mediaPreviewsMap, targetImageElement, selectedItemId, showCamera, zoom])
+  }, [items, mediaPreviewsMap, targetImageElement, selectedItemId, showCamera, zoom, localOverride])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(render)
@@ -266,11 +283,15 @@ export default function UnifiedPreviewCanvas({
     const selectedItem = items.find((item) => item.id === selectedItemId)
     if (!selectedItem) return null
 
-    const mediaWidth = CANVAS_WIDTH * 0.4 * selectedItem.scale * zoom
+    // 드래그 중이면 로컬 오버라이드 값 사용
+    const position = localOverride?.position ?? selectedItem.position
+    const scale = localOverride?.scale ?? selectedItem.scale
+
+    const mediaWidth = CANVAS_WIDTH * 0.4 * scale * zoom
     const mediaHeight = mediaWidth / selectedItem.aspectRatio
 
-    const mediaX = selectedItem.position.x * CANVAS_WIDTH - mediaWidth / 2
-    const mediaY = selectedItem.position.y * CANVAS_HEIGHT - mediaHeight / 2
+    const mediaX = position.x * CANVAS_WIDTH - mediaWidth / 2
+    const mediaY = position.y * CANVAS_HEIGHT - mediaHeight / 2
 
     return {
       left: mediaX,
@@ -278,20 +299,89 @@ export default function UnifiedPreviewCanvas({
       width: mediaWidth,
       height: mediaHeight,
     }
-  }, [selectedItemId, items, zoom])
+  }, [selectedItemId, items, zoom, localOverride])
 
-  // 드래그 핸들러 (위치 이동)
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!selectedItemId || isResizing) return
+  // 전역 마우스 이벤트 핸들러 (드래그/리사이즈 중)
+  const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
+    const { isDragging, isResizing, startX, startY, initialPosition, initialScale } = dragStateRef.current
+
+    if (!isDragging && !isResizing) return
+    if (!selectedItemId) return
 
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return
 
+    if (isResizing) {
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
+      const diagonal = (deltaX + deltaY) / 2
+      const scaleDelta = diagonal / (rect.width * 0.25)
+
+      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, initialScale + scaleDelta))
+      setLocalOverride({ scale: newScale })
+    } else if (isDragging) {
+      const x = (e.clientX - rect.left) / rect.width
+      const y = (e.clientY - rect.top) / rect.height
+
+      const dx = x - startX
+      const dy = y - startY
+
+      const newX = Math.max(0, Math.min(1, initialPosition.x + dx))
+      const newY = Math.max(0, Math.min(1, initialPosition.y + dy))
+
+      setLocalOverride({ position: { x: newX, y: newY } })
+    }
+  }, [selectedItemId])
+
+  // Note: handleGlobalMouseUp is not used - event listeners are set up with { once: true }
+
+  // localOverride 변경 감지하여 부모에 전달 (드래그 종료 시)
+  const localOverrideRef = useRef(localOverride)
+  localOverrideRef.current = localOverride
+
+  const commitChanges = useCallback(() => {
+    const override = localOverrideRef.current
+    if (selectedItemId && override) {
+      if (override.position) {
+        onItemPositionChange?.(selectedItemId, override.position)
+      }
+      if (override.scale !== undefined) {
+        onItemScaleChange?.(selectedItemId, override.scale)
+      }
+    }
+    setLocalOverride(null)
+  }, [selectedItemId, onItemPositionChange, onItemScaleChange])
+
+  // 드래그 핸들러 (위치 이동)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!selectedItemId || dragStateRef.current.isResizing) return
+
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const selectedItem = items.find((item) => item.id === selectedItemId)
+    if (!selectedItem) return
+
     const x = (e.clientX - rect.left) / rect.width
     const y = (e.clientY - rect.top) / rect.height
 
-    setIsDragging(true)
-    setDragStart({ x, y })
+    dragStateRef.current = {
+      isDragging: true,
+      isResizing: false,
+      startX: x,
+      startY: y,
+      initialPosition: { ...selectedItem.position },
+      initialScale: selectedItem.scale,
+    }
+
+    // 전역 이벤트 리스너 등록
+    document.addEventListener('mousemove', handleGlobalMouseMove)
+    document.addEventListener('mouseup', () => {
+      commitChanges()
+      document.removeEventListener('mousemove', handleGlobalMouseMove)
+      dragStateRef.current.isDragging = false
+      dragStateRef.current.isResizing = false
+    }, { once: true })
   }
 
   // 리사이즈 핸들러
@@ -307,69 +397,73 @@ export default function UnifiedPreviewCanvas({
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
 
-    setIsResizing(true)
-    setDragStart({ x: clientX, y: clientY })
-    setInitialScale(selectedItem.scale)
-  }
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!selectedItemId) return
-
-    const rect = canvasRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    if (isResizing) {
-      // 리사이즈 모드
-      const deltaX = e.clientX - dragStart.x
-      const deltaY = e.clientY - dragStart.y
-      const diagonal = (deltaX + deltaY) / 2
-      const scaleDelta = diagonal / (rect.width * 0.25)
-
-      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, initialScale + scaleDelta))
-      onItemScaleChange?.(selectedItemId, newScale)
-    } else if (isDragging) {
-      // 위치 이동 모드
-      const x = (e.clientX - rect.left) / rect.width
-      const y = (e.clientY - rect.top) / rect.height
-
-      const dx = x - dragStart.x
-      const dy = y - dragStart.y
-
-      const selectedItem = items.find((item) => item.id === selectedItemId)
-      if (!selectedItem) return
-
-      const newX = Math.max(0, Math.min(1, selectedItem.position.x + dx))
-      const newY = Math.max(0, Math.min(1, selectedItem.position.y + dy))
-
-      onItemPositionChange?.(selectedItemId, { x: newX, y: newY })
-      setDragStart({ x, y })
+    dragStateRef.current = {
+      isDragging: false,
+      isResizing: true,
+      startX: clientX,
+      startY: clientY,
+      initialPosition: { ...selectedItem.position },
+      initialScale: selectedItem.scale,
     }
+
+    // 전역 이벤트 리스너 등록
+    document.addEventListener('mousemove', handleGlobalMouseMove)
+    document.addEventListener('mouseup', () => {
+      commitChanges()
+      document.removeEventListener('mousemove', handleGlobalMouseMove)
+      dragStateRef.current.isDragging = false
+      dragStateRef.current.isResizing = false
+    }, { once: true })
   }
 
-  const handleMouseUp = () => {
-    setIsDragging(false)
-    setIsResizing(false)
-  }
-
-  // 터치 이벤트 핸들러 (리사이즈용)
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isResizing || !selectedItemId) return
+  // 터치 이벤트 핸들러
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!dragStateRef.current.isResizing || !selectedItemId) return
 
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return
 
+    const { startX, startY, initialScale } = dragStateRef.current
     const touch = e.touches[0]
-    const deltaX = touch.clientX - dragStart.x
-    const deltaY = touch.clientY - dragStart.y
+    const deltaX = touch.clientX - startX
+    const deltaY = touch.clientY - startY
     const diagonal = (deltaX + deltaY) / 2
     const scaleDelta = diagonal / (rect.width * 0.25)
 
     const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, initialScale + scaleDelta))
-    onItemScaleChange?.(selectedItemId, newScale)
-  }
+    setLocalOverride({ scale: newScale })
+  }, [selectedItemId])
 
-  const handleTouchEnd = () => {
-    setIsResizing(false)
+  const handleResizeTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!selectedItemId) return
+
+    const selectedItem = items.find((item) => item.id === selectedItemId)
+    if (!selectedItem) return
+
+    const touch = e.touches[0]
+
+    dragStateRef.current = {
+      isDragging: false,
+      isResizing: true,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      initialPosition: { ...selectedItem.position },
+      initialScale: selectedItem.scale,
+    }
+
+    // 전역 터치 이벤트 리스너 등록
+    const onTouchEnd = () => {
+      commitChanges()
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', onTouchEnd)
+      dragStateRef.current.isResizing = false
+    }
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', onTouchEnd, { once: true })
   }
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -410,9 +504,6 @@ export default function UnifiedPreviewCanvas({
           height={CANVAS_HEIGHT}
           className="w-full cursor-move"
           onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
           onClick={handleCanvasClick}
         />
 
@@ -431,9 +522,7 @@ export default function UnifiedPreviewCanvas({
             <div
               className="absolute -bottom-2 -right-2 w-5 h-5 bg-purple-500 rounded-tl-md cursor-nwse-resize pointer-events-auto flex items-center justify-center shadow-md hover:bg-purple-600 active:bg-purple-700 transition-colors"
               onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
+              onTouchStart={handleResizeTouchStart}
             >
               <Maximize2 size={10} className="text-white rotate-90" />
             </div>

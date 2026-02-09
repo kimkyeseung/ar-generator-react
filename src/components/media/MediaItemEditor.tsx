@@ -1,9 +1,8 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useRef } from 'react'
 import { ArrowUp, ArrowDown, Upload, X, Move, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/button'
-import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS, VideoPosition } from '../../types/project'
+import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'
 import { isValidHexColor } from '../../utils/validation'
-import { API_URL } from '../../config/api'
 
 const MIN_SCALE = 0.2
 const MAX_SCALE = 5.0

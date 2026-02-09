@@ -115,8 +115,8 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       },
       scale: item.scale ?? 1,
       aspectRatio: item.aspectRatio ?? 16 / 9,
-      chromaKeyEnabled: item.chromaKeyEnabled,
-      chromaKeyColor: item.chromaKeyColor ?? undefined,
+      chromaKeyEnabled: item.chromaKeyEnabled ?? false,
+      chromaKeyColor: item.chromaKeyColor || undefined,
       chromaKeySettings: {
         similarity: item.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
         smoothness: item.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
@@ -281,6 +281,12 @@ export default function MindARViewerPage() {
   }
 
   const isBasicMode = data.fileIds.mode === 'basic'
+
+  // 디버그: 미디어 아이템 데이터 출력
+  console.log('[MindARViewerPage] mediaItems:', JSON.stringify(data.assets.mediaItems, null, 2))
+  data.assets.mediaItems.forEach((item, i) => {
+    console.log(`[MediaItem ${i}] id=${item.id}, type=${item.type}, chromaKeyEnabled=${item.chromaKeyEnabled}, chromaKeyColor=${item.chromaKeyColor}`)
+  })
 
   // 기본 모드: BasicModeViewer 렌더링
   if (isBasicMode) {

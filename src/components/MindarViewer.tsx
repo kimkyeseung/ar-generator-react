@@ -694,11 +694,11 @@ const MindARViewer: React.FC<Props> = ({
                   className="w-full h-full object-contain pointer-events-none"
                 />
               )
-            ) : item.chromaKeyEnabled && item.chromaKeyColor ? (
+            ) : item.chromaKeyEnabled ? (
               // 크로마키가 활성화된 비디오
               <ChromaKeyVideo
                 src={item.previewFileUrl || item.fileUrl}
-                chromaKeyColor={item.chromaKeyColor}
+                chromaKeyColor={item.chromaKeyColor || '#00FF00'}
                 chromaKeySettings={item.chromaKeySettings}
                 className="w-full h-full object-contain pointer-events-none"
               />

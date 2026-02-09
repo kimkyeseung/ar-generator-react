@@ -32,8 +32,11 @@ export default function ChromaKeyVideo({
     const canvas = canvasRef.current
     if (!video || !canvas) return
 
-    const ctx = canvas.getContext('2d')
+    // willReadFrequently 옵션으로 성능 최적화
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) return
+
+    console.log(`[ChromaKeyVideo] Initialized with color=${chromaKeyColor}, similarity=${chromaKeySettings.similarity}, smoothness=${chromaKeySettings.smoothness}`)
 
     // 크로마키 색상 파싱
     const hexToRgb = (hex: string) => {
@@ -53,6 +56,7 @@ export default function ChromaKeyVideo({
     let animationId: number
     let isRunning = true
 
+    let frameCount = 0
     const processFrame = () => {
       if (!isRunning) return
 
@@ -61,10 +65,22 @@ export default function ChromaKeyVideo({
         return
       }
 
-      canvas.width = video.videoWidth || 640
-      canvas.height = video.videoHeight || 360
+      const vw = video.videoWidth || 640
+      const vh = video.videoHeight || 360
+
+      if (canvas.width !== vw || canvas.height !== vh) {
+        canvas.width = vw
+        canvas.height = vh
+        console.log(`[ChromaKeyVideo] Canvas resized to ${vw}x${vh}`)
+      }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+      // 첫 프레임에서 디버그 로그
+      if (frameCount === 0) {
+        console.log(`[ChromaKeyVideo] Processing first frame, video size: ${vw}x${vh}`)
+      }
+      frameCount++
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       const data = imageData.data

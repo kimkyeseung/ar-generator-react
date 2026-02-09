@@ -193,7 +193,7 @@ export default function MediaItemList({
                 </Button>
               </div>
 
-              {selectedItemId === item.id && !item.isCollapsed && (
+              {selectedItemId === item.id && (
                 <div className="px-3 pb-5 border-t border-gray-100 mt-2 pt-3">
                   <MediaItemEditor
                     item={item}

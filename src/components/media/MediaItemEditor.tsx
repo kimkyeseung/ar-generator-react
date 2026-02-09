@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { ArrowUp, ArrowDown, Upload, X, Move, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'

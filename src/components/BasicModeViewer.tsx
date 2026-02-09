@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoPosition, VideoQuality } from '../types/project'
 import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
@@ -355,9 +355,6 @@ const BasicModeViewer: React.FC<Props> = ({
         if (cameraRef.current) {
           cameraRef.current.style.width = '100%'
           cameraRef.current.style.height = '100%'
-        }
-        if (canvasRef.current && chromaKeyColor) {
-          // 캔버스 크기는 processFrame에서 자동 조정되므로 별도 처리 불필요
         }
       }, 100)
     }

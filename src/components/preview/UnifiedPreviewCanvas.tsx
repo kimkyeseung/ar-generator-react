@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { MediaItem } from '../../types/project'
 import { ZoomIn, ZoomOut, Move, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -332,8 +332,6 @@ export default function UnifiedPreviewCanvas({
       setLocalOverride({ position: { x: newX, y: newY } })
     }
   }, [selectedItemId])
-
-  // Note: handleGlobalMouseUp is not used - event listeners are set up with { once: true }
 
   // localOverride 변경 감지하여 부모에 전달 (드래그 종료 시)
   const localOverrideRef = useRef(localOverride)

@@ -1,4 +1,3 @@
-import React from 'react'
 import { Video, Image as ImageIcon, GripVertical, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { MediaItem, MediaType, createDefaultMediaItem } from '../../types/project'

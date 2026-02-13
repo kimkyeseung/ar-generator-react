@@ -437,7 +437,6 @@ export default function CreateProjectPage() {
       onItemSelect={setSelectedMediaItemId}
       onItemPositionChange={handleMediaItemPositionChange}
       onItemScaleChange={handleMediaItemScaleChange}
-      targetImageFile={targetImageFiles[0]}
       zoom={previewZoom}
       onZoomChange={setPreviewZoom}
     />

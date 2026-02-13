@@ -856,8 +856,6 @@ export default function EditProjectPage() {
       onItemSelect={setSelectedMediaItemId}
       onItemPositionChange={handleMediaItemPositionChange}
       onItemScaleChange={handleMediaItemScaleChange}
-      targetImageFile={targetImageFiles[0]}
-      targetImageUrl={project.targetImageFileId ? `${API_URL}/file/${project.targetImageFileId}` : undefined}
       zoom={previewZoom}
       onZoomChange={setPreviewZoom}
     />

@@ -13,8 +13,6 @@ interface UnifiedPreviewCanvasProps {
   onItemSelect?: (id: string) => void
   onItemPositionChange?: (id: string, position: { x: number; y: number }) => void
   onItemScaleChange?: (id: string, scale: number) => void
-  targetImageFile?: File | null
-  targetImageUrl?: string
   showCamera?: boolean
   zoom?: number
   onZoomChange?: (zoom: number) => void
@@ -32,8 +30,6 @@ export default function UnifiedPreviewCanvas({
   onItemSelect,
   onItemPositionChange,
   onItemScaleChange,
-  targetImageFile,
-  targetImageUrl,
   showCamera = false,
   zoom = 1,
   onZoomChange,
@@ -41,7 +37,6 @@ export default function UnifiedPreviewCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [mediaPreviewsMap, setMediaPreviewsMap] = useState<Map<string, MediaPreview>>(new Map())
-  const [targetImageElement, setTargetImageElement] = useState<HTMLImageElement | null>(null)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const animationRef = useRef<number>()
@@ -102,25 +97,6 @@ export default function UnifiedPreviewCanvas({
       cameraStream?.getTracks().forEach((track) => track.stop())
     }
   }, [showCamera])
-
-  // 타겟 이미지 로드
-  useEffect(() => {
-    if (!targetImageFile && !targetImageUrl) {
-      setTargetImageElement(null)
-      return
-    }
-
-    const img = new window.Image()
-    img.onload = () => setTargetImageElement(img)
-
-    if (targetImageFile) {
-      const url = URL.createObjectURL(targetImageFile)
-      img.src = url
-      return () => URL.revokeObjectURL(url)
-    } else if (targetImageUrl) {
-      img.src = targetImageUrl
-    }
-  }, [targetImageFile, targetImageUrl])
 
   // 미디어 프리뷰 로드
   useEffect(() => {
@@ -229,15 +205,6 @@ export default function UnifiedPreviewCanvas({
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     }
 
-    // 타겟 이미지 표시 (있는 경우)
-    if (targetImageElement) {
-      const targetWidth = CANVAS_WIDTH * 0.6
-      const targetHeight = targetWidth * (targetImageElement.height / targetImageElement.width)
-      const targetX = (CANVAS_WIDTH - targetWidth) / 2
-      const targetY = (CANVAS_HEIGHT - targetHeight) / 2
-      ctx.drawImage(targetImageElement, targetX, targetY, targetWidth, targetHeight)
-    }
-
     // 미디어 아이템 렌더링 (순서대로)
     const sortedItems = [...items].sort((a, b) => a.order - b.order)
 
@@ -277,7 +244,7 @@ export default function UnifiedPreviewCanvas({
     })
 
     animationRef.current = requestAnimationFrame(render)
-  }, [items, mediaPreviewsMap, targetImageElement, selectedItemId, showCamera, zoom, localOverride])
+  }, [items, mediaPreviewsMap, selectedItemId, showCamera, zoom, localOverride])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(render)

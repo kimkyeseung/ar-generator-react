@@ -211,10 +211,12 @@ const MindARViewer: React.FC<Props> = ({
     setIsHDReady(!previewVideoUrl)
   }, [videoUrl, previewVideoUrl])
 
-  // 디버그 모드: 필터 설정 (MindAR 기본값: minCF=0.001, beta=1000)
+  // 디버그 모드: 필터 설정 (반응성 개선: minCF=0.05, beta=1500)
+  // 기존 MindAR 기본값(0.001, 1000)은 부드럽지만 지연이 큼
+  // 새 값: minCF 높이면 덜 부드럽지만 반응 빠름, beta 높이면 빠른 움직임 추적 향상
   const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
-  const [filterMinCF, setFilterMinCF] = useState(0.001)
-  const [filterBeta, setFilterBeta] = useState(1000)
+  const [filterMinCF, setFilterMinCF] = useState(0.05)
+  const [filterBeta, setFilterBeta] = useState(1500)
 
   // 디버그 모드: 필터 파라미터 실시간 업데이트
   useEffect(() => {

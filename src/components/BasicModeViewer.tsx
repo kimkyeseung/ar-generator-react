@@ -15,6 +15,7 @@ interface Props {
   videoQuality?: VideoQuality
   overlayImageUrl?: string // 오버레이 이미지 URL
   overlayLinkUrl?: string // 오버레이 이미지 클릭 시 열릴 URL
+  guideImageUrl?: string // 안내문구 이미지 URL (영상 로딩 전 표시)
   mediaItems?: ProcessedMediaItem[] // 멀티 미디어 아이템
   debugMode?: boolean
 }
@@ -30,6 +31,7 @@ const BasicModeViewer: React.FC<Props> = ({
   videoQuality = 'low',
   overlayImageUrl,
   overlayLinkUrl,
+  guideImageUrl,
   mediaItems = [],
   debugMode = false,
 }) => {
@@ -43,6 +45,7 @@ const BasicModeViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [actualCameraResolution, setActualCameraResolution] = useState<string | null>(null)
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false) // 영상 재생 중 여부 (안내문구 숨김용)
 
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // 영상 비율 (width/height)
 
@@ -435,6 +438,19 @@ const BasicModeViewer: React.FC<Props> = ({
           </div>
         )}
 
+        {/* 안내문구 이미지 (영상 재생 전까지 표시) */}
+        {guideImageUrl && !isVideoPlaying && !isLoading && !cameraError && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="max-w-[80%] max-h-[70%] p-4">
+              <img
+                src={guideImageUrl}
+                alt="안내문구"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              />
+            </div>
+          </div>
+        )}
+
         {/* 비디오 오버레이 */}
         <div
           className="absolute pointer-events-none"
@@ -456,6 +472,7 @@ const BasicModeViewer: React.FC<Props> = ({
                 muted
                 playsInline
                 crossOrigin="anonymous"
+                onPlay={() => setIsVideoPlaying(true)}
                 className="hidden"
               />
               {/* 크로마키 처리된 캔버스 */}
@@ -471,6 +488,7 @@ const BasicModeViewer: React.FC<Props> = ({
               muted
               playsInline
               crossOrigin="anonymous"
+              onPlay={() => setIsVideoPlaying(true)}
               className="h-full w-full object-contain"
             />
           )}

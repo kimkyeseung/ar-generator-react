@@ -53,6 +53,7 @@ interface ArAssets {
   previewVideoUrl?: string
   targetImageUrl?: string // 기본 모드에서는 undefined
   overlayImageUrl?: string // 오버레이 이미지 URL
+  guideImageUrl?: string // 안내문구 이미지 URL
   mediaItems: ProcessedMediaItem[] // 멀티 미디어 아이템
 }
 
@@ -138,6 +139,9 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       targetImageUrl,
       overlayImageUrl: fileIds.overlayImageFileId
         ? `${API_URL}/file/${fileIds.overlayImageFileId}?t=${cacheBuster}`
+        : undefined,
+      guideImageUrl: fileIds.guideImageFileId
+        ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
         : undefined,
       mediaItems: processedMediaItems,
     },
@@ -302,6 +306,7 @@ export default function MindARViewerPage() {
             videoQuality={data.fileIds.videoQuality || 'low'}
             overlayImageUrl={data.assets.overlayImageUrl}
             overlayLinkUrl={data.fileIds.overlayLinkUrl}
+            guideImageUrl={data.assets.guideImageUrl}
             mediaItems={data.assets.mediaItems}
             debugMode={isDebugMode}
           />
@@ -333,6 +338,7 @@ export default function MindARViewerPage() {
             videoQuality={data.fileIds.videoQuality || 'low'}
             overlayImageUrl={data.assets.overlayImageUrl}
             overlayLinkUrl={data.fileIds.overlayLinkUrl}
+            guideImageUrl={data.assets.guideImageUrl}
             mediaItems={data.assets.mediaItems}
             debugMode={isDebugMode}
           />

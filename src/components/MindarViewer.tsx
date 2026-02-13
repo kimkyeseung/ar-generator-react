@@ -53,6 +53,7 @@ interface Props {
   videoQuality?: VideoQuality
   overlayImageUrl?: string // 오버레이 이미지 URL
   overlayLinkUrl?: string // 오버레이 이미지 클릭 시 열릴 URL
+  guideImageUrl?: string // 안내문구 이미지 URL (타겟 인식 전 표시)
   mediaItems?: ProcessedMediaItem[] // 멀티 미디어 아이템
   debugMode?: boolean
 }
@@ -190,6 +191,7 @@ const MindARViewer: React.FC<Props> = ({
   videoQuality = 'low',
   overlayImageUrl,
   overlayLinkUrl,
+  guideImageUrl,
   mediaItems = [],
   debugMode = false,
 }) => {
@@ -201,6 +203,7 @@ const MindARViewer: React.FC<Props> = ({
   // 현재 재생 중인 비디오 URL (프리뷰 → 원본 전환)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
+  const [isTargetFound, setIsTargetFound] = useState(false) // 타겟 인식 여부 (안내문구 숨김용)
 
   // props 변경 시 상태 리셋 (영상 교체 시)
   useEffect(() => {
@@ -390,6 +393,7 @@ const MindARViewer: React.FC<Props> = ({
     /** ---------- 타겟 이벤트 ---------- **/
     const handleTargetFound = async () => {
       console.log('[MindAR] targetFound')
+      setIsTargetFound(true) // 안내문구 이미지 숨김
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (!video) return
 
@@ -610,6 +614,19 @@ const MindARViewer: React.FC<Props> = ({
           <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
           <p className="text-lg font-medium text-white">AR 준비 중...</p>
           <p className="mt-2 text-sm text-white/70">카메라 권한을 허용해주세요</p>
+        </div>
+      )}
+
+      {/* 안내문구 이미지 (타겟 인식 전까지 표시) */}
+      {guideImageUrl && !isTargetFound && !isLoading && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
+          <div className="max-w-[80%] max-h-[70%] p-4 animate-pulse">
+            <img
+              src={guideImageUrl}
+              alt="안내문구"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            />
+          </div>
         </div>
       )}
 

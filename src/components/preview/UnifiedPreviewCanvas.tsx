@@ -62,9 +62,21 @@ export default function UnifiedPreviewCanvas({
     scale?: number
   } | null>(null)
 
+  // 크로마키 미리보기 줌 (별도 관리)
+  const [chromaKeyZoom, setChromaKeyZoom] = useState(1)
+  const chromaKeyCanvasRef = useRef<HTMLCanvasElement>(null)
+  const chromaKeyAnimationRef = useRef<number>()
+
   // 캔버스 크기
   const CANVAS_WIDTH = 360
   const CANVAS_HEIGHT = 640
+
+  // 트래킹 모드 + 크로마키 활성화된 영상 필터링
+  const chromaKeyItems = useMemo(() => {
+    return items.filter(
+      item => item.type === 'video' && item.mode === 'tracking' && item.chromaKeyEnabled
+    )
+  }, [items])
 
   // 카메라 스트림 초기화
   useEffect(() => {
@@ -275,6 +287,58 @@ export default function UnifiedPreviewCanvas({
       }
     }
   }, [render])
+
+  // 크로마키 미리보기 캔버스 렌더링
+  const renderChromaKey = useCallback(() => {
+    const canvas = chromaKeyCanvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx || chromaKeyItems.length === 0) return
+
+    // 첫 번째 크로마키 영상의 비율로 캔버스 크기 결정
+    const firstItem = chromaKeyItems[0]
+    const preview = mediaPreviewsMap.get(firstItem.id)
+    if (!preview?.element) return
+
+    const videoElement = preview.element as HTMLVideoElement
+    if (videoElement.readyState < 2) {
+      chromaKeyAnimationRef.current = requestAnimationFrame(renderChromaKey)
+      return
+    }
+
+    // 영상 실제 비율 유지
+    const videoWidth = videoElement.videoWidth || 320
+    const videoHeight = videoElement.videoHeight || 180
+    const aspectRatio = videoWidth / videoHeight
+
+    // 캔버스 크기 계산 (최대 너비 기준)
+    const maxWidth = 360
+    const displayWidth = maxWidth * chromaKeyZoom
+    const displayHeight = displayWidth / aspectRatio
+
+    canvas.width = displayWidth
+    canvas.height = displayHeight
+
+    // 배경 클리어
+    ctx.fillStyle = '#1a1a2e'
+    ctx.fillRect(0, 0, displayWidth, displayHeight)
+
+    // 영상 그리기
+    ctx.drawImage(videoElement, 0, 0, displayWidth, displayHeight)
+
+    chromaKeyAnimationRef.current = requestAnimationFrame(renderChromaKey)
+  }, [chromaKeyItems, mediaPreviewsMap, chromaKeyZoom])
+
+  // 크로마키 미리보기 애니메이션 시작/정지
+  useEffect(() => {
+    if (chromaKeyItems.length > 0) {
+      chromaKeyAnimationRef.current = requestAnimationFrame(renderChromaKey)
+    }
+    return () => {
+      if (chromaKeyAnimationRef.current) {
+        cancelAnimationFrame(chromaKeyAnimationRef.current)
+      }
+    }
+  }, [renderChromaKey, chromaKeyItems.length])
 
   // 선택된 아이템의 위치와 크기 계산 (리사이즈 핸들 오버레이용)
   const selectedItemBounds = useMemo(() => {
@@ -589,6 +653,82 @@ export default function UnifiedPreviewCanvas({
           <span className="text-gray-300">|</span>
           <Maximize2 size={14} />
           <span>우하단 모서리: 크기 조절</span>
+        </div>
+      )}
+
+      {/* 트래킹 모드 크로마키 미리보기 (별도 영역) */}
+      {chromaKeyItems.length > 0 && (
+        <div className="mt-6 pt-4 border-t border-gray-700">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">
+            트래킹 모드 크로마키 미리보기
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">
+            트래킹모드 + 크로마키 영상은 타겟 이미지 위에 실제 비율로 표시됩니다
+          </p>
+
+          {/* 크로마키 캔버스 */}
+          <div className="relative bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center p-2">
+            <canvas
+              ref={chromaKeyCanvasRef}
+              className="max-w-full rounded"
+              style={{ maxHeight: '400px' }}
+            />
+          </div>
+
+          {/* 크로마키 크기 컨트롤 */}
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setChromaKeyZoom(Math.max(0.5, chromaKeyZoom - 0.1))}
+              disabled={chromaKeyZoom <= 0.5}
+              className="h-7 w-7"
+            >
+              <ZoomOut size={14} />
+            </Button>
+            <div className="flex items-center gap-2 px-2">
+              <input
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.1"
+                value={chromaKeyZoom}
+                onChange={(e) => setChromaKeyZoom(parseFloat(e.target.value))}
+                className="w-20"
+              />
+              <span className="text-xs text-gray-400 w-10 text-center">
+                {Math.round(chromaKeyZoom * 100)}%
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setChromaKeyZoom(Math.min(2, chromaKeyZoom + 0.1))}
+              disabled={chromaKeyZoom >= 2}
+              className="h-7 w-7"
+            >
+              <ZoomIn size={14} />
+            </Button>
+          </div>
+
+          {/* 크로마키 영상 목록 */}
+          <div className="mt-3 space-y-1">
+            {chromaKeyItems.map((item, index) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/50 px-2 py-1 rounded"
+              >
+                <div
+                  className="w-3 h-3 rounded-sm border border-gray-600"
+                  style={{ backgroundColor: item.chromaKeyColor }}
+                />
+                <span>영상 {index + 1}</span>
+                <span className="text-gray-500">({item.chromaKeyColor})</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

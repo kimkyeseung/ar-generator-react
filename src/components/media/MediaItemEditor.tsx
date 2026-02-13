@@ -1,5 +1,5 @@
-import { useCallback, useRef } from 'react'
-import { ArrowUp, ArrowDown, Upload, X, Move, Maximize2 } from 'lucide-react'
+import { useCallback, useRef, useState } from 'react'
+import { ArrowUp, ArrowDown, Upload, X, Move, Maximize2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '../ui/button'
 import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'
 import { isValidHexColor } from '../../utils/validation'
@@ -28,6 +28,7 @@ export default function MediaItemEditor({
   onMoveDown,
 }: MediaItemEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [chromaKeyOptionsExpanded, setChromaKeyOptionsExpanded] = useState(false)
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -342,59 +343,71 @@ export default function MediaItemEditor({
                   placeholder="#00FF00"
                   className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
                 />
+                {/* 세부 설정 토글 버튼 */}
+                <button
+                  type="button"
+                  onClick={() => setChromaKeyOptionsExpanded(!chromaKeyOptionsExpanded)}
+                  disabled={disabled}
+                  className="p-1 rounded hover:bg-gray-100 text-gray-500"
+                  title={chromaKeyOptionsExpanded ? '옵션 접기' : '옵션 펼치기'}
+                >
+                  {chromaKeyOptionsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
               </div>
               {item.chromaKeyColor && !isValidHexColor(item.chromaKeyColor) && (
                 <p className="text-xs text-red-500">
                   유효한 HEX 색상을 입력하세요
                 </p>
               )}
-              {/* 크로마키 세부 설정 */}
-              <div className="space-y-2">
-                <div>
-                  <label className="text-xs text-gray-500">
-                    색상 범위: {item.chromaKeySettings.similarity.toFixed(2)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={item.chromaKeySettings.similarity}
-                    onChange={(e) =>
-                      onChange({
-                        chromaKeySettings: {
-                          ...item.chromaKeySettings,
-                          similarity: parseFloat(e.target.value),
-                        },
-                      })
-                    }
-                    disabled={disabled}
-                    className="w-full"
-                  />
+              {/* 크로마키 세부 설정 (접기/펼치기) */}
+              {chromaKeyOptionsExpanded && (
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <div>
+                    <label className="text-xs text-gray-500">
+                      색상 범위: {item.chromaKeySettings.similarity.toFixed(2)}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={item.chromaKeySettings.similarity}
+                      onChange={(e) =>
+                        onChange({
+                          chromaKeySettings: {
+                            ...item.chromaKeySettings,
+                            similarity: parseFloat(e.target.value),
+                          },
+                        })
+                      }
+                      disabled={disabled}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">
+                      경계 부드러움: {item.chromaKeySettings.smoothness.toFixed(2)}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="0.5"
+                      step="0.01"
+                      value={item.chromaKeySettings.smoothness}
+                      onChange={(e) =>
+                        onChange({
+                          chromaKeySettings: {
+                            ...item.chromaKeySettings,
+                            smoothness: parseFloat(e.target.value),
+                          },
+                        })
+                      }
+                      disabled={disabled}
+                      className="w-full"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500">
-                    경계 부드러움: {item.chromaKeySettings.smoothness.toFixed(2)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="0.5"
-                    step="0.01"
-                    value={item.chromaKeySettings.smoothness}
-                    onChange={(e) =>
-                      onChange({
-                        chromaKeySettings: {
-                          ...item.chromaKeySettings,
-                          smoothness: parseFloat(e.target.value),
-                        },
-                      })
-                    }
-                    disabled={disabled}
-                    className="w-full"
-                  />
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>

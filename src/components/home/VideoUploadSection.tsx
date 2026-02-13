@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { FileUpload } from '../FileUpload'
 import StatusCallout from './StatusCallout'
 import VideoLimitNotice from './VideoLimitNotice'
@@ -44,6 +45,7 @@ export default function VideoUploadSection({
   showFlatView = true,
 }: VideoUploadSectionProps) {
   const [showPreview, setShowPreview] = useState(false)
+  const [chromaKeyOptionsExpanded, setChromaKeyOptionsExpanded] = useState(false)
 
   if (!isTargetReady) {
     return (
@@ -131,6 +133,15 @@ export default function VideoUploadSection({
                     placeholder='#00FF00'
                     className='flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500'
                   />
+                  {/* 세부 설정 토글 버튼 */}
+                  <button
+                    type='button'
+                    onClick={() => setChromaKeyOptionsExpanded(!chromaKeyOptionsExpanded)}
+                    className='p-2 rounded hover:bg-gray-200 text-gray-500'
+                    title={chromaKeyOptionsExpanded ? '옵션 접기' : '옵션 펼치기'}
+                  >
+                    {chromaKeyOptionsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
                 </div>
               </div>
               <p className='text-xs text-gray-500'>
@@ -141,90 +152,92 @@ export default function VideoUploadSection({
               )}
             </div>
 
-            {/* 크로마키 강도 조절 */}
-            <div className='space-y-3 pt-2 border-t border-gray-200'>
-              <p className='text-sm font-medium text-gray-700'>강도 조절</p>
+            {/* 크로마키 강도 조절 (접기/펼치기) */}
+            {chromaKeyOptionsExpanded && (
+              <div className='space-y-3 pt-2 border-t border-gray-200'>
+                <p className='text-sm font-medium text-gray-700'>강도 조절</p>
 
-              {/* 색상 범위 (Similarity) */}
-              <div className='space-y-1'>
-                <div className='flex items-center justify-between'>
-                  <label htmlFor='chroma-similarity' className='text-xs text-gray-600'>
-                    색상 범위
-                  </label>
-                  <span className='text-xs text-gray-500 font-mono'>
-                    {chromaKeySettings.similarity.toFixed(2)}
-                  </span>
+                {/* 색상 범위 (Similarity) */}
+                <div className='space-y-1'>
+                  <div className='flex items-center justify-between'>
+                    <label htmlFor='chroma-similarity' className='text-xs text-gray-600'>
+                      색상 범위
+                    </label>
+                    <span className='text-xs text-gray-500 font-mono'>
+                      {chromaKeySettings.similarity.toFixed(2)}
+                    </span>
+                  </div>
+                  <input
+                    type='range'
+                    id='chroma-similarity'
+                    min='0.1'
+                    max='0.8'
+                    step='0.01'
+                    value={chromaKeySettings.similarity}
+                    onChange={(e) => onChromaKeySettingsChange({
+                      ...chromaKeySettings,
+                      similarity: parseFloat(e.target.value)
+                    })}
+                    className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600'
+                  />
+                  <p className='text-xs text-gray-400'>
+                    높을수록 더 넓은 색상 범위를 제거합니다
+                  </p>
                 </div>
-                <input
-                  type='range'
-                  id='chroma-similarity'
-                  min='0.1'
-                  max='0.8'
-                  step='0.01'
-                  value={chromaKeySettings.similarity}
-                  onChange={(e) => onChromaKeySettingsChange({
-                    ...chromaKeySettings,
-                    similarity: parseFloat(e.target.value)
-                  })}
-                  className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600'
-                />
-                <p className='text-xs text-gray-400'>
-                  높을수록 더 넓은 색상 범위를 제거합니다
-                </p>
-              </div>
 
-              {/* 경계 부드러움 (Smoothness) */}
-              <div className='space-y-1'>
-                <div className='flex items-center justify-between'>
-                  <label htmlFor='chroma-smoothness' className='text-xs text-gray-600'>
-                    경계 부드러움
-                  </label>
-                  <span className='text-xs text-gray-500 font-mono'>
-                    {chromaKeySettings.smoothness.toFixed(2)}
-                  </span>
+                {/* 경계 부드러움 (Smoothness) */}
+                <div className='space-y-1'>
+                  <div className='flex items-center justify-between'>
+                    <label htmlFor='chroma-smoothness' className='text-xs text-gray-600'>
+                      경계 부드러움
+                    </label>
+                    <span className='text-xs text-gray-500 font-mono'>
+                      {chromaKeySettings.smoothness.toFixed(2)}
+                    </span>
+                  </div>
+                  <input
+                    type='range'
+                    id='chroma-smoothness'
+                    min='0.01'
+                    max='0.3'
+                    step='0.01'
+                    value={chromaKeySettings.smoothness}
+                    onChange={(e) => onChromaKeySettingsChange({
+                      ...chromaKeySettings,
+                      smoothness: parseFloat(e.target.value)
+                    })}
+                    className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600'
+                  />
+                  <p className='text-xs text-gray-400'>
+                    높을수록 경계가 부드러워집니다
+                  </p>
                 </div>
-                <input
-                  type='range'
-                  id='chroma-smoothness'
-                  min='0.01'
-                  max='0.3'
-                  step='0.01'
-                  value={chromaKeySettings.smoothness}
-                  onChange={(e) => onChromaKeySettingsChange({
-                    ...chromaKeySettings,
-                    smoothness: parseFloat(e.target.value)
-                  })}
-                  className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600'
-                />
-                <p className='text-xs text-gray-400'>
-                  높을수록 경계가 부드러워집니다
-                </p>
-              </div>
 
-              {/* 기본값 복원 버튼 */}
-              <button
-                type='button'
-                onClick={() => onChromaKeySettingsChange(DEFAULT_CHROMAKEY_SETTINGS)}
-                className='text-xs text-purple-600 hover:text-purple-700 underline'
-              >
-                기본값으로 복원
-              </button>
-
-              {/* 미리보기 버튼 */}
-              {(videoFile || existingVideoUrl) && (
+                {/* 기본값 복원 버튼 */}
                 <button
                   type='button'
-                  onClick={() => setShowPreview(!showPreview)}
-                  className='w-full mt-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors flex items-center justify-center gap-2'
+                  onClick={() => onChromaKeySettingsChange(DEFAULT_CHROMAKEY_SETTINGS)}
+                  className='text-xs text-purple-600 hover:text-purple-700 underline'
                 >
-                  <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' />
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' />
-                  </svg>
-                  {showPreview ? '미리보기 닫기' : '미리보기'}
+                  기본값으로 복원
                 </button>
-              )}
-            </div>
+
+                {/* 미리보기 버튼 */}
+                {(videoFile || existingVideoUrl) && (
+                  <button
+                    type='button'
+                    onClick={() => setShowPreview(!showPreview)}
+                    className='w-full mt-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors flex items-center justify-center gap-2'
+                  >
+                    <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' />
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' />
+                    </svg>
+                    {showPreview ? '미리보기 닫기' : '미리보기'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* 크로마키 미리보기 */}
             {(videoFile || existingVideoUrl) && showPreview && (

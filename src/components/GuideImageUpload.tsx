@@ -24,6 +24,7 @@ export default function GuideImageUpload({
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [dimensions, setDimensions] = React.useState<{ width: number; height: number } | null>(null)
+  const [hideExisting, setHideExisting] = React.useState(false)
 
   // 파일 변경 시 프리뷰 URL 생성
   React.useEffect(() => {
@@ -73,6 +74,7 @@ export default function GuideImageUpload({
           )
         }
 
+        setHideExisting(false)
         onFileSelect(selectedFile)
         URL.revokeObjectURL(img.src)
       }
@@ -94,9 +96,10 @@ export default function GuideImageUpload({
     onFileSelect(null)
     setDimensions(null)
     setError(null)
+    setHideExisting(true)
   }
 
-  const displayUrl = previewUrl || existingImageUrl
+  const displayUrl = previewUrl || (hideExisting ? null : existingImageUrl)
 
   return (
     <div className="space-y-2">
@@ -124,12 +127,22 @@ export default function GuideImageUpload({
       />
 
       {displayUrl ? (
-        <div className="relative inline-block">
-          <img
-            src={displayUrl}
-            alt="안내문구 이미지 미리보기"
-            className="max-w-[200px] max-h-[355px] object-contain rounded-lg border border-gray-200"
-          />
+        <div className="relative inline-block group">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={disabled}
+            className="relative rounded-lg overflow-hidden border border-gray-200 hover:border-purple-400 transition-colors disabled:cursor-not-allowed"
+          >
+            <img
+              src={displayUrl}
+              alt="안내문구 이미지 미리보기"
+              className="max-w-[200px] max-h-[355px] object-contain"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Upload size={24} className="text-white" />
+            </div>
+          </button>
           <Button
             type="button"
             variant="destructive"

@@ -281,7 +281,7 @@ const BasicModeViewer: React.FC<Props> = ({
       cancelAnimationFrame(animationId)
       video.removeEventListener('play', handlePlay)
     }
-  }, [chromaKeyColor, currentVideoUrl])
+  }, [chromaKeyColor, chromaKeySettings, currentVideoUrl])
 
   // isMuted 상태 변경 시 비디오에 반영
   useEffect(() => {

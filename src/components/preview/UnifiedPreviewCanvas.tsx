@@ -59,7 +59,7 @@ export default function UnifiedPreviewCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [mediaPreviewsMap, setMediaPreviewsMap] = useState<Map<string, MediaPreview>>(new Map())
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const animationRef = useRef<number>()
   const checkerPatternRef = useRef<CanvasPattern | null>(null)
@@ -172,7 +172,7 @@ export default function UnifiedPreviewCanvas({
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment', width: 1280, height: 720 },
         })
-        setCameraStream(stream)
+        cameraStreamRef.current = stream
         if (videoRef.current) {
           videoRef.current.srcObject = stream
         }
@@ -184,11 +184,12 @@ export default function UnifiedPreviewCanvas({
     initCamera()
 
     return () => {
-      cameraStream?.getTracks().forEach((track) => track.stop())
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
     }
   }, [showCamera])
 
   // 미디어 프리뷰 로드
+  // mediaPreviewsMap은 의도적으로 deps에서 제외 (이전 상태와 비교하여 재사용 결정)
   useEffect(() => {
     const newPreviews = new Map<string, MediaPreview>()
 
@@ -282,6 +283,7 @@ export default function UnifiedPreviewCanvas({
         }
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items])
 
   // 캔버스 렌더링

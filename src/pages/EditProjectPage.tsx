@@ -858,6 +858,10 @@ export default function EditProjectPage() {
       onItemScaleChange={handleMediaItemScaleChange}
       zoom={previewZoom}
       onZoomChange={setPreviewZoom}
+      mainVideoFile={mode === 'basic' ? (videoFile || existingVideoFile) : null}
+      mainVideoUrl={mode === 'basic' && !videoFile && !existingVideoFile && project?.videoFileId ? `${API_URL}/file/${project.videoFileId}` : null}
+      mainVideoPosition={mode === 'basic' ? videoPosition : undefined}
+      mainVideoScale={mode === 'basic' ? videoScale : undefined}
     />
   )
 

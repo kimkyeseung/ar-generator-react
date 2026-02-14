@@ -29,6 +29,11 @@ interface UnifiedPreviewCanvasProps {
   showCamera?: boolean
   zoom?: number
   onZoomChange?: (zoom: number) => void
+  // 메인 비디오 (기본 모드용)
+  mainVideoFile?: File | null
+  mainVideoUrl?: string | null
+  mainVideoPosition?: { x: number; y: number }
+  mainVideoScale?: number
 }
 
 interface MediaPreview {
@@ -46,6 +51,10 @@ export default function UnifiedPreviewCanvas({
   showCamera = false,
   zoom = 1,
   onZoomChange,
+  mainVideoFile,
+  mainVideoUrl,
+  mainVideoPosition = { x: 0.5, y: 0.5 },
+  mainVideoScale = 1,
 }: UnifiedPreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,6 +64,8 @@ export default function UnifiedPreviewCanvas({
   const animationRef = useRef<number>()
   const checkerPatternRef = useRef<CanvasPattern | null>(null)
   const chromaKeyTempCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const mainVideoRef = useRef<HTMLVideoElement | null>(null)
+  const [mainVideoReady, setMainVideoReady] = useState(false)
 
   // 드래그 상태를 ref로 관리 (리렌더링 방지)
   const dragStateRef = useRef({
@@ -112,6 +123,46 @@ export default function UnifiedPreviewCanvas({
     checkerPatternRef.current = ctx.createPattern(patternCanvas, 'repeat')
     return checkerPatternRef.current
   }, [])
+
+  // 메인 비디오 로드
+  useEffect(() => {
+    if (!mainVideoFile && !mainVideoUrl) {
+      if (mainVideoRef.current) {
+        mainVideoRef.current.pause()
+        mainVideoRef.current = null
+      }
+      setMainVideoReady(false)
+      return
+    }
+
+    const video = document.createElement('video')
+    video.muted = true
+    video.loop = true
+    video.playsInline = true
+    video.preload = 'auto'
+
+    if (mainVideoFile) {
+      video.src = URL.createObjectURL(mainVideoFile)
+    } else if (mainVideoUrl) {
+      video.src = mainVideoUrl
+      video.crossOrigin = 'anonymous'
+    }
+
+    video.onloadeddata = () => {
+      console.log('Main video loaded:', video.readyState)
+      video.play().catch(() => {})
+      mainVideoRef.current = video
+      setMainVideoReady(true)
+    }
+    video.onerror = () => console.error('Main video load error')
+
+    return () => {
+      if (mainVideoFile) {
+        URL.revokeObjectURL(video.src)
+      }
+      video.pause()
+    }
+  }, [mainVideoFile, mainVideoUrl])
 
   // 카메라 스트림 초기화
   useEffect(() => {
@@ -260,6 +311,30 @@ export default function UnifiedPreviewCanvas({
       }
     }
 
+    // 메인 비디오 렌더링 (기본 모드용)
+    if (mainVideoRef.current && mainVideoReady && mainVideoRef.current.readyState >= 1) {
+      const video = mainVideoRef.current
+      const videoAspect = video.videoWidth / video.videoHeight
+
+      // 기본 크기 계산 (VideoPositionEditor와 동일한 로직)
+      // 가로가 긴 비디오: 캔버스 너비의 50%
+      // 세로가 긴 비디오: 50% * aspectRatio
+      const baseWidth = videoAspect >= 1
+        ? CANVAS_WIDTH * 0.5
+        : CANVAS_WIDTH * 0.5 * videoAspect
+      const baseHeight = baseWidth / videoAspect
+
+      // 스케일 적용 (CSS transform scale과 동일하게)
+      const drawWidth = baseWidth * mainVideoScale
+      const drawHeight = baseHeight * mainVideoScale
+
+      // 위치 계산 (normalized coordinates, 중앙 기준)
+      const drawX = mainVideoPosition.x * CANVAS_WIDTH - drawWidth / 2
+      const drawY = mainVideoPosition.y * CANVAS_HEIGHT - drawHeight / 2
+
+      ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight)
+    }
+
     // 미디어 아이템 렌더링 (순서대로)
     const sortedItems = [...items].sort((a, b) => a.order - b.order)
 
@@ -364,7 +439,7 @@ export default function UnifiedPreviewCanvas({
     })
 
     animationRef.current = requestAnimationFrame(render)
-  }, [items, mediaPreviewsMap, selectedItemId, showCamera, zoom, localOverride, getCheckerPattern])
+  }, [items, mediaPreviewsMap, selectedItemId, showCamera, zoom, localOverride, getCheckerPattern, mainVideoReady, mainVideoPosition, mainVideoScale])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(render)

@@ -3,9 +3,22 @@ import { MediaItem } from '../../types/project'
 import { ZoomIn, ZoomOut, Move, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { API_URL } from '../../config/api'
+import { isValidHexColor } from '../../utils/validation'
 
 const MIN_SCALE = 0.2
 const MAX_SCALE = 5.0
+
+// HEX to RGB 변환
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : { r: 0, g: 255, b: 0 }
+}
 
 interface UnifiedPreviewCanvasProps {
   items: MediaItem[]
@@ -41,6 +54,7 @@ export default function UnifiedPreviewCanvas({
   const videoRef = useRef<HTMLVideoElement>(null)
   const animationRef = useRef<number>()
   const checkerPatternRef = useRef<CanvasPattern | null>(null)
+  const chromaKeyTempCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
   // 드래그 상태를 ref로 관리 (리렌더링 방지)
   const dragStateRef = useRef({
@@ -280,7 +294,63 @@ export default function UnifiedPreviewCanvas({
 
       // 미디어 그리기
       try {
-        ctx.drawImage(element, mediaX, mediaY, mediaWidth, mediaHeight)
+        // 크로마키가 활성화된 비디오인 경우 크로마키 처리
+        if (item.type === 'video' && item.chromaKeyEnabled && element instanceof HTMLVideoElement) {
+          // 임시 캔버스 생성 또는 재사용
+          if (!chromaKeyTempCanvasRef.current) {
+            chromaKeyTempCanvasRef.current = document.createElement('canvas')
+          }
+          const tempCanvas = chromaKeyTempCanvasRef.current
+          const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
+
+          if (tempCtx) {
+            // 임시 캔버스 크기 설정
+            const srcWidth = element.videoWidth || 320
+            const srcHeight = element.videoHeight || 180
+            tempCanvas.width = srcWidth
+            tempCanvas.height = srcHeight
+
+            // 비디오를 임시 캔버스에 그리기
+            tempCtx.drawImage(element, 0, 0, srcWidth, srcHeight)
+
+            // 크로마키 처리
+            const keyColor = hexToRgb(isValidHexColor(item.chromaKeyColor) ? item.chromaKeyColor : '#00FF00')
+            const { similarity, smoothness } = item.chromaKeySettings
+
+            const imageData = tempCtx.getImageData(0, 0, srcWidth, srcHeight)
+            const data = imageData.data
+
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i]
+              const g = data[i + 1]
+              const b = data[i + 2]
+
+              // 색상 거리 계산 (정규화)
+              const distance =
+                Math.sqrt(
+                  Math.pow(r - keyColor.r, 2) +
+                  Math.pow(g - keyColor.g, 2) +
+                  Math.pow(b - keyColor.b, 2)
+                ) / Math.sqrt(3) / 255
+
+              // 알파 계산
+              if (distance < similarity) {
+                data[i + 3] = 0
+              } else if (distance < similarity + smoothness) {
+                const alpha = (distance - similarity) / smoothness
+                data[i + 3] = Math.round(alpha * 255)
+              }
+            }
+
+            tempCtx.putImageData(imageData, 0, 0)
+
+            // 처리된 이미지를 메인 캔버스에 그리기
+            ctx.drawImage(tempCanvas, mediaX, mediaY, mediaWidth, mediaHeight)
+          }
+        } else {
+          // 일반 미디어는 그대로 그리기
+          ctx.drawImage(element, mediaX, mediaY, mediaWidth, mediaHeight)
+        }
       } catch (err) {
         console.warn('Failed to draw media:', item.id, err)
       }

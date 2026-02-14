@@ -149,12 +149,11 @@ export default function UnifiedPreviewCanvas({
     }
 
     video.onloadeddata = () => {
-      console.log('Main video loaded:', video.readyState)
       video.play().catch(() => {})
       mainVideoRef.current = video
       setMainVideoReady(true)
     }
-    video.onerror = () => console.error('Main video load error')
+    video.onerror = () => {}
 
     return () => {
       if (mainVideoFile) {
@@ -177,8 +176,8 @@ export default function UnifiedPreviewCanvas({
         if (videoRef.current) {
           videoRef.current.srcObject = stream
         }
-      } catch (err) {
-        console.warn('Camera access failed:', err)
+      } catch {
+        // Camera access failed - preview will use checkerboard background
       }
     }
 
@@ -218,20 +217,18 @@ export default function UnifiedPreviewCanvas({
           video.playsInline = true
           video.preload = 'auto'
           video.onloadeddata = () => {
-            console.log('Video loaded (file):', item.id, video.readyState)
             video.play().catch(() => {})
             setMediaPreviewsMap((prev) => new Map(prev))
           }
-          video.onerror = () => console.error('Video load error (file):', item.id)
+          video.onerror = () => {}
           newPreviews.set(item.id, { id: item.id, element: video, objectUrl: url })
         } else {
           const img = new window.Image()
           img.src = url
           img.onload = () => {
-            console.log('Image loaded (file):', item.id, img.naturalWidth, img.naturalHeight)
             setMediaPreviewsMap((prev) => new Map(prev))
           }
-          img.onerror = () => console.error('Image load error (file):', item.id)
+          img.onerror = () => {}
           newPreviews.set(item.id, { id: item.id, element: img, objectUrl: url })
         }
       } else if (item.existingFileId) {
@@ -245,21 +242,19 @@ export default function UnifiedPreviewCanvas({
           video.preload = 'auto'
           video.crossOrigin = 'anonymous'
           video.onloadeddata = () => {
-            console.log('Video loaded (existing):', item.id, video.readyState)
             video.play().catch(() => {})
             setMediaPreviewsMap((prev) => new Map(prev))
           }
-          video.onerror = () => console.error('Video load error (existing):', item.id)
+          video.onerror = () => {}
           newPreviews.set(item.id, { id: item.id, element: video, objectUrl: null })
         } else {
           const img = new window.Image()
           img.src = url
           img.crossOrigin = 'anonymous'
           img.onload = () => {
-            console.log('Image loaded (existing):', item.id, img.naturalWidth, img.naturalHeight)
             setMediaPreviewsMap((prev) => new Map(prev))
           }
-          img.onerror = () => console.error('Image load error (existing):', item.id)
+          img.onerror = () => {}
           newPreviews.set(item.id, { id: item.id, element: img, objectUrl: null })
         }
       }
@@ -426,8 +421,8 @@ export default function UnifiedPreviewCanvas({
           // 일반 미디어는 그대로 그리기
           ctx.drawImage(element, mediaX, mediaY, mediaWidth, mediaHeight)
         }
-      } catch (err) {
-        console.warn('Failed to draw media:', item.id, err)
+      } catch {
+        // Media draw failed - element may not be ready yet
       }
 
       // 선택된 아이템 하이라이트

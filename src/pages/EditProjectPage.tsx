@@ -201,16 +201,13 @@ export default function EditProjectPage() {
 
     try {
       setIsDownloadingVideo(true)
-      console.log('[Edit] Downloading existing video for re-compression...')
       const res = await fetch(`${API_URL}/file/${project.videoFileId}`)
       if (!res.ok) throw new Error('Failed to download existing video')
       const blob = await res.blob()
       const file = new File([blob], 'existing-video.mp4', { type: blob.type || 'video/mp4' })
       setExistingVideoFile(file)
-      console.log(`[Edit] Downloaded existing video: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
       return file
-    } catch (err) {
-      console.error('[Edit] Failed to download existing video:', err)
+    } catch {
       return null
     } finally {
       setIsDownloadingVideo(false)
@@ -228,15 +225,8 @@ export default function EditProjectPage() {
       try {
         const { previewFile } = await compressVideo(videoFile, quality)
         setPreviewVideoFile(previewFile)
-        if (previewFile) {
-          console.log(
-            `[Compressor] Re-compressed new video with ${quality}: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB`
-          )
-        } else {
-          console.log('[Compressor] High quality mode - no compression')
-        }
-      } catch (err) {
-        console.warn('Re-compression failed:', err)
+      } catch {
+        // Re-compression failed - continue without preview
       } finally {
         setIsCompressing(false)
       }
@@ -251,7 +241,6 @@ export default function EditProjectPage() {
         // 기존 영상 다운로드
         const existingFile = await downloadExistingVideo()
         if (!existingFile) {
-          console.warn('[Edit] Could not download existing video for re-compression')
           return
         }
 
@@ -260,16 +249,8 @@ export default function EditProjectPage() {
         setPreviewVideoFile(previewFile)
         // 기존 영상을 videoFile로 설정 (업로드 시 사용)
         setVideoFile(existingFile)
-
-        if (previewFile) {
-          console.log(
-            `[Compressor] Re-compressed existing video with ${quality}: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB`
-          )
-        } else {
-          console.log('[Compressor] High quality mode - will re-upload original without preview')
-        }
-      } catch (err) {
-        console.warn('Re-compression of existing video failed:', err)
+      } catch {
+        // Re-compression of existing video failed - continue without preview
       } finally {
         setIsCompressing(false)
       }
@@ -309,15 +290,8 @@ export default function EditProjectPage() {
       try {
         const { previewFile } = await compressVideo(file, videoQuality)
         setPreviewVideoFile(previewFile)
-        if (previewFile) {
-          console.log(
-            `[Compressor] Preview: ${(previewFile.size / 1024 / 1024).toFixed(2)}MB, Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`
-          )
-        } else {
-          console.log('[Compressor] High quality mode - no compression')
-        }
-      } catch (err) {
-        console.warn('Preview compression failed, will upload without preview:', err)
+      } catch {
+        // Preview compression failed - will upload without preview
       } finally {
         setIsCompressing(false)
       }
@@ -543,7 +517,6 @@ export default function EditProjectPage() {
 
       navigate(`/result/qr/${res.folderId}`)
     } catch (err) {
-      console.error(err)
       const errorMessage =
         err instanceof Error
           ? err.message

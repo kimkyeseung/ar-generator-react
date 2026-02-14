@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Video, Image as ImageIcon, GripVertical, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { MediaItem, MediaType, createDefaultMediaItem } from '../../types/project'
@@ -21,6 +22,7 @@ export default function MediaItemList({
   onItemSelect,
   selectedItemId,
 }: MediaItemListProps) {
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null)
   const handleAddItem = (type: MediaType) => {
     const newItem = createDefaultMediaItem(
       generateMediaItemId(),
@@ -66,8 +68,17 @@ export default function MediaItemList({
   }
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
+    // 손잡이에서 시작한 드래그만 허용
+    if (draggingItemId !== id) {
+      e.preventDefault()
+      return
+    }
     e.dataTransfer.setData('text/plain', id)
     e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragEnd = () => {
+    setDraggingItemId(null)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -91,6 +102,7 @@ export default function MediaItemList({
     onItemsChange(
       newItems.map((item, index) => ({ ...item, order: index }))
     )
+    setDraggingItemId(null)
   }
 
   return (
@@ -137,8 +149,9 @@ export default function MediaItemList({
           .map((item, index) => (
             <div
               key={item.id}
-              draggable={!disabled}
+              draggable={!disabled && draggingItemId === item.id}
               onDragStart={(e) => handleDragStart(e, item.id)}
+              onDragEnd={handleDragEnd}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, item.id)}
               className={`border rounded-lg transition-colors ${
@@ -151,10 +164,16 @@ export default function MediaItemList({
                 className="flex items-center gap-2 px-3 py-2 cursor-pointer"
                 onClick={() => onItemSelect?.(item.id)}
               >
-                <GripVertical
-                  size={16}
-                  className="text-gray-400 cursor-grab flex-shrink-0"
-                />
+                <div
+                  onMouseDown={() => !disabled && setDraggingItemId(item.id)}
+                  onTouchStart={() => !disabled && setDraggingItemId(item.id)}
+                  className="flex-shrink-0"
+                >
+                  <GripVertical
+                    size={16}
+                    className="text-gray-400 cursor-grab"
+                  />
+                </div>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   {item.type === 'video' ? (
                     <Video size={16} className="text-purple-500 flex-shrink-0" />

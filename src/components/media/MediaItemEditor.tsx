@@ -361,7 +361,12 @@ export default function MediaItemEditor({
               )}
               {/* 크로마키 세부 설정 (접기/펼치기) */}
               {chromaKeyOptionsExpanded && (
-                <div className="space-y-2 pt-2 border-t border-gray-100">
+                <div
+                  className="space-y-2 pt-2 border-t border-gray-100"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
                   <div>
                     <label className="text-xs text-gray-500">
                       색상 범위: {item.chromaKeySettings.similarity.toFixed(2)}

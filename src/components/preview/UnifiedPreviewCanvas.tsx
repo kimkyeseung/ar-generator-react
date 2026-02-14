@@ -74,11 +74,9 @@ export default function UnifiedPreviewCanvas({
     )
   }, [items])
 
-  // 체커보드 패턴 생성 (한 번만)
-  useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (!ctx) return
+  // 체커보드 패턴 생성 함수
+  const getCheckerPattern = useCallback((ctx: CanvasRenderingContext2D) => {
+    if (checkerPatternRef.current) return checkerPatternRef.current
 
     // 체커보드 패턴용 작은 캔버스 생성
     const patternCanvas = document.createElement('canvas')
@@ -86,7 +84,7 @@ export default function UnifiedPreviewCanvas({
     patternCanvas.width = patternSize
     patternCanvas.height = patternSize
     const patternCtx = patternCanvas.getContext('2d')
-    if (!patternCtx) return
+    if (!patternCtx) return null
 
     // 체커보드 패턴 그리기
     patternCtx.fillStyle = '#CCCCCC'
@@ -98,6 +96,7 @@ export default function UnifiedPreviewCanvas({
 
     // 패턴 생성 및 캐싱
     checkerPatternRef.current = ctx.createPattern(patternCanvas, 'repeat')
+    return checkerPatternRef.current
   }, [])
 
   // 카메라 스트림 초기화
@@ -152,16 +151,22 @@ export default function UnifiedPreviewCanvas({
           video.muted = true
           video.loop = true
           video.playsInline = true
-          video.preload = 'metadata'
+          video.preload = 'auto'
           video.onloadeddata = () => {
+            console.log('Video loaded (file):', item.id, video.readyState)
             video.play().catch(() => {})
             setMediaPreviewsMap((prev) => new Map(prev))
           }
+          video.onerror = () => console.error('Video load error (file):', item.id)
           newPreviews.set(item.id, { id: item.id, element: video, objectUrl: url })
         } else {
           const img = new window.Image()
           img.src = url
-          img.onload = () => setMediaPreviewsMap((prev) => new Map(prev))
+          img.onload = () => {
+            console.log('Image loaded (file):', item.id, img.naturalWidth, img.naturalHeight)
+            setMediaPreviewsMap((prev) => new Map(prev))
+          }
+          img.onerror = () => console.error('Image load error (file):', item.id)
           newPreviews.set(item.id, { id: item.id, element: img, objectUrl: url })
         }
       } else if (item.existingFileId) {
@@ -172,18 +177,24 @@ export default function UnifiedPreviewCanvas({
           video.muted = true
           video.loop = true
           video.playsInline = true
-          video.preload = 'metadata'
+          video.preload = 'auto'
           video.crossOrigin = 'anonymous'
           video.onloadeddata = () => {
+            console.log('Video loaded (existing):', item.id, video.readyState)
             video.play().catch(() => {})
             setMediaPreviewsMap((prev) => new Map(prev))
           }
+          video.onerror = () => console.error('Video load error (existing):', item.id)
           newPreviews.set(item.id, { id: item.id, element: video, objectUrl: null })
         } else {
           const img = new window.Image()
           img.src = url
           img.crossOrigin = 'anonymous'
-          img.onload = () => setMediaPreviewsMap((prev) => new Map(prev))
+          img.onload = () => {
+            console.log('Image loaded (existing):', item.id, img.naturalWidth, img.naturalHeight)
+            setMediaPreviewsMap((prev) => new Map(prev))
+          }
+          img.onerror = () => console.error('Image load error (existing):', item.id)
           newPreviews.set(item.id, { id: item.id, element: img, objectUrl: null })
         }
       }
@@ -226,10 +237,13 @@ export default function UnifiedPreviewCanvas({
     // 카메라 배경 또는 체커보드 배경
     if (showCamera && videoRef.current && videoRef.current.readyState >= 2) {
       ctx.drawImage(videoRef.current, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-    } else if (checkerPatternRef.current) {
-      // 캐싱된 체커보드 패턴 사용
-      ctx.fillStyle = checkerPatternRef.current
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+    } else {
+      // 체커보드 패턴 배경
+      const pattern = getCheckerPattern(ctx)
+      if (pattern) {
+        ctx.fillStyle = pattern
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+      }
     }
 
     // 미디어 아이템 렌더링 (순서대로)
@@ -241,13 +255,13 @@ export default function UnifiedPreviewCanvas({
 
       const element = preview.element
 
-      // 비디오인 경우 로드 상태 확인
-      if (element instanceof HTMLVideoElement && element.readyState < 2) {
+      // 비디오인 경우 로드 상태 확인 (readyState >= 1이면 첫 프레임 그리기 가능)
+      if (element instanceof HTMLVideoElement && element.readyState < 1) {
         return // 아직 로드되지 않음
       }
 
-      // 이미지인 경우 로드 상태 확인
-      if (element instanceof HTMLImageElement && !element.complete) {
+      // 이미지인 경우 로드 상태 확인 (naturalWidth > 0이면 로드 완료)
+      if (element instanceof HTMLImageElement && element.naturalWidth === 0) {
         return // 아직 로드되지 않음
       }
 
@@ -264,19 +278,23 @@ export default function UnifiedPreviewCanvas({
       const mediaX = position.x * CANVAS_WIDTH - mediaWidth / 2
       const mediaY = position.y * CANVAS_HEIGHT - mediaHeight / 2
 
+      // 미디어 그리기
+      try {
+        ctx.drawImage(element, mediaX, mediaY, mediaWidth, mediaHeight)
+      } catch (err) {
+        console.warn('Failed to draw media:', item.id, err)
+      }
+
       // 선택된 아이템 하이라이트
       if (isSelected) {
         ctx.strokeStyle = '#8B5CF6'
         ctx.lineWidth = 2
         ctx.strokeRect(mediaX - 2, mediaY - 2, mediaWidth + 4, mediaHeight + 4)
       }
-
-      // 미디어 그리기
-      ctx.drawImage(element, mediaX, mediaY, mediaWidth, mediaHeight)
     })
 
     animationRef.current = requestAnimationFrame(render)
-  }, [items, mediaPreviewsMap, selectedItemId, showCamera, zoom, localOverride])
+  }, [items, mediaPreviewsMap, selectedItemId, showCamera, zoom, localOverride, getCheckerPattern])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(render)

@@ -40,6 +40,7 @@ export default function UnifiedPreviewCanvas({
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const animationRef = useRef<number>()
+  const checkerPatternRef = useRef<CanvasPattern | null>(null)
 
   // 드래그 상태를 ref로 관리 (리렌더링 방지)
   const dragStateRef = useRef({
@@ -72,6 +73,32 @@ export default function UnifiedPreviewCanvas({
       item => item.type === 'video' && item.mode === 'tracking' && item.chromaKeyEnabled
     )
   }, [items])
+
+  // 체커보드 패턴 생성 (한 번만)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!ctx) return
+
+    // 체커보드 패턴용 작은 캔버스 생성
+    const patternCanvas = document.createElement('canvas')
+    const patternSize = 20 // 10px * 2
+    patternCanvas.width = patternSize
+    patternCanvas.height = patternSize
+    const patternCtx = patternCanvas.getContext('2d')
+    if (!patternCtx) return
+
+    // 체커보드 패턴 그리기
+    patternCtx.fillStyle = '#CCCCCC'
+    patternCtx.fillRect(0, 0, 10, 10)
+    patternCtx.fillRect(10, 10, 10, 10)
+    patternCtx.fillStyle = '#999999'
+    patternCtx.fillRect(10, 0, 10, 10)
+    patternCtx.fillRect(0, 10, 10, 10)
+
+    // 패턴 생성 및 캐싱
+    checkerPatternRef.current = ctx.createPattern(patternCanvas, 'repeat')
+  }, [])
 
   // 카메라 스트림 초기화
   useEffect(() => {
@@ -196,12 +223,12 @@ export default function UnifiedPreviewCanvas({
     ctx.fillStyle = '#1a1a2e'
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
 
-    // 카메라 배경 또는 그린 스크린 배경
+    // 카메라 배경 또는 체커보드 배경
     if (showCamera && videoRef.current && videoRef.current.readyState >= 2) {
       ctx.drawImage(videoRef.current, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-    } else {
-      // 그린 스크린 배경 (크로마키 테스트용)
-      ctx.fillStyle = '#00FF00'
+    } else if (checkerPatternRef.current) {
+      // 캐싱된 체커보드 패턴 사용
+      ctx.fillStyle = checkerPatternRef.current
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     }
 
@@ -212,12 +239,17 @@ export default function UnifiedPreviewCanvas({
       const preview = mediaPreviewsMap.get(item.id)
       if (!preview?.element) return
 
-      // 트래킹 모드에서 크로마키가 꺼져있으면 표시하지 않음
-      if (item.mode === 'tracking' && item.type === 'video' && !item.chromaKeyEnabled) {
-        return
+      const element = preview.element
+
+      // 비디오인 경우 로드 상태 확인
+      if (element instanceof HTMLVideoElement && element.readyState < 2) {
+        return // 아직 로드되지 않음
       }
 
-      const element = preview.element
+      // 이미지인 경우 로드 상태 확인
+      if (element instanceof HTMLImageElement && !element.complete) {
+        return // 아직 로드되지 않음
+      }
 
       // 드래그 중인 선택된 아이템은 로컬 오버라이드 값 사용
       const isSelected = selectedItemId === item.id

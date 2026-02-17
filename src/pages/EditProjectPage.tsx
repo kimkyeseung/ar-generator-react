@@ -204,7 +204,9 @@ export default function EditProjectPage() {
       const res = await fetch(`${API_URL}/file/${project.videoFileId}`)
       if (!res.ok) throw new Error('Failed to download existing video')
       const blob = await res.blob()
-      const file = new File([blob], 'existing-video.mp4', { type: blob.type || 'video/mp4' })
+      // 서버에서 application/octet-stream으로 반환될 수 있으므로 video/mp4로 강제 설정
+      const mimeType = blob.type && blob.type !== 'application/octet-stream' ? blob.type : 'video/mp4'
+      const file = new File([blob], 'existing-video.mp4', { type: mimeType })
       setExistingVideoFile(file)
       return file
     } catch {

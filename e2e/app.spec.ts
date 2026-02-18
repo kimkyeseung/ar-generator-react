@@ -500,6 +500,193 @@ test.describe('Edit Project Page - Video Quality Change', () => {
   })
 })
 
+test.describe('Guide Image Upload', () => {
+  test('should show guide image upload section on create page', async ({ page }) => {
+    await page.goto('/create')
+
+    // 안내문구 이미지 업로드 섹션이 보여야 함
+    await expect(page.getByText('안내문구 이미지 (선택)')).toBeVisible()
+
+    // 권장 크기 안내 텍스트가 보여야 함
+    await expect(page.getByText(/권장.*1080.*1920/)).toBeVisible()
+  })
+
+  test('should have guide image upload button', async ({ page }) => {
+    await page.goto('/create')
+
+    // 안내문구 이미지 업로드 버튼이 있어야 함
+    await expect(page.getByText('클릭하여 안내문구 이미지 업로드')).toBeVisible()
+  })
+
+  test('should have hidden file input for guide image', async ({ page }) => {
+    await page.goto('/create')
+
+    // 안내문구 이미지 업로드용 숨겨진 input이 있어야 함
+    // GuideImageUpload 컴포넌트의 input (accept="image/*", hidden)
+    const guideImageInputs = page.locator('input[type="file"][accept="image/*"]')
+
+    // 여러 이미지 업로드 input 중 하나가 존재해야 함
+    await expect(guideImageInputs.first()).toBeAttached()
+  })
+
+  test('should show guide image section in both AR and basic mode', async ({ page }) => {
+    await page.goto('/create')
+
+    // AR 모드에서 안내문구 이미지 섹션 확인
+    await expect(page.getByText('안내문구 이미지 (선택)')).toBeVisible()
+
+    // 기본 모드로 전환
+    await page.getByRole('button', { name: /기본 모드 선택/i }).click()
+
+    // 기본 모드에서도 안내문구 이미지 섹션이 보여야 함
+    await expect(page.getByText('안내문구 이미지 (선택)')).toBeVisible()
+  })
+
+  test('should show tooltip with guide image description', async ({ page }) => {
+    await page.goto('/create')
+
+    // 안내문구 이미지 섹션의 정보 아이콘에 마우스 호버
+    const infoIcon = page.locator('label:has-text("안내문구 이미지")').locator('..').locator('svg')
+
+    if (await infoIcon.count() > 0) {
+      await infoIcon.first().hover()
+
+      // 툴팁에 설명이 표시되어야 함
+      await expect(page.getByText('AR 뷰어 진입 시 표시되는 안내문구 이미지입니다.')).toBeVisible()
+    }
+  })
+})
+
+test.describe('Guide Image Fullscreen Display', () => {
+  // Note: 이 테스트들은 실제 AR 뷰어 페이지 접근이 필요합니다.
+  // 프로젝트 데이터가 있어야 완전히 동작합니다.
+
+  test('should have correct fullscreen styles for guide image in MindarViewer', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    // AR 모드 프로젝트 찾기
+    const arBadges = page.locator('span', { hasText: '🎯 AR' })
+    const arCount = await arBadges.count()
+
+    if (arCount > 0) {
+      // 첫 번째 AR 프로젝트의 보기 버튼 클릭
+      const firstArBadge = arBadges.first()
+      const card = firstArBadge.locator('xpath=ancestor::div[contains(@class, "rounded")]').last()
+      const viewButton = card.locator('a, button').filter({ hasText: /보기|View/ })
+
+      if (await viewButton.count() > 0) {
+        // 새 탭에서 열리므로 Promise.all 사용
+        const [newPage] = await Promise.all([
+          page.context().waitForEvent('page'),
+          viewButton.first().click(),
+        ])
+
+        await newPage.waitForLoadState('domcontentloaded')
+
+        // 안내문구 이미지가 있다면 스타일 확인
+        const guideImage = newPage.locator('img[alt="안내문구"]')
+
+        if (await guideImage.count() > 0) {
+          // w-full h-full object-contain 클래스가 적용되어 있는지 확인
+          await expect(guideImage).toHaveClass(/w-full/)
+          await expect(guideImage).toHaveClass(/h-full/)
+          await expect(guideImage).toHaveClass(/object-contain/)
+        }
+
+        await newPage.close()
+      } else {
+        test.skip()
+      }
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should have correct fullscreen styles for guide image in BasicModeViewer', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    // 기본 모드 프로젝트 찾기
+    const basicBadges = page.locator('span', { hasText: '📹 기본' })
+    const basicCount = await basicBadges.count()
+
+    if (basicCount > 0) {
+      // 첫 번째 기본 모드 프로젝트의 보기 버튼 클릭
+      const firstBasicBadge = basicBadges.first()
+      const card = firstBasicBadge.locator('xpath=ancestor::div[contains(@class, "rounded")]').last()
+      const viewButton = card.locator('a, button').filter({ hasText: /보기|View/ })
+
+      if (await viewButton.count() > 0) {
+        const [newPage] = await Promise.all([
+          page.context().waitForEvent('page'),
+          viewButton.first().click(),
+        ])
+
+        await newPage.waitForLoadState('domcontentloaded')
+
+        // 안내문구 이미지가 있다면 스타일 확인
+        const guideImage = newPage.locator('img[alt="안내문구"]')
+
+        if (await guideImage.count() > 0) {
+          // w-full h-full object-contain 클래스가 적용되어 있는지 확인
+          await expect(guideImage).toHaveClass(/w-full/)
+          await expect(guideImage).toHaveClass(/h-full/)
+          await expect(guideImage).toHaveClass(/object-contain/)
+        }
+
+        await newPage.close()
+      } else {
+        test.skip()
+      }
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should display guide image container as fixed fullscreen', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    // AR 모드 프로젝트 찾기
+    const arBadges = page.locator('span', { hasText: '🎯 AR' })
+    const arCount = await arBadges.count()
+
+    if (arCount > 0) {
+      const firstArBadge = arBadges.first()
+      const card = firstArBadge.locator('xpath=ancestor::div[contains(@class, "rounded")]').last()
+      const viewButton = card.locator('a, button').filter({ hasText: /보기|View/ })
+
+      if (await viewButton.count() > 0) {
+        const [newPage] = await Promise.all([
+          page.context().waitForEvent('page'),
+          viewButton.first().click(),
+        ])
+
+        await newPage.waitForLoadState('domcontentloaded')
+
+        // 안내문구 이미지 컨테이너가 fixed inset-0로 설정되어 있는지 확인
+        const guideImageContainer = newPage.locator('div:has(> img[alt="안내문구"])').first()
+
+        if (await guideImageContainer.count() > 0) {
+          // fixed와 inset-0 클래스가 적용되어 있는지 확인
+          await expect(guideImageContainer).toHaveClass(/fixed/)
+          await expect(guideImageContainer).toHaveClass(/inset-0/)
+        }
+
+        await newPage.close()
+      } else {
+        test.skip()
+      }
+    } else {
+      test.skip()
+    }
+  })
+})
+
 test.describe('Edit Project Page - Mode Change', () => {
   // Note: These tests require a project to exist in the database
   // They verify the mode change functionality in the edit page

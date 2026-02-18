@@ -622,13 +622,11 @@ const MindARViewer: React.FC<Props> = ({
       {/* 안내문구 이미지 (타겟 인식 전까지 표시) */}
       {guideImageUrl && !isTargetFound && !isLoading && (
         <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
-          <div className="max-w-[80%] max-h-[70%] p-4 animate-pulse">
-            <img
-              src={guideImageUrl}
-              alt="안내문구"
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-            />
-          </div>
+          <img
+            src={guideImageUrl}
+            alt="안내문구"
+            className="w-full h-full object-contain animate-pulse"
+          />
         </div>
       )}
 

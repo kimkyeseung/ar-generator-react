@@ -440,14 +440,12 @@ const BasicModeViewer: React.FC<Props> = ({
 
         {/* 안내문구 이미지 (영상 재생 전까지 표시) */}
         {guideImageUrl && !isVideoPlaying && !isLoading && !cameraError && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="max-w-[80%] max-h-[70%] p-4">
-              <img
-                src={guideImageUrl}
-                alt="안내문구"
-                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              />
-            </div>
+          <div className="absolute inset-0 z-20 flex items-center justify-center">
+            <img
+              src={guideImageUrl}
+              alt="안내문구"
+              className="w-full h-full object-contain"
+            />
           </div>
         )}
 

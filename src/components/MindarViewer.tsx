@@ -649,7 +649,7 @@ const MindARViewer: React.FC<Props> = ({
           <img
             src={guideImageUrl}
             alt="안내문구"
-            className="w-full h-full object-contain animate-pulse"
+            className="w-full h-full object-cover animate-pulse"
           />
         </div>
       )}

@@ -477,7 +477,7 @@ const BasicModeViewer: React.FC<Props> = ({
             <img
               src={guideImageUrl}
               alt="안내문구"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
             />
           </div>
         )}

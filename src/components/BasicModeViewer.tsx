@@ -42,7 +42,7 @@ const BasicModeViewer: React.FC<Props> = ({
 
   const [isMuted, setIsMuted] = useState(true) // 항상 음소거로 시작 (자동 재생 지원)
   const [isLoading, setIsLoading] = useState(true)
-  const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [actualCameraResolution, setActualCameraResolution] = useState<string | null>(null)
   const [isVideoPlaying, setIsVideoPlaying] = useState(false) // 영상 재생 중 여부 (안내문구 숨김용)
@@ -53,8 +53,8 @@ const BasicModeViewer: React.FC<Props> = ({
 
   // props 변경 시 상태 리셋
   useEffect(() => {
-    setCurrentVideoUrl(previewVideoUrl || videoUrl)
-  }, [videoUrl, previewVideoUrl])
+    setCurrentVideoUrl(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
+  }, [videoUrl])
 
   // 디버그 모드: 비디오 파일 크기 가져오기
   useEffect(() => {

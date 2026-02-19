@@ -201,7 +201,7 @@ const MindARViewer: React.FC<Props> = ({
   const [isMuted, setIsMuted] = useState(isIOS())
   const [isLoading, setIsLoading] = useState(true)
   // 현재 재생 중인 비디오 URL (프리뷰 → 원본 전환)
-  const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
   const [isTargetFound, setIsTargetFound] = useState(false) // 타겟 인식 여부 (안내문구 숨김용)
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
@@ -209,9 +209,9 @@ const MindARViewer: React.FC<Props> = ({
 
   // props 변경 시 상태 리셋 (영상 교체 시)
   useEffect(() => {
-    setCurrentVideoUrl(previewVideoUrl || videoUrl)
-    setIsHDReady(!previewVideoUrl)
-  }, [videoUrl, previewVideoUrl])
+    setCurrentVideoUrl(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
+    setIsHDReady(true)
+  }, [videoUrl])
 
   // 디버그 모드: 비디오 파일 크기 가져오기
   useEffect(() => {

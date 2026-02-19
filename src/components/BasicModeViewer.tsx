@@ -425,13 +425,11 @@ const BasicModeViewer: React.FC<Props> = ({
           }`}>
             🎬 {videoQuality === 'high' ? '고화질' : videoQuality === 'medium' ? '중화질' : '저화질'}
           </span>
-          {previewVideoUrl && (
-            <span className={`px-2 py-0.5 rounded ${
-              currentVideoUrl === videoUrl ? 'bg-green-500' : 'bg-yellow-500'
-            }`}>
-              {currentVideoUrl === videoUrl ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
-            </span>
-          )}
+          <span className={`px-2 py-0.5 rounded ${
+            !previewVideoUrl || currentVideoUrl === videoUrl ? 'bg-green-500' : 'bg-yellow-500'
+          }`}>
+            {!previewVideoUrl || currentVideoUrl === videoUrl ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
+          </span>
           {videoResolution && (
             <span className="px-2 py-0.5 rounded bg-indigo-500">
               🖥️ {videoResolution}

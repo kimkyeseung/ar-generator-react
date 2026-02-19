@@ -774,11 +774,9 @@ const MindARViewer: React.FC<Props> = ({
                 }`}>
                   🎬 {videoQuality === 'high' ? '고화질' : videoQuality === 'medium' ? '중화질' : '저화질'}
                 </span>
-                {previewVideoUrl && (
-                  <span className={`text-xs px-2 py-0.5 rounded ${isHDReady ? 'bg-green-500' : 'bg-yellow-500'}`}>
-                    {isHDReady ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
-                  </span>
-                )}
+                <span className={`text-xs px-2 py-0.5 rounded ${!previewVideoUrl || isHDReady ? 'bg-green-500' : 'bg-yellow-500'}`}>
+                  {!previewVideoUrl || isHDReady ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
+                </span>
                 {videoResolution && (
                   <span className="text-xs px-2 py-0.5 rounded bg-indigo-500">
                     🖥️ {videoResolution}

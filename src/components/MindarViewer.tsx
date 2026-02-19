@@ -204,12 +204,33 @@ const MindARViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(previewVideoUrl || videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
   const [isTargetFound, setIsTargetFound] = useState(false) // 타겟 인식 여부 (안내문구 숨김용)
+  const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
+  const [videoResolution, setVideoResolution] = useState<string | null>(null) // 비디오 해상도
 
   // props 변경 시 상태 리셋 (영상 교체 시)
   useEffect(() => {
     setCurrentVideoUrl(previewVideoUrl || videoUrl)
     setIsHDReady(!previewVideoUrl)
   }, [videoUrl, previewVideoUrl])
+
+  // 디버그 모드: 비디오 파일 크기 가져오기
+  useEffect(() => {
+    if (!debugMode) return
+
+    const fetchVideoSize = async (url: string) => {
+      try {
+        const response = await fetch(url, { method: 'HEAD' })
+        const contentLength = response.headers.get('Content-Length')
+        if (contentLength) {
+          setVideoFileSize(parseInt(contentLength, 10))
+        }
+      } catch (e) {
+        console.warn('[MindAR] Failed to fetch video size:', e)
+      }
+    }
+
+    fetchVideoSize(currentVideoUrl)
+  }, [debugMode, currentVideoUrl])
 
   // 디버그 모드: 필터 설정 (반응성 개선: minCF=0.05, beta=1500)
   // 기존 MindAR 기본값(0.001, 1000)은 부드럽지만 지연이 큼
@@ -404,7 +425,10 @@ const MindARViewer: React.FC<Props> = ({
         video.currentTime = 0
         // 현재 mute 상태 유지하며 재생
         await video.play()
-        console.log('[MindAR] Video playing')
+        // 비디오 해상도 로깅 및 저장 (디버깅용)
+        const resolution = `${video.videoWidth}x${video.videoHeight}`
+        setVideoResolution(resolution)
+        console.log(`[MindAR] Video playing - Resolution: ${resolution}, ReadyState: ${video.readyState}`)
       } catch (e) {
         console.warn('[MindAR] targetFound -> play() error', e)
         video.play().catch(() => {})
@@ -755,6 +779,16 @@ const MindARViewer: React.FC<Props> = ({
                     {isHDReady ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
                   </span>
                 )}
+                {videoResolution && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-indigo-500">
+                    🖥️ {videoResolution}
+                  </span>
+                )}
+                {videoFileSize && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-teal-500">
+                    💾 {(videoFileSize / 1024 / 1024).toFixed(1)}MB
+                  </span>
+                )}
               </div>
             </div>
 
@@ -825,7 +859,7 @@ const MindARViewer: React.FC<Props> = ({
         assettimeout='15000'
         color-space='sRGB'
         embedded
-        renderer='colorManagement: true, physicallyCorrectLights'
+        renderer='antialias: true; colorManagement: true; physicallyCorrectLights: true'
         vr-mode-ui='enabled: false'
         device-orientation-permission-ui='enabled: false'
       >

@@ -48,11 +48,32 @@ const BasicModeViewer: React.FC<Props> = ({
   const [isVideoPlaying, setIsVideoPlaying] = useState(false) // 영상 재생 중 여부 (안내문구 숨김용)
 
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // 영상 비율 (width/height)
+  const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
+  const [videoResolution, setVideoResolution] = useState<string | null>(null) // 비디오 해상도
 
   // props 변경 시 상태 리셋
   useEffect(() => {
     setCurrentVideoUrl(previewVideoUrl || videoUrl)
   }, [videoUrl, previewVideoUrl])
+
+  // 디버그 모드: 비디오 파일 크기 가져오기
+  useEffect(() => {
+    if (!debugMode) return
+
+    const fetchVideoSize = async (url: string) => {
+      try {
+        const response = await fetch(url, { method: 'HEAD' })
+        const contentLength = response.headers.get('Content-Length')
+        if (contentLength) {
+          setVideoFileSize(parseInt(contentLength, 10))
+        }
+      } catch (e) {
+        console.warn('[BasicMode] Failed to fetch video size:', e)
+      }
+    }
+
+    fetchVideoSize(currentVideoUrl)
+  }, [debugMode, currentVideoUrl])
 
   // 카메라 시작
   useEffect(() => {
@@ -332,8 +353,10 @@ const BasicModeViewer: React.FC<Props> = ({
     const handleLoadedMetadata = () => {
       if (video.videoWidth && video.videoHeight) {
         const ratio = video.videoWidth / video.videoHeight
+        const resolution = `${video.videoWidth}x${video.videoHeight}`
         setVideoAspectRatio(ratio)
-        console.log(`[BasicMode] Video aspect ratio: ${ratio.toFixed(2)} (${video.videoWidth}x${video.videoHeight})`)
+        setVideoResolution(resolution)
+        console.log(`[BasicMode] Video aspect ratio: ${ratio.toFixed(2)} (${resolution})`)
       }
     }
 
@@ -407,6 +430,16 @@ const BasicModeViewer: React.FC<Props> = ({
               currentVideoUrl === videoUrl ? 'bg-green-500' : 'bg-yellow-500'
             }`}>
               {currentVideoUrl === videoUrl ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
+            </span>
+          )}
+          {videoResolution && (
+            <span className="px-2 py-0.5 rounded bg-indigo-500">
+              🖥️ {videoResolution}
+            </span>
+          )}
+          {videoFileSize && (
+            <span className="px-2 py-0.5 rounded bg-teal-500">
+              💾 {(videoFileSize / 1024 / 1024).toFixed(1)}MB
             </span>
           )}
         </div>

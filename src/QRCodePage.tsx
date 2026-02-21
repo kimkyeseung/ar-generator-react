@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Download } from "lucide-react";
 import QRCode from "qrcode";
 import { useNavigate, useParams } from "react-router-dom";
@@ -9,7 +9,12 @@ export function QRCodePage() {
   const { folderId } = useParams<{ folderId: string }>();
   const navigate = useNavigate();
 
-  const fullUrl = `${window.location.origin}/result/${folderId}`;
+  // 디버그 모드 상태
+  const [isDebugMode, setIsDebugMode] = useState(false);
+
+  // QR 코드에 사용될 URL (디버그 모드일 때 쿼리 추가)
+  const baseUrl = `${window.location.origin}/result/${folderId}`;
+  const fullUrl = isDebugMode ? `${baseUrl}?mode=debug` : baseUrl;
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -28,14 +33,26 @@ export function QRCodePage() {
     if (canvasRef.current) {
       const url = canvasRef.current.toDataURL("image/png");
       const link = document.createElement("a");
-      link.download = "ar-qrcode.png";
+      link.download = isDebugMode ? "ar-qrcode-debug.png" : "ar-qrcode.png";
       link.href = url;
       link.click();
     }
   };
 
+  // 디버그 모드 토글
+  const handleDebugClick = () => {
+    setIsDebugMode(prev => !prev);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      {/* 숨겨진 디버그 버튼 (좌측 하단, 모바일에서 숨김) */}
+      <button
+        type="button"
+        onClick={handleDebugClick}
+        className="fixed bottom-0 left-0 w-[50px] h-[50px] cursor-pointer opacity-0 hidden md:block"
+        aria-label="Debug mode"
+      />
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
         <Button
           variant="ghost"
@@ -60,7 +77,7 @@ export function QRCodePage() {
 
           <Button
             onClick={() => {
-              navigate(`/result/${folderId}`);
+              navigate(`/result/${folderId}${isDebugMode ? '?mode=debug' : ''}`);
             }}
             className="w-full"
           >

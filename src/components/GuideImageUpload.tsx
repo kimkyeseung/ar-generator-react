@@ -105,7 +105,7 @@ export default function GuideImageUpload({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <label className="block text-sm font-medium text-gray-700">
-          안내문구 이미지 (선택)
+          영상 뜨기 전까지 안내문구 이미지 업로드 (선택)
         </label>
         <div className="relative group">
           <Info size={14} className="text-gray-400" />

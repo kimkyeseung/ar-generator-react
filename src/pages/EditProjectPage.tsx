@@ -365,50 +365,57 @@ export default function EditProjectPage() {
       status={workflowStatus}
     >
       {/* 기본 정보 */}
-      <CollapsibleSection title="기본 정보" defaultOpen={true}>
-        <div className='space-y-4'>
-          {/* 프로젝트 제목 */}
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              프로젝트 제목
-            </label>
-            <input
-              type='text'
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder='프로젝트 제목을 입력하세요'
-              className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-            />
-          </div>
-
-          {/* 썸네일 이미지 업로드 */}
-          <ThumbnailUpload
-            file={thumbnailFile}
-            existingThumbnailUrl={project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined}
-            onFileSelect={setThumbnailFile}
-            disabled={isUploading || isCompiling}
-          />
-
-          {/* 모드 선택 */}
-          <ModeSelector
-            mode={mode}
-            onModeChange={handleModeChange}
-            disabled={isUploading || isCompiling}
-          />
-          {mode === 'ar' && project.mode === 'basic' && (
-            <p className='text-xs text-amber-600'>
-              AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
-            </p>
-          )}
-
-          {/* 카메라 해상도 선택 */}
-          <CameraResolutionSelector
-            resolution={cameraResolution}
-            onResolutionChange={setCameraResolution}
-            disabled={isUploading || isCompiling}
+      <div className='space-y-4'>
+        {/* 프로젝트 제목 */}
+        <div>
+          <label className='block text-sm font-medium text-gray-700 mb-2'>
+            프로젝트 제목
+          </label>
+          <input
+            type='text'
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder='프로젝트 제목을 입력하세요'
+            className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
           />
         </div>
-      </CollapsibleSection>
+
+        {/* 썸네일 이미지 업로드 */}
+        <ThumbnailUpload
+          file={thumbnailFile}
+          existingThumbnailUrl={project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined}
+          onFileSelect={setThumbnailFile}
+          disabled={isUploading || isCompiling}
+        />
+
+        {/* 모드 선택 */}
+        <ModeSelector
+          mode={mode}
+          onModeChange={handleModeChange}
+          disabled={isUploading || isCompiling}
+        />
+        {mode === 'ar' && project.mode === 'basic' && (
+          <p className='text-xs text-amber-600'>
+            AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
+          </p>
+        )}
+
+        {/* 안내문구 이미지 */}
+        <GuideImageUpload
+          file={guideImageFile}
+          existingImageUrl={project.guideImageFileId ? `${API_URL}/file/${project.guideImageFileId}` : undefined}
+          onFileSelect={setGuideImageFile}
+          disabled={isUploading || isCompiling}
+        />
+
+
+        {/* 카메라 해상도 선택 */}
+        <CameraResolutionSelector
+          resolution={cameraResolution}
+          onResolutionChange={setCameraResolution}
+          disabled={isUploading || isCompiling}
+        />
+      </div>
 
       {/* 현재 에셋 미리보기 (AR 모드에서 타겟 이미지만 표시) */}
       {mode === 'ar' && project.targetImageFileId && targetImageFiles.length === 0 && (
@@ -476,14 +483,6 @@ export default function EditProjectPage() {
       {/* 추가 옵션 */}
       <CollapsibleSection title="추가 옵션" defaultOpen={false} className="mt-4">
         <div className='space-y-4'>
-          {/* 안내문구 이미지 */}
-          <GuideImageUpload
-            file={guideImageFile}
-            existingImageUrl={project.guideImageFileId ? `${API_URL}/file/${project.guideImageFileId}` : undefined}
-            onFileSelect={setGuideImageFile}
-            disabled={isUploading || isCompiling}
-          />
-
           {/* 오버레이 이미지 편집 */}
           <OverlayImageUpload
             file={overlayImageFile}

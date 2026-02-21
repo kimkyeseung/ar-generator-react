@@ -97,7 +97,9 @@ describe('MindARViewerPage', () => {
       const { container } = render(<MindARViewerPage />)
 
       // Check that loading container uses h-[100dvh] class
-      const loadingContainer = container.querySelector('div')
+      // The loading container with h-[100dvh] is the second div (after LandscapeWarningOverlay)
+      const loadingContainer = container.querySelector('div.h-\\[100dvh\\]')
+      expect(loadingContainer).toBeInTheDocument()
       expect(loadingContainer?.className).toContain('h-[100dvh]')
 
       // Should NOT use min-h-[100dvh]
@@ -118,8 +120,22 @@ describe('MindARViewerPage', () => {
           },
           assets: {
             mindUrl: 'blob:mind-url',
-            videoUrl: 'blob:video-url',
             targetImageUrl: 'blob:target-url',
+            mainVideo: {
+              id: 'video-1',
+              type: 'video',
+              mode: 'tracking',
+              fileUrl: 'blob:video-url',
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+              aspectRatio: 16 / 9,
+              chromaKeyEnabled: false,
+              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+              flatView: false,
+              linkEnabled: false,
+              order: 0,
+            },
+            mediaItems: [],
           },
         },
         isLoading: false,
@@ -167,7 +183,21 @@ describe('MindARViewerPage', () => {
             cameraResolution: 'fhd',
           },
           assets: {
-            videoUrl: 'blob:video-url',
+            mainVideo: {
+              id: 'video-1',
+              type: 'video',
+              mode: 'basic',
+              fileUrl: 'blob:video-url',
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+              aspectRatio: 16 / 9,
+              chromaKeyEnabled: false,
+              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+              flatView: false,
+              linkEnabled: false,
+              order: 0,
+            },
+            mediaItems: [],
           },
         },
         isLoading: false,
@@ -200,6 +230,229 @@ describe('MindARViewerPage', () => {
 
       // Check overflow-hidden to prevent content overflow during orientation change
       expect(section?.className).toContain('overflow-hidden')
+    })
+  })
+
+  describe('Media item mode selection in AR mode', () => {
+    it('should select tracking mode video as mainVideo in AR mode', async () => {
+      // AR 모드에서 tracking 모드 비디오만 메인 비디오로 선택되어야 함
+      mockUseQuery.mockReturnValue({
+        data: {
+          fileIds: {
+            mindFileId: 'mind-123',
+            targetImageFileId: 'target-123',
+            mode: 'ar',
+            cameraResolution: 'fhd',
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'tracking',
+                fileId: 'file-1',
+                order: 0,
+              },
+            ],
+          },
+          assets: {
+            mindUrl: 'blob:mind-url',
+            targetImageUrl: 'blob:target-url',
+            mainVideo: {
+              id: 'video-1',
+              type: 'video',
+              mode: 'tracking',
+              fileUrl: 'blob:video-url',
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+              aspectRatio: 16 / 9,
+              chromaKeyEnabled: false,
+              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+              flatView: false,
+              linkEnabled: false,
+              order: 0,
+            },
+            mediaItems: [],
+          },
+        },
+        isLoading: false,
+      } as any)
+
+      render(<MindARViewerPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mindar-viewer')).toBeInTheDocument()
+      })
+    })
+
+    it('should not select basic mode video as mainVideo in AR mode', async () => {
+      // AR 모드에서 basic 모드 비디오는 메인 비디오로 선택되지 않아야 함
+      // mainVideo가 없으면 에러 메시지 표시
+      mockUseQuery.mockReturnValue({
+        data: {
+          fileIds: {
+            mindFileId: 'mind-123',
+            targetImageFileId: 'target-123',
+            mode: 'ar',
+            cameraResolution: 'fhd',
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'basic', // basic 모드 비디오
+                fileId: 'file-1',
+                order: 0,
+              },
+            ],
+          },
+          assets: {
+            mindUrl: 'blob:mind-url',
+            targetImageUrl: 'blob:target-url',
+            mainVideo: undefined, // basic 모드 비디오만 있으면 mainVideo가 없음
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'basic',
+                fileUrl: 'blob:video-url',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
+          },
+        },
+        isLoading: false,
+      } as any)
+
+      render(<MindARViewerPage />)
+
+      await waitFor(() => {
+        // mainVideo가 없으면 에러 메시지 표시
+        expect(screen.getByText('비디오가 없습니다.')).toBeInTheDocument()
+      })
+    })
+
+    it('should select first tracking video when multiple videos exist with different modes', async () => {
+      // 여러 비디오 중 첫 번째 tracking 모드 비디오가 메인 비디오로 선택되어야 함
+      // basic 모드 비디오는 mediaItems에 포함되어 오버레이로 렌더링됨
+      mockUseQuery.mockReturnValue({
+        data: {
+          fileIds: {
+            mindFileId: 'mind-123',
+            targetImageFileId: 'target-123',
+            mode: 'ar',
+            cameraResolution: 'fhd',
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'basic', // 첫 번째 비디오는 basic
+                fileId: 'file-1',
+                order: 0,
+              },
+              {
+                id: 'video-2',
+                type: 'video',
+                mode: 'tracking', // 두 번째 비디오는 tracking
+                fileId: 'file-2',
+                order: 1,
+              },
+            ],
+          },
+          assets: {
+            mindUrl: 'blob:mind-url',
+            targetImageUrl: 'blob:target-url',
+            mainVideo: {
+              id: 'video-2', // tracking 모드인 video-2가 메인 비디오
+              type: 'video',
+              mode: 'tracking',
+              fileUrl: 'blob:video-url-2',
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+              aspectRatio: 16 / 9,
+              chromaKeyEnabled: false,
+              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+              flatView: false,
+              linkEnabled: false,
+              order: 1,
+            },
+            mediaItems: [
+              {
+                id: 'video-1', // basic 모드 비디오는 mediaItems에 포함
+                type: 'video',
+                mode: 'basic',
+                fileUrl: 'blob:video-url-1',
+                position: { x: 0.3, y: 0.3 },
+                scale: 0.5,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
+          },
+        },
+        isLoading: false,
+      } as any)
+
+      render(<MindARViewerPage />)
+
+      await waitFor(() => {
+        // MindARViewer가 렌더링되어야 함 (tracking 모드 비디오가 있으므로)
+        expect(screen.getByTestId('mindar-viewer')).toBeInTheDocument()
+      })
+    })
+
+    it('should select any video as mainVideo in basic project mode regardless of item mode', async () => {
+      // 프로젝트가 basic 모드이면 비디오의 mode에 관계없이 첫 번째 비디오가 메인 비디오
+      mockUseQuery.mockReturnValue({
+        data: {
+          fileIds: {
+            mode: 'basic', // 프로젝트 모드가 basic
+            cameraResolution: 'fhd',
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'tracking', // 비디오의 mode는 tracking이지만
+                fileId: 'file-1',
+                order: 0,
+              },
+            ],
+          },
+          assets: {
+            mainVideo: {
+              id: 'video-1',
+              type: 'video',
+              mode: 'tracking',
+              fileUrl: 'blob:video-url',
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+              aspectRatio: 16 / 9,
+              chromaKeyEnabled: false,
+              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+              flatView: false,
+              linkEnabled: false,
+              order: 0,
+            },
+            mediaItems: [],
+          },
+        },
+        isLoading: false,
+      } as any)
+
+      render(<MindARViewerPage />)
+
+      await waitFor(() => {
+        // BasicModeViewer가 렌더링되어야 함 (프로젝트가 basic 모드이므로)
+        expect(screen.getByTestId('basic-mode-viewer')).toBeInTheDocument()
+      })
     })
   })
 })

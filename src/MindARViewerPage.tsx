@@ -117,8 +117,11 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       order: item.order,
     }))
 
-  // 첫 번째 비디오를 메인 비디오로 추출
-  const mainVideo = processedMediaItems.find((item) => item.type === 'video')
+  // AR 모드: 첫 번째 트래킹 모드 비디오를 메인 비디오로 추출
+  // 기본 모드: 첫 번째 비디오를 메인 비디오로 추출
+  const mainVideo = isBasicMode
+    ? processedMediaItems.find((item) => item.type === 'video')
+    : processedMediaItems.find((item) => item.type === 'video' && item.mode === 'tracking')
   // 메인 비디오를 제외한 나머지 미디어 아이템
   const otherMediaItems = mainVideo
     ? processedMediaItems.filter((item) => item.id !== mainVideo.id)

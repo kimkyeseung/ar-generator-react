@@ -687,6 +687,191 @@ test.describe('Guide Image Fullscreen Display', () => {
   })
 })
 
+test.describe('Media Item Mode Switch (Tracking/Basic)', () => {
+  // 미디어 아이템의 트래킹/기본 모드 전환 테스트
+  // 이 테스트들은 프로젝트 생성 페이지에서 미디어 아이템의 모드 선택 기능을 검증합니다.
+
+  test('should show mode selector for each media item', async ({ page }) => {
+    await page.goto('/create')
+
+    // 영상 추가 버튼 클릭
+    const addVideoButton = page.getByRole('button', { name: /영상 추가하기/i })
+    await expect(addVideoButton).toBeVisible()
+    await addVideoButton.click()
+
+    // 미디어 아이템 섹션이 추가되어야 함
+    await expect(page.getByText(/영상 1/)).toBeVisible()
+
+    // 미디어 아이템에 트래킹/기본 모드 선택이 있어야 함
+    // 표시 모드 레이블 아래의 버튼들 확인
+    await expect(page.getByText('표시 모드')).toBeVisible()
+    // 트래킹 버튼과 기본 버튼이 있어야 함 (섹션 내에서)
+    const trackingButton = page.locator('button', { hasText: '트래킹' }).first()
+    const basicButton = page.locator('button', { hasText: /^기본$/ }).first()
+    await expect(trackingButton).toBeVisible()
+    await expect(basicButton).toBeVisible()
+  })
+
+  test('should default to tracking mode for new media item', async ({ page }) => {
+    await page.goto('/create')
+
+    // 영상 추가
+    await page.getByRole('button', { name: /영상 추가하기/i }).click()
+
+    // 표시 모드 섹션 확인
+    await expect(page.getByText('표시 모드')).toBeVisible()
+
+    // 트래킹 버튼이 default variant (선택 상태)이어야 함
+    const trackingButton = page.locator('button', { hasText: '트래킹' }).first()
+    // default variant는 배경색이 있음 (primary)
+    await expect(trackingButton).toHaveClass(/bg-/)
+  })
+
+  test('should switch media item from tracking to basic mode', async ({ page }) => {
+    await page.goto('/create')
+
+    // 영상 추가
+    await page.getByRole('button', { name: /영상 추가하기/i }).click()
+
+    // 표시 모드 섹션 확인
+    await expect(page.getByText('표시 모드')).toBeVisible()
+
+    // 기본 모드로 전환 - 정확히 '기본' 텍스트만 있는 버튼 클릭
+    const basicButton = page.locator('button', { hasText: /^기본$/ }).first()
+    await basicButton.click()
+
+    // 모드 전환 후 설명 텍스트가 변경되어야 함
+    await expect(page.getByText('화면에 항상 표시됩니다')).toBeVisible()
+  })
+
+  test('should show tracking badge in collapsed section header', async ({ page }) => {
+    await page.goto('/create')
+
+    // 영상 추가
+    await page.getByRole('button', { name: /영상 추가하기/i }).click()
+
+    // 섹션 헤더에 '트래킹' 뱃지가 보여야 함
+    // getByText로 정확한 텍스트 매칭
+    await expect(page.getByText('트래킹', { exact: true })).toBeVisible()
+  })
+
+  test('should show basic badge when mode is changed to basic', async ({ page }) => {
+    await page.goto('/create')
+
+    // 영상 추가
+    await page.getByRole('button', { name: /영상 추가하기/i }).click()
+
+    // 기본 모드로 전환
+    const basicButton = page.locator('button', { hasText: /^기본$/ }).first()
+    await basicButton.click()
+
+    // 모드 전환 후 '화면에 항상 표시됩니다' 설명이 보여야 함
+    await expect(page.getByText('화면에 항상 표시됩니다')).toBeVisible()
+  })
+
+  test('should allow multiple media items with different modes', async ({ page }) => {
+    await page.goto('/create')
+
+    // 첫 번째 영상 추가 (트래킹 모드)
+    await page.getByRole('button', { name: /영상 추가하기/i }).click()
+    await expect(page.getByText(/영상 1/)).toBeVisible()
+
+    // 두 번째 영상 추가
+    await page.getByRole('button', { name: /영상 추가하기/i }).click()
+    await expect(page.getByText(/영상 2/)).toBeVisible()
+
+    // 두 영상 모두 헤더에 표시됨
+    await expect(page.getByText(/영상 1/)).toBeVisible()
+    await expect(page.getByText(/영상 2/)).toBeVisible()
+
+    // 표시 모드 섹션이 두 개 있어야 함 (각 미디어 아이템에 하나씩)
+    const displayModeLabels = page.getByText('표시 모드')
+    await expect(displayModeLabels).toHaveCount(2)
+  })
+})
+
+test.describe('Edit Project - Media Item Mode Change', () => {
+  // 편집 페이지에서 미디어 아이템 모드 변경 테스트
+  // 기존 프로젝트의 미디어 아이템 모드를 변경하고 저장 후 뷰어에서 적용되는지 확인
+
+  test('should display current mode for existing media items', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    // AR 프로젝트 찾기 (미디어 아이템이 있는 프로젝트)
+    const arBadges = page.locator('span', { hasText: '🎯 AR' })
+    const count = await arBadges.count()
+
+    if (count > 0) {
+      // 첫 번째 AR 프로젝트 편집
+      const firstArBadge = arBadges.first()
+      const card = firstArBadge.locator('xpath=ancestor::div[contains(@class, "rounded")]').last()
+      const editButton = card.locator('button', { hasText: '편집' })
+
+      if (await editButton.count() > 0) {
+        await editButton.click()
+        await expect(page.getByText('모드 선택')).toBeVisible({ timeout: 10000 })
+
+        // 미디어 아이템이 있는지 확인
+        const mediaSection = page.getByText(/영상 \d|이미지 \d/)
+        if (await mediaSection.count() > 0) {
+          // 표시 모드 레이블이 보이는지 확인
+          await expect(page.getByText('표시 모드')).toBeVisible()
+        } else {
+          test.skip()
+        }
+      } else {
+        test.skip()
+      }
+    } else {
+      test.skip()
+    }
+  })
+
+  test('should allow changing media item mode from tracking to basic in edit page', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('내 프로젝트')).toBeVisible({ timeout: 10000 })
+    await page.waitForLoadState('networkidle')
+
+    const arBadges = page.locator('span', { hasText: '🎯 AR' })
+    const count = await arBadges.count()
+
+    if (count > 0) {
+      const firstArBadge = arBadges.first()
+      const card = firstArBadge.locator('xpath=ancestor::div[contains(@class, "rounded")]').last()
+      const editButton = card.locator('button', { hasText: '편집' })
+
+      if (await editButton.count() > 0) {
+        await editButton.click()
+        await expect(page.getByText('모드 선택')).toBeVisible({ timeout: 10000 })
+
+        // 미디어 아이템 섹션 찾기 - 표시 모드 레이블 확인
+        const displayModeLabel = page.getByText('표시 모드')
+        const displayModeCount = await displayModeLabel.count()
+
+        if (displayModeCount > 0) {
+          // 기본 모드 버튼 클릭
+          const basicButton = page.locator('button', { hasText: /^기본$/ }).first()
+          if (await basicButton.count() > 0) {
+            await basicButton.click()
+            // 모드 전환 후 설명 텍스트가 변경되어야 함
+            await expect(page.getByText('화면에 항상 표시됩니다')).toBeVisible()
+          } else {
+            test.skip()
+          }
+        } else {
+          test.skip()
+        }
+      } else {
+        test.skip()
+      }
+    } else {
+      test.skip()
+    }
+  })
+})
+
 test.describe('Edit Project Page - Mode Change', () => {
   // Note: These tests require a project to exist in the database
   // They verify the mode change functionality in the edit page

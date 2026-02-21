@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface CollapsibleSectionProps {
-  title: string
+  title: React.ReactNode
   children: React.ReactNode
   defaultOpen?: boolean
   className?: string
@@ -11,6 +11,7 @@ interface CollapsibleSectionProps {
   contentClassName?: string
   icon?: React.ReactNode
   badge?: React.ReactNode
+  headerRight?: React.ReactNode
   onToggle?: (isOpen: boolean) => void
 }
 
@@ -25,6 +26,7 @@ export function CollapsibleSection({
   contentClassName,
   icon,
   badge,
+  headerRight,
   onToggle,
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = React.useState(defaultOpen)
@@ -104,9 +106,12 @@ export function CollapsibleSection({
           <span className="font-medium text-gray-900">{title}</span>
           {badge && <span>{badge}</span>}
         </div>
-        <span className="text-gray-500">
-          {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </span>
+        <div className="flex items-center gap-2">
+          {headerRight}
+          <span className="text-gray-500">
+            {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </span>
+        </div>
       </button>
 
       <div

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { Video, Image as ImageIcon, Trash2 } from 'lucide-react'
 import TargetImageUpload from '../components/TargetImageUpload'
 import ThumbnailUpload from '../components/ThumbnailUpload'
 import OverlayImageUpload from '../components/OverlayImageUpload'
@@ -13,7 +14,7 @@ import PageBackground from '../components/home/PageBackground'
 import UploadCard from '../components/home/UploadCard'
 import VideoQualitySelector from '../components/home/VideoQualitySelector'
 import PasswordModal from '../components/PasswordModal'
-import MediaItemList from '../components/media/MediaItemList'
+import MediaItemEditor from '../components/media/MediaItemEditor'
 import UnifiedPreviewCanvas from '../components/preview/UnifiedPreviewCanvas'
 import TwoColumnLayout from '../components/layout/TwoColumnLayout'
 import { CollapsibleSection } from '../components/ui/CollapsibleSection'
@@ -26,10 +27,15 @@ import {
   ProjectMode,
   VideoQuality,
   MediaItem,
+  MediaType,
+  createDefaultMediaItem,
 } from '../types/project'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { API_URL } from '../config/api'
 import { verifyPassword } from '../utils/auth'
+
+let mediaItemIdCounter = 0
+const generateMediaItemId = () => `media-${Date.now()}-${++mediaItemIdCounter}`
 
 export default function EditProjectPage() {
   const { id } = useParams<{ id: string }>()
@@ -156,6 +162,56 @@ export default function EditProjectPage() {
 
   const handleTargetImageSelect = useCallback((files: File[]) => {
     setTargetImageFiles(files)
+  }, [])
+
+  // 미디어 아이템 추가
+  const handleAddItem = useCallback((type: MediaType) => {
+    const newItem = createDefaultMediaItem(
+      generateMediaItemId(),
+      type,
+      mediaItems.length
+    )
+    setMediaItems(prev => [...prev, newItem])
+    setSelectedMediaItemId(newItem.id)
+  }, [mediaItems.length])
+
+  // 미디어 아이템 삭제
+  const handleRemoveItem = useCallback((id: string) => {
+    setMediaItems(prev => {
+      const newItems = prev
+        .filter(item => item.id !== id)
+        .map((item, index) => ({ ...item, order: index }))
+      if (selectedMediaItemId === id && newItems.length > 0) {
+        setSelectedMediaItemId(newItems[0].id)
+      } else if (newItems.length === 0) {
+        setSelectedMediaItemId(null)
+      }
+      return newItems
+    })
+  }, [selectedMediaItemId])
+
+  // 미디어 아이템 변경
+  const handleItemChange = useCallback((id: string, updates: Partial<MediaItem>) => {
+    setMediaItems(prev =>
+      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
+    )
+  }, [])
+
+  // 미디어 아이템 순서 변경
+  const handleMoveItem = useCallback((id: string, direction: 'up' | 'down') => {
+    setMediaItems(prev => {
+      const currentIndex = prev.findIndex(item => item.id === id)
+      if (currentIndex === -1) return prev
+
+      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+      if (newIndex < 0 || newIndex >= prev.length) return prev
+
+      const newItems = [...prev]
+      const [removed] = newItems.splice(currentIndex, 1)
+      newItems.splice(newIndex, 0, removed)
+
+      return newItems.map((item, index) => ({ ...item, order: index }))
+    })
   }, [])
 
   // 멀티 미디어 아이템 위치 변경
@@ -417,6 +473,27 @@ export default function EditProjectPage() {
         />
       </div>
 
+      <div className='grid grid-cols-2 gap-3 mt-4'>
+        <button
+          type="button"
+          onClick={() => handleAddItem('video')}
+          disabled={isUploading || isCompiling}
+          className="flex flex-col items-center justify-center gap-2 py-5 px-4 border-2 border-gray-200 rounded-xl hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+        >
+          <Video size={24} className="text-purple-600" />
+          <span className="font-medium text-gray-700">영상 추가하기</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleAddItem('image')}
+          disabled={isUploading || isCompiling}
+          className="flex flex-col items-center justify-center gap-2 py-5 px-4 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+        >
+          <ImageIcon size={24} className="text-blue-600" />
+          <span className="font-medium text-gray-700">이미지 추가하기</span>
+        </button>
+      </div>
+
       {/* 현재 에셋 미리보기 (AR 모드에서 타겟 이미지만 표시) */}
       {mode === 'ar' && project.targetImageFileId && targetImageFiles.length === 0 && (
         <CollapsibleSection title="현재 에셋" defaultOpen={true} className="mt-4">
@@ -460,25 +537,78 @@ export default function EditProjectPage() {
         </CollapsibleSection>
       )}
 
-      {/* 미디어 관리 (영상/이미지) */}
-      <CollapsibleSection title="미디어 관리" defaultOpen={true} className="mt-4">
-        <div className='space-y-4'>
-          <MediaItemList
-            items={mediaItems}
-            onItemsChange={setMediaItems}
-            disabled={isUploading || isCompiling}
-            selectedItemId={selectedMediaItemId}
-            onItemSelect={setSelectedMediaItemId}
-          />
+      {/* 미디어 아이템들 (각각 CollapsibleSection) */}
+      {mediaItems.length === 0 && (
+        <div className="mt-4 text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+          <p className="text-gray-500 text-sm">
+            영상이나 이미지를 추가하세요
+          </p>
+        </div>
+      )}
 
-          {/* 영상 품질 선택 */}
+      {mediaItems
+        .sort((a, b) => a.order - b.order)
+        .map((item, index) => (
+          <CollapsibleSection
+            key={item.id}
+            title={
+              <div className="flex items-center gap-2">
+                {item.type === 'video' ? (
+                  <Video size={16} className="text-purple-500" />
+                ) : (
+                  <ImageIcon size={16} className="text-blue-500" />
+                )}
+                <span>{item.type === 'video' ? '영상' : '이미지'} {index + 1}</span>
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  item.mode === 'tracking'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {item.mode === 'tracking' ? '트래킹' : '기본'}
+                </span>
+                {(item.file || item.existingFileId) && (
+                  <span className="text-xs text-green-600">✓</span>
+                )}
+              </div>
+            }
+            defaultOpen={selectedMediaItemId === item.id}
+            className="mt-4"
+            headerRight={
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRemoveItem(item.id)
+                }}
+                disabled={isUploading || isCompiling}
+                className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-50"
+              >
+                <Trash2 size={16} />
+              </button>
+            }
+          >
+            <MediaItemEditor
+              item={item}
+              onChange={(updates) => handleItemChange(item.id, updates)}
+              disabled={isUploading || isCompiling}
+              canMoveUp={index > 0}
+              canMoveDown={index < mediaItems.length - 1}
+              onMoveUp={() => handleMoveItem(item.id, 'up')}
+              onMoveDown={() => handleMoveItem(item.id, 'down')}
+            />
+          </CollapsibleSection>
+        ))}
+
+      {/* 영상 품질 선택 */}
+      {mediaItems.length > 0 && (
+        <div className="mt-4">
           <VideoQualitySelector
             quality={videoQuality}
             onQualityChange={handleVideoQualityChange}
             disabled={isUploading || isCompiling}
           />
         </div>
-      </CollapsibleSection>
+      )}
 
       {/* 추가 옵션 */}
       <CollapsibleSection title="추가 옵션" defaultOpen={false} className="mt-4">

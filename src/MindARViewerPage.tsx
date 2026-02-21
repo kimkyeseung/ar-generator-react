@@ -28,33 +28,22 @@ export interface ProcessedMediaItem {
 
 interface ArFilesResponse {
   mindFileId?: string // 기본 모드에서는 null
-  videoFileId: string
-  previewVideoFileId?: string
   targetImageFileId?: string
-  overlayImageFileId?: string // 오버레이 이미지 ID
-  overlayLinkUrl?: string // 오버레이 이미지 클릭 시 열릴 URL
   guideImageFileId?: string // 안내문구 이미지 ID
-  chromaKeyColor?: string
-  chromaKeySimilarity?: number // 크로마키 색상 범위 (0.0~1.0)
-  chromaKeySmoothness?: number // 크로마키 경계 부드러움 (0.0~0.5)
-  flatView?: boolean
   highPrecision?: boolean
   mode?: ProjectMode // 'ar' | 'basic'
-  cameraResolution?: CameraResolution // '4k' | 'fhd' | 'hd'
+  cameraResolution?: CameraResolution // 'fhd' | 'hd'
   videoQuality?: VideoQuality // 'high' | 'medium' | 'low'
-  videoPosition?: VideoPosition // 기본 모드용
-  videoScale?: number // 기본 모드용
-  mediaItems?: MediaItemResponse[] // 멀티 미디어 아이템
+  mediaItems?: MediaItemResponse[] // 모든 미디어는 여기에 포함
 }
 
 interface ArAssets {
   mindUrl?: string // 기본 모드에서는 undefined
-  videoUrl: string
-  previewVideoUrl?: string
   targetImageUrl?: string // 기본 모드에서는 undefined
-  overlayImageUrl?: string // 오버레이 이미지 URL
   guideImageUrl?: string // 안내문구 이미지 URL
-  mediaItems: ProcessedMediaItem[] // 멀티 미디어 아이템
+  mediaItems: ProcessedMediaItem[] // 모든 미디어 아이템
+  // 첫 번째 비디오 (메인 비디오) - BasicModeViewer/MindARViewer 호환용
+  mainVideo?: ProcessedMediaItem
 }
 
 // 단일 fetch + blob 변환
@@ -128,22 +117,23 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       order: item.order,
     }))
 
+  // 첫 번째 비디오를 메인 비디오로 추출
+  const mainVideo = processedMediaItems.find((item) => item.type === 'video')
+  // 메인 비디오를 제외한 나머지 미디어 아이템
+  const otherMediaItems = mainVideo
+    ? processedMediaItems.filter((item) => item.id !== mainVideo.id)
+    : processedMediaItems
+
   return {
     fileIds,
     assets: {
       mindUrl,
-      videoUrl: `${API_URL}/stream/${fileIds.videoFileId}?t=${cacheBuster}`,
-      previewVideoUrl: fileIds.previewVideoFileId
-        ? `${API_URL}/stream/${fileIds.previewVideoFileId}?t=${cacheBuster}`
-        : undefined,
       targetImageUrl,
-      overlayImageUrl: fileIds.overlayImageFileId
-        ? `${API_URL}/file/${fileIds.overlayImageFileId}?t=${cacheBuster}`
-        : undefined,
       guideImageUrl: fileIds.guideImageFileId
         ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
         : undefined,
-      mediaItems: processedMediaItems,
+      mediaItems: otherMediaItems,
+      mainVideo,
     },
   }
 }
@@ -288,24 +278,28 @@ export default function MindARViewerPage() {
 
   // 기본 모드: BasicModeViewer 렌더링
   if (isBasicMode) {
+    const mainVideo = data.assets.mainVideo
+    if (!mainVideo) {
+      return (
+        <div className="flex h-[100dvh] w-full items-center justify-center bg-red-500">
+          <p className="text-white">비디오가 없습니다.</p>
+        </div>
+      )
+    }
+
     return (
       <>
         <LandscapeWarningOverlay />
         <section className="relative flex h-[100dvh] w-full overflow-hidden">
           <BasicModeViewer
-            videoUrl={data.assets.videoUrl}
-            previewVideoUrl={data.assets.previewVideoUrl}
-            position={data.fileIds.videoPosition || { x: 0.5, y: 0.5 }}
-            scale={data.fileIds.videoScale || 1}
-            chromaKeyColor={data.fileIds.chromaKeyColor}
-            chromaKeySettings={{
-              similarity: data.fileIds.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
-              smoothness: data.fileIds.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
-            }}
+            videoUrl={mainVideo.fileUrl}
+            previewVideoUrl={mainVideo.previewFileUrl}
+            position={mainVideo.position}
+            scale={mainVideo.scale}
+            chromaKeyColor={mainVideo.chromaKeyEnabled ? mainVideo.chromaKeyColor : undefined}
+            chromaKeySettings={mainVideo.chromaKeySettings}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
             videoQuality={data.fileIds.videoQuality || 'low'}
-            overlayImageUrl={data.assets.overlayImageUrl}
-            overlayLinkUrl={data.fileIds.overlayLinkUrl}
             guideImageUrl={data.assets.guideImageUrl}
             mediaItems={data.assets.mediaItems}
             debugMode={isDebugMode}
@@ -317,6 +311,15 @@ export default function MindARViewerPage() {
   }
 
   // AR 모드: MindARViewer 렌더링
+  const mainVideo = data.assets.mainVideo
+  if (!mainVideo) {
+    return (
+      <div className="flex h-[100dvh] w-full items-center justify-center bg-red-500">
+        <p className="text-white">비디오가 없습니다.</p>
+      </div>
+    )
+  }
+
   return (
     <>
       <LandscapeWarningOverlay />
@@ -324,20 +327,15 @@ export default function MindARViewerPage() {
         <div className="absolute inset-0">
           <MindARViewer
             mindUrl={data.assets.mindUrl!}
-            videoUrl={data.assets.videoUrl}
-            previewVideoUrl={data.assets.previewVideoUrl}
+            videoUrl={mainVideo.fileUrl}
+            previewVideoUrl={mainVideo.previewFileUrl}
             targetImageUrl={data.assets.targetImageUrl!}
-            chromaKeyColor={data.fileIds.chromaKeyColor}
-            chromaKeySettings={{
-              similarity: data.fileIds.chromaKeySimilarity ?? DEFAULT_CHROMAKEY_SETTINGS.similarity,
-              smoothness: data.fileIds.chromaKeySmoothness ?? DEFAULT_CHROMAKEY_SETTINGS.smoothness,
-            }}
-            flatView={data.fileIds.flatView}
+            chromaKeyColor={mainVideo.chromaKeyEnabled ? mainVideo.chromaKeyColor : undefined}
+            chromaKeySettings={mainVideo.chromaKeySettings}
+            flatView={mainVideo.flatView}
             highPrecision={data.fileIds.highPrecision}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
             videoQuality={data.fileIds.videoQuality || 'low'}
-            overlayImageUrl={data.assets.overlayImageUrl}
-            overlayLinkUrl={data.fileIds.overlayLinkUrl}
             guideImageUrl={data.assets.guideImageUrl}
             mediaItems={data.assets.mediaItems}
             debugMode={isDebugMode}

@@ -1,41 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Video, Image as ImageIcon, Trash2 } from 'lucide-react'
-import TargetImageUpload from '../components/TargetImageUpload'
-import ThumbnailUpload from '../components/ThumbnailUpload'
-import OverlayImageUpload from '../components/OverlayImageUpload'
-import GuideImageUpload from '../components/GuideImageUpload'
-import ArOptionsSection from '../components/home/ArOptionsSection'
-import CameraResolutionSelector from '../components/home/CameraResolutionSelector'
 import HeroHeader from '../components/home/HeroHeader'
-import ModeSelector from '../components/home/ModeSelector'
 import PageBackground from '../components/home/PageBackground'
-import UploadCard from '../components/home/UploadCard'
-import VideoQualitySelector from '../components/home/VideoQualitySelector'
 import PasswordModal from '../components/PasswordModal'
-import MediaItemEditor from '../components/media/MediaItemEditor'
+import ProjectForm, { ProjectFormState, ProjectFormExistingData } from '../components/ProjectForm'
 import UnifiedPreviewCanvas from '../components/preview/UnifiedPreviewCanvas'
 import TwoColumnLayout from '../components/layout/TwoColumnLayout'
-import { CollapsibleSection } from '../components/ui/CollapsibleSection'
 import { Button } from '../components/ui/button'
 import { Progress } from '../components/ui/progress'
 import {
-  CameraResolution,
   DEFAULT_CHROMAKEY_SETTINGS,
   Project,
-  ProjectMode,
-  VideoQuality,
   MediaItem,
-  MediaType,
-  createDefaultMediaItem,
 } from '../types/project'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { API_URL } from '../config/api'
 import { verifyPassword } from '../utils/auth'
-
-let mediaItemIdCounter = 0
-const generateMediaItemId = () => `media-${Date.now()}-${++mediaItemIdCounter}`
 
 export default function EditProjectPage() {
   const { id } = useParams<{ id: string }>()
@@ -47,24 +28,20 @@ export default function EditProjectPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Form state
-  const [title, setTitle] = useState('')
-  const [mode, setMode] = useState<ProjectMode>('ar')
-  const [cameraResolution, setCameraResolution] = useState<CameraResolution>('fhd')
-  const [videoQuality, setVideoQuality] = useState<VideoQuality>('low')
-  const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
-  const [highPrecision, setHighPrecision] = useState(false)
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
-
-  // 오버레이 이미지 상태
-  const [overlayImageFile, setOverlayImageFile] = useState<File | null>(null)
-  const [overlayLinkUrl, setOverlayLinkUrl] = useState<string>('')
-
-  // 안내문구 이미지 상태
-  const [guideImageFile, setGuideImageFile] = useState<File | null>(null)
-
-  // 멀티 미디어 아이템 상태
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
-  const [selectedMediaItemId, setSelectedMediaItemId] = useState<string | null>(null)
+  const [formState, setFormState] = useState<ProjectFormState>({
+    title: '',
+    mode: 'ar',
+    cameraResolution: 'fhd',
+    videoQuality: 'low',
+    thumbnailFile: null,
+    targetImageFiles: [],
+    guideImageFile: null,
+    overlayImageFile: null,
+    overlayLinkUrl: '',
+    mediaItems: [],
+    selectedMediaItemId: null,
+    highPrecision: false,
+  })
 
   // 미리보기 줌
   const [previewZoom, setPreviewZoom] = useState(1)
@@ -92,22 +69,11 @@ export default function EditProjectPage() {
         if (!res.ok) throw new Error('프로젝트를 불러오지 못했습니다.')
         const data: Project = await res.json()
         setProject(data)
-        setTitle(data.title || '')
-        setMode(data.mode || 'ar')
-        setCameraResolution(data.cameraResolution || 'fhd')
-        if (data.highPrecision) {
-          setHighPrecision(data.highPrecision)
-        }
-        // DB에 저장된 영상 품질 불러오기
-        const savedQuality: VideoQuality = data.videoQuality || 'low'
-        setVideoQuality(savedQuality)
-        // 오버레이 링크 URL 불러오기
-        if (data.overlayLinkUrl) {
-          setOverlayLinkUrl(data.overlayLinkUrl)
-        }
+
         // 멀티 미디어 아이템 로드 (있는 경우)
+        let loadedItems: MediaItem[] = []
         if (data.mediaItems && data.mediaItems.length > 0) {
-          const loadedItems: MediaItem[] = data.mediaItems.map(item => ({
+          loadedItems = data.mediaItems.map(item => ({
             id: item.id,
             type: item.type as 'video' | 'image',
             mode: item.mode as 'tracking' | 'basic',
@@ -133,8 +99,22 @@ export default function EditProjectPage() {
             order: item.order ?? 0,
             isCollapsed: true,
           }))
-          setMediaItems(loadedItems)
         }
+
+        setFormState({
+          title: data.title || '',
+          mode: data.mode || 'ar',
+          cameraResolution: data.cameraResolution || 'fhd',
+          videoQuality: data.videoQuality || 'low',
+          thumbnailFile: null,
+          targetImageFiles: [],
+          guideImageFile: null,
+          overlayImageFile: null,
+          overlayLinkUrl: data.overlayLinkUrl || '',
+          mediaItems: loadedItems,
+          selectedMediaItemId: null,
+          highPrecision: data.highPrecision || false,
+        })
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
       } finally {
@@ -145,95 +125,33 @@ export default function EditProjectPage() {
     fetchProject()
   }, [id])
 
-  // 모드 변경 핸들러
-  const handleModeChange = useCallback((newMode: ProjectMode) => {
-    setMode(newMode)
-    // 기본 모드로 변경 시 AR 관련 상태 초기화
-    if (newMode === 'basic') {
-      setTargetImageFiles([])
-      setHighPrecision(false)
-    }
-  }, [])
-
-  // 영상 품질 변경 (미디어 아이템에 적용됨)
-  const handleVideoQualityChange = useCallback((quality: VideoQuality) => {
-    setVideoQuality(quality)
-  }, [])
-
-  const handleTargetImageSelect = useCallback((files: File[]) => {
-    setTargetImageFiles(files)
-  }, [])
-
-  // 미디어 아이템 추가
-  const handleAddItem = useCallback((type: MediaType) => {
-    const newItem = createDefaultMediaItem(
-      generateMediaItemId(),
-      type,
-      mediaItems.length
-    )
-    setMediaItems(prev => [...prev, newItem])
-    setSelectedMediaItemId(newItem.id)
-  }, [mediaItems.length])
-
-  // 미디어 아이템 삭제
-  const handleRemoveItem = useCallback((id: string) => {
-    setMediaItems(prev => {
-      const newItems = prev
-        .filter(item => item.id !== id)
-        .map((item, index) => ({ ...item, order: index }))
-      if (selectedMediaItemId === id && newItems.length > 0) {
-        setSelectedMediaItemId(newItems[0].id)
-      } else if (newItems.length === 0) {
-        setSelectedMediaItemId(null)
-      }
-      return newItems
-    })
-  }, [selectedMediaItemId])
-
-  // 미디어 아이템 변경
-  const handleItemChange = useCallback((id: string, updates: Partial<MediaItem>) => {
-    setMediaItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
-    )
-  }, [])
-
-  // 미디어 아이템 순서 변경
-  const handleMoveItem = useCallback((id: string, direction: 'up' | 'down') => {
-    setMediaItems(prev => {
-      const currentIndex = prev.findIndex(item => item.id === id)
-      if (currentIndex === -1) return prev
-
-      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-      if (newIndex < 0 || newIndex >= prev.length) return prev
-
-      const newItems = [...prev]
-      const [removed] = newItems.splice(currentIndex, 1)
-      newItems.splice(newIndex, 0, removed)
-
-      return newItems.map((item, index) => ({ ...item, order: index }))
-    })
+  // Form state 변경 핸들러
+  const handleFormChange = useCallback((updates: Partial<ProjectFormState>) => {
+    setFormState(prev => ({ ...prev, ...updates }))
   }, [])
 
   // 멀티 미디어 아이템 위치 변경
   const handleMediaItemPositionChange = useCallback((id: string, position: { x: number; y: number }) => {
-    setMediaItems(items =>
-      items.map(item =>
+    setFormState(prev => ({
+      ...prev,
+      mediaItems: prev.mediaItems.map(item =>
         item.id === id ? { ...item, position } : item
-      )
-    )
+      ),
+    }))
   }, [])
 
   // 멀티 미디어 아이템 스케일 변경
   const handleMediaItemScaleChange = useCallback((id: string, scale: number) => {
-    setMediaItems(items =>
-      items.map(item =>
+    setFormState(prev => ({
+      ...prev,
+      mediaItems: prev.mediaItems.map(item =>
         item.id === id ? { ...item, scale } : item
-      )
-    )
+      ),
+    }))
   }, [])
 
   // AR 모드로 변경 시 타겟 이미지가 필요한지 확인
-  const needsTargetImage = mode === 'ar' && !project?.targetImageFileId && targetImageFiles.length === 0
+  const needsTargetImage = formState.mode === 'ar' && !project?.targetImageFileId && formState.targetImageFiles.length === 0
 
   const canSave =
     !isUploading &&
@@ -251,6 +169,20 @@ export default function EditProjectPage() {
   // 비밀번호 확인 후 (필요시 컴파일 +) 업로드
   const handlePasswordSubmit = async (password: string) => {
     if (!canSave || !id) return
+
+    const {
+      title,
+      mode,
+      cameraResolution,
+      videoQuality,
+      thumbnailFile,
+      targetImageFiles,
+      guideImageFile,
+      overlayImageFile,
+      overlayLinkUrl,
+      mediaItems,
+      highPrecision,
+    } = formState
 
     try {
       setUploadError(null)
@@ -387,6 +319,14 @@ export default function EditProjectPage() {
     return '편집 모드'
   }, [isCompiling, isUploading, compileProgress, progress])
 
+  // 기존 데이터 (ProjectForm에 전달)
+  const existingData: ProjectFormExistingData | undefined = project ? {
+    thumbnailUrl: project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined,
+    targetImageUrl: project.targetImageFileId ? `${API_URL}/file/${project.targetImageFileId}` : undefined,
+    guideImageUrl: project.guideImageFileId ? `${API_URL}/file/${project.guideImageFileId}` : undefined,
+    overlayImageUrl: project.overlayImageFileId ? `${API_URL}/file/${project.overlayImageFileId}` : undefined,
+  } : undefined
+
   if (isLoading) {
     return (
       <PageBackground>
@@ -414,275 +354,78 @@ export default function EditProjectPage() {
     )
   }
 
+  // Footer (저장 버튼 영역)
+  const formFooter = (
+    <div className='mt-8'>
+      {uploadError && (
+        <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
+          {uploadError}
+        </div>
+      )}
+
+      {isCompiling && (
+        <div className='mb-4 space-y-2'>
+          <p className='text-sm text-purple-600'>
+            타겟 이미지를 컴파일하고 있습니다...
+          </p>
+          <Progress value={compileProgress} />
+        </div>
+      )}
+
+      {isUploading && (
+        <div className='mb-4'>
+          <div className='h-2 bg-gray-200 rounded-full overflow-hidden'>
+            <div
+              className='h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300'
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className='text-sm text-gray-500 mt-2 text-center'>
+            {progress}% 업로드 중...
+          </p>
+        </div>
+      )}
+
+      <div className='flex gap-4'>
+        <Button
+          variant='outline'
+          onClick={() => navigate('/')}
+          className='flex-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+          disabled={isUploading || isCompiling}
+        >
+          취소
+        </Button>
+        <Button
+          onClick={handleSaveClick}
+          disabled={!canSave}
+          className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+        >
+          {isCompiling ? '컴파일 중...' : isUploading ? '저장 중...' : '저장'}
+        </Button>
+      </div>
+    </div>
+  )
+
   // 설정 패널 (좌측)
   const settingsPanel = (
-    <UploadCard
+    <ProjectForm
+      state={formState}
+      onChange={handleFormChange}
+      existingData={existingData}
+      disabled={isUploading || isCompiling}
       stepMessage='프로젝트 편집'
-      status={workflowStatus}
-    >
-      {/* 기본 정보 */}
-      <div className='space-y-4'>
-        {/* 프로젝트 제목 */}
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            프로젝트 제목
-          </label>
-          <input
-            type='text'
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder='프로젝트 제목을 입력하세요'
-            className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-          />
-        </div>
-
-        {/* 썸네일 이미지 업로드 */}
-        <ThumbnailUpload
-          file={thumbnailFile}
-          existingThumbnailUrl={project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined}
-          onFileSelect={setThumbnailFile}
-          disabled={isUploading || isCompiling}
-        />
-
-        {/* 모드 선택 */}
-        <ModeSelector
-          mode={mode}
-          onModeChange={handleModeChange}
-          disabled={isUploading || isCompiling}
-        />
-        {mode === 'ar' && project.mode === 'basic' && (
-          <p className='text-xs text-amber-600'>
-            AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
-          </p>
-        )}
-
-        {/* 안내문구 이미지 */}
-        <GuideImageUpload
-          file={guideImageFile}
-          existingImageUrl={project.guideImageFileId ? `${API_URL}/file/${project.guideImageFileId}` : undefined}
-          onFileSelect={setGuideImageFile}
-          disabled={isUploading || isCompiling}
-        />
-
-
-        {/* 카메라 해상도 선택 */}
-        <CameraResolutionSelector
-          resolution={cameraResolution}
-          onResolutionChange={setCameraResolution}
-          disabled={isUploading || isCompiling}
-        />
-      </div>
-
-      <div className='grid grid-cols-2 gap-3 mt-4'>
-        <button
-          type="button"
-          onClick={() => handleAddItem('video')}
-          disabled={isUploading || isCompiling}
-          className="flex flex-col items-center justify-center gap-2 py-5 px-4 border-2 border-gray-200 rounded-xl hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white"
-        >
-          <Video size={24} className="text-purple-600" />
-          <span className="font-medium text-gray-700">영상 추가하기</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAddItem('image')}
-          disabled={isUploading || isCompiling}
-          className="flex flex-col items-center justify-center gap-2 py-5 px-4 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white"
-        >
-          <ImageIcon size={24} className="text-blue-600" />
-          <span className="font-medium text-gray-700">이미지 추가하기</span>
-        </button>
-      </div>
-
-      {/* 현재 에셋 미리보기 (AR 모드에서 타겟 이미지만 표시) */}
-      {mode === 'ar' && project.targetImageFileId && targetImageFiles.length === 0 && (
-        <CollapsibleSection title="현재 에셋" defaultOpen={true} className="mt-4">
-          <div className='flex gap-4 flex-wrap'>
-            <div className='flex flex-col items-center'>
-              <img
-                src={`${API_URL}/file/${project.targetImageFileId}`}
-                alt='현재 타겟 이미지'
-                className='w-32 h-32 object-cover rounded-lg border border-gray-200'
-              />
-              <span className='text-xs text-gray-500 mt-1'>타겟 이미지</span>
-            </div>
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* AR 설정 (AR 모드에서만) */}
-      {mode === 'ar' && (
-        <CollapsibleSection title="AR 설정" defaultOpen={true} className="mt-4">
-          <div className='space-y-4'>
-            <ArOptionsSection
-              highPrecision={highPrecision}
-              onHighPrecisionChange={setHighPrecision}
-            />
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                타겟 이미지 {needsTargetImage ? '(필수)' : '변경 (선택)'}
-                {needsTargetImage && <span className='text-red-500 ml-1'>*</span>}
-              </label>
-              <TargetImageUpload
-                files={targetImageFiles}
-                onFileSelect={handleTargetImageSelect}
-              />
-              {needsTargetImage && (
-                <p className='text-xs text-red-500 mt-1'>
-                  AR 모드에서는 타겟 이미지가 필요합니다.
-                </p>
-              )}
-            </div>
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* 미디어 아이템들 (각각 CollapsibleSection) */}
-      {mediaItems.length === 0 && (
-        <div className="mt-4 text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
-          <p className="text-gray-500 text-sm">
-            영상이나 이미지를 추가하세요
-          </p>
-        </div>
-      )}
-
-      {mediaItems
-        .sort((a, b) => a.order - b.order)
-        .map((item, index) => (
-          <CollapsibleSection
-            key={item.id}
-            title={
-              <div className="flex items-center gap-2">
-                {item.type === 'video' ? (
-                  <Video size={16} className="text-purple-500" />
-                ) : (
-                  <ImageIcon size={16} className="text-blue-500" />
-                )}
-                <span>{item.type === 'video' ? '영상' : '이미지'} {index + 1}</span>
-                <span className={`text-xs px-2 py-0.5 rounded ${
-                  item.mode === 'tracking'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {item.mode === 'tracking' ? '트래킹' : '기본'}
-                </span>
-                {(item.file || item.existingFileId) && (
-                  <span className="text-xs text-green-600">✓</span>
-                )}
-              </div>
-            }
-            defaultOpen={selectedMediaItemId === item.id}
-            className="mt-4"
-            headerRight={
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleRemoveItem(item.id)
-                }}
-                disabled={isUploading || isCompiling}
-                className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-50"
-              >
-                <Trash2 size={16} />
-              </button>
-            }
-          >
-            <MediaItemEditor
-              item={item}
-              onChange={(updates) => handleItemChange(item.id, updates)}
-              disabled={isUploading || isCompiling}
-              canMoveUp={index > 0}
-              canMoveDown={index < mediaItems.length - 1}
-              onMoveUp={() => handleMoveItem(item.id, 'up')}
-              onMoveDown={() => handleMoveItem(item.id, 'down')}
-            />
-          </CollapsibleSection>
-        ))}
-
-      {/* 영상 품질 선택 */}
-      {mediaItems.length > 0 && (
-        <div className="mt-4">
-          <VideoQualitySelector
-            quality={videoQuality}
-            onQualityChange={handleVideoQualityChange}
-            disabled={isUploading || isCompiling}
-          />
-        </div>
-      )}
-
-      {/* 추가 옵션 */}
-      <CollapsibleSection title="추가 옵션" defaultOpen={false} className="mt-4">
-        <div className='space-y-4'>
-          {/* 오버레이 이미지 편집 */}
-          <OverlayImageUpload
-            file={overlayImageFile}
-            linkUrl={overlayLinkUrl}
-            existingImageUrl={project.overlayImageFileId ? `${API_URL}/file/${project.overlayImageFileId}` : undefined}
-            onFileSelect={setOverlayImageFile}
-            onLinkUrlChange={setOverlayLinkUrl}
-            disabled={isUploading || isCompiling}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* 저장 버튼 */}
-      <div className='mt-8'>
-        {uploadError && (
-          <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
-            {uploadError}
-          </div>
-        )}
-
-        {isCompiling && (
-          <div className='mb-4 space-y-2'>
-            <p className='text-sm text-purple-600'>
-              타겟 이미지를 컴파일하고 있습니다...
-            </p>
-            <Progress value={compileProgress} />
-          </div>
-        )}
-
-        {isUploading && (
-          <div className='mb-4'>
-            <div className='h-2 bg-gray-200 rounded-full overflow-hidden'>
-              <div
-                className='h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300'
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className='text-sm text-gray-500 mt-2 text-center'>
-              {progress}% 업로드 중...
-            </p>
-          </div>
-        )}
-
-        <div className='flex gap-4'>
-          <Button
-            variant='outline'
-            onClick={() => navigate('/')}
-            className='flex-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            disabled={isUploading || isCompiling}
-          >
-            취소
-          </Button>
-          <Button
-            onClick={handleSaveClick}
-            disabled={!canSave}
-            className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
-          >
-            {isCompiling ? '컴파일 중...' : isUploading ? '저장 중...' : '저장'}
-          </Button>
-        </div>
-      </div>
-    </UploadCard>
+      workflowStatus={workflowStatus}
+      footer={formFooter}
+      hasExistingTargetImage={!!project.targetImageFileId}
+    />
   )
 
   // 미리보기 패널 (우측)
   const previewPanel = (
     <UnifiedPreviewCanvas
-      items={mediaItems}
-      selectedItemId={selectedMediaItemId}
-      onItemSelect={setSelectedMediaItemId}
+      items={formState.mediaItems}
+      selectedItemId={formState.selectedMediaItemId}
+      onItemSelect={(id) => handleFormChange({ selectedMediaItemId: id })}
       onItemPositionChange={handleMediaItemPositionChange}
       onItemScaleChange={handleMediaItemScaleChange}
       zoom={previewZoom}

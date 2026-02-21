@@ -1,32 +1,16 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import TargetImageUpload from '../components/TargetImageUpload'
-import ThumbnailUpload from '../components/ThumbnailUpload'
-import OverlayImageUpload from '../components/OverlayImageUpload'
-import GuideImageUpload from '../components/GuideImageUpload'
-import ArOptionsSection from '../components/home/ArOptionsSection'
-import CameraResolutionSelector from '../components/home/CameraResolutionSelector'
 import HeroHeader from '../components/home/HeroHeader'
 import InfoFooter from '../components/home/InfoFooter'
-import ModeSelector from '../components/home/ModeSelector'
 import PageBackground from '../components/home/PageBackground'
 import PublishSection from '../components/home/PublishSection'
-import UploadCard from '../components/home/UploadCard'
-import VideoQualitySelector from '../components/home/VideoQualitySelector'
 import PasswordModal from '../components/PasswordModal'
-import MediaItemList from '../components/media/MediaItemList'
+import ProjectForm, { ProjectFormState } from '../components/ProjectForm'
 import UnifiedPreviewCanvas from '../components/preview/UnifiedPreviewCanvas'
 import TwoColumnLayout from '../components/layout/TwoColumnLayout'
-import { CollapsibleSection } from '../components/ui/CollapsibleSection'
 import { Button } from '../components/ui/button'
 import { useImageCompiler } from '../hooks/useImageCompiler'
-import {
-  CameraResolution,
-  ProjectMode,
-  VideoQuality,
-  MediaItem,
-} from '../types/project'
 import { API_URL } from '../config/api'
 import { isValidHexColor } from '../utils/validation'
 import { verifyPassword } from '../utils/auth'
@@ -36,40 +20,28 @@ export default function CreateProjectPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // 모드 선택 (AR 모드 / 기본 모드)
-  const [mode, setMode] = useState<ProjectMode>('ar')
+  // Form state
+  const [formState, setFormState] = useState<ProjectFormState>({
+    title: '',
+    mode: 'ar',
+    cameraResolution: 'fhd',
+    videoQuality: 'low',
+    thumbnailFile: null,
+    targetImageFiles: [],
+    guideImageFile: null,
+    overlayImageFile: null,
+    overlayLinkUrl: '',
+    mediaItems: [],
+    selectedMediaItemId: null,
+    highPrecision: false,
+  })
 
-  // 카메라 해상도 선택
-  const [cameraResolution, setCameraResolution] = useState<CameraResolution>('fhd')
-
-  // 영상 품질 선택
-  const [videoQuality, setVideoQuality] = useState<VideoQuality>('low')
-
-  // 타겟 이미지 파일 (컴파일 전 원본) - AR 모드에서만 사용
-  const [targetImageFiles, setTargetImageFiles] = useState<File[]>([])
+  // 미리보기 줌
+  const [previewZoom, setPreviewZoom] = useState(1)
 
   // 업로드/에러 상태
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-
-  // 옵션 상태
-  const [title, setTitle] = useState<string>('')
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
-  const [highPrecision, setHighPrecision] = useState(false)
-
-  // 오버레이 이미지 상태
-  const [overlayImageFile, setOverlayImageFile] = useState<File | null>(null)
-  const [overlayLinkUrl, setOverlayLinkUrl] = useState<string>('')
-
-  // 안내문구 이미지 상태
-  const [guideImageFile, setGuideImageFile] = useState<File | null>(null)
-
-  // 멀티 미디어 아이템 상태
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
-  const [selectedMediaItemId, setSelectedMediaItemId] = useState<string | null>(null)
-
-  // 미리보기 줌
-  const [previewZoom, setPreviewZoom] = useState(1)
 
   // 비밀번호 모달 상태
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -78,37 +50,36 @@ export default function CreateProjectPage() {
   // 훅
   const { compile, isCompiling, progress: compileProgress } = useImageCompiler()
 
-  const handleTargetImageSelect = useCallback((files: File[]) => {
-    setTargetImageFiles(files)
-  }, [])
-
-  // 영상 품질 변경
-  const handleVideoQualityChange = useCallback((quality: VideoQuality) => {
-    setVideoQuality(quality)
+  // Form state 변경 핸들러
+  const handleFormChange = useCallback((updates: Partial<ProjectFormState>) => {
+    setFormState(prev => ({ ...prev, ...updates }))
   }, [])
 
   // 미디어 아이템 위치 변경
   const handleMediaItemPositionChange = useCallback((id: string, position: { x: number; y: number }) => {
-    setMediaItems(items =>
-      items.map(item =>
+    setFormState(prev => ({
+      ...prev,
+      mediaItems: prev.mediaItems.map(item =>
         item.id === id ? { ...item, position } : item
-      )
-    )
+      ),
+    }))
   }, [])
 
   // 멀티 미디어 아이템 스케일 변경
   const handleMediaItemScaleChange = useCallback((id: string, scale: number) => {
-    setMediaItems(items =>
-      items.map(item =>
+    setFormState(prev => ({
+      ...prev,
+      mediaItems: prev.mediaItems.map(item =>
         item.id === id ? { ...item, scale } : item
-      )
-    )
+      ),
+    }))
   }, [])
 
   // 퍼블리시 가능 여부
   // AR 모드: 타겟 이미지 파일 + 미디어 아이템 필요
   // 기본 모드: 미디어 아이템만 필요
   const canPublish = useMemo(() => {
+    const { mode, targetImageFiles, mediaItems } = formState
     const hasMediaItems = mediaItems.some(item => item.file !== null)
     // 크로마키 검증: 크로마키 활성화된 아이템의 색상이 모두 유효한지 확인
     const hasValidChromaKey = mediaItems
@@ -120,7 +91,7 @@ export default function CreateProjectPage() {
     }
     // 기본 모드
     return hasMediaItems && hasValidChromaKey
-  }, [mode, targetImageFiles.length, mediaItems])
+  }, [formState])
 
   // 배포 버튼 클릭 시 비밀번호 모달 열기
   const handlePublishClick = () => {
@@ -133,6 +104,20 @@ export default function CreateProjectPage() {
   // 비밀번호 확인 후 컴파일 + 업로드 순차 실행
   const handlePasswordSubmit = async (password: string) => {
     if (!canPublish) return
+
+    const {
+      title,
+      mode,
+      cameraResolution,
+      videoQuality,
+      thumbnailFile,
+      targetImageFiles,
+      guideImageFile,
+      overlayImageFile,
+      overlayLinkUrl,
+      mediaItems,
+      highPrecision,
+    } = formState
 
     const mediaItemsWithFiles = mediaItems.filter(item => item.file !== null)
 
@@ -285,6 +270,7 @@ export default function CreateProjectPage() {
 
   // 현재 단계 메시지
   const stepMessage = useMemo(() => {
+    const { mode, targetImageFiles, mediaItems } = formState
     const hasMediaContent = mediaItems.some(item => item.file !== null)
 
     if (mode === 'ar') {
@@ -301,7 +287,7 @@ export default function CreateProjectPage() {
       return 'Step 1. 영상이나 이미지를 추가해주세요.'
     }
     return 'Step 2. 위치를 조정하고 배포 버튼을 클릭하세요.'
-  }, [mode, targetImageFiles.length, mediaItems])
+  }, [formState])
 
   // 워크플로우 상태
   const workflowStatus = useMemo(() => {
@@ -311,130 +297,38 @@ export default function CreateProjectPage() {
     return '파일을 업로드해주세요'
   }, [canPublish, isCompiling, isUploading, compileProgress, progress])
 
+  // Footer (배포 섹션)
+  const formFooter = (
+    <div className="mt-6">
+      <PublishSection
+        canPublish={canPublish}
+        onPublish={handlePublishClick}
+        progress={isCompiling ? compileProgress : progress}
+        isUploading={isUploading}
+        isCompiling={isCompiling}
+        uploadError={uploadError}
+      />
+    </div>
+  )
+
   // 설정 패널 (좌측)
   const settingsPanel = (
-    <UploadCard
+    <ProjectForm
+      state={formState}
+      onChange={handleFormChange}
+      disabled={isUploading || isCompiling}
       stepMessage={stepMessage}
-      status={workflowStatus}
-    >
-      {/* 프로젝트 제목 입력 */}
-      <CollapsibleSection title="기본 정보" defaultOpen={true}>
-        <div className='space-y-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              프로젝트 제목 (선택)
-            </label>
-            <input
-              type='text'
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder='프로젝트 제목을 입력하세요'
-              className='w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-            />
-          </div>
-
-          {/* 썸네일 이미지 업로드 */}
-          <ThumbnailUpload
-            file={thumbnailFile}
-            onFileSelect={setThumbnailFile}
-            disabled={isUploading || isCompiling}
-          />
-
-          {/* 모드 선택 */}
-          <ModeSelector
-            mode={mode}
-            onModeChange={setMode}
-            disabled={isUploading || isCompiling}
-          />
-
-          {/* 카메라 해상도 선택 */}
-          <CameraResolutionSelector
-            resolution={cameraResolution}
-            onResolutionChange={setCameraResolution}
-            disabled={isUploading || isCompiling}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* AR 설정 - AR 모드에서만 표시 */}
-      {mode === 'ar' && (
-        <CollapsibleSection title="AR 설정" defaultOpen={true} className="mt-4">
-          <div className='space-y-4'>
-            <ArOptionsSection
-              highPrecision={highPrecision}
-              onHighPrecisionChange={setHighPrecision}
-            />
-            <TargetImageUpload
-              files={targetImageFiles}
-              onFileSelect={handleTargetImageSelect}
-            />
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* 안내문구 이미지 */}
-      <CollapsibleSection title="안내문구 이미지" defaultOpen={false} className="mt-4">
-        <GuideImageUpload
-          file={guideImageFile}
-          onFileSelect={setGuideImageFile}
-          disabled={isUploading || isCompiling}
-        />
-      </CollapsibleSection>
-
-      {/* 미디어 관리 (영상/이미지 추가) */}
-      <CollapsibleSection title="미디어 관리" defaultOpen={true} className="mt-4">
-        <div className='space-y-4'>
-          <MediaItemList
-            items={mediaItems}
-            onItemsChange={setMediaItems}
-            disabled={isUploading || isCompiling}
-            selectedItemId={selectedMediaItemId}
-            onItemSelect={setSelectedMediaItemId}
-          />
-
-          {/* 영상 품질 선택 */}
-          <VideoQualitySelector
-            quality={videoQuality}
-            onQualityChange={handleVideoQualityChange}
-            disabled={isUploading || isCompiling}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* 추가 옵션 */}
-      <CollapsibleSection title="추가 옵션" defaultOpen={false} className="mt-4">
-        <div className='space-y-4'>
-          {/* 오버레이 이미지 업로드 */}
-          <OverlayImageUpload
-            file={overlayImageFile}
-            linkUrl={overlayLinkUrl}
-            onFileSelect={setOverlayImageFile}
-            onLinkUrlChange={setOverlayLinkUrl}
-            disabled={isUploading || isCompiling}
-          />
-        </div>
-      </CollapsibleSection>
-
-      {/* 배포 섹션 */}
-      <div className="mt-6">
-        <PublishSection
-          canPublish={canPublish}
-          onPublish={handlePublishClick}
-          progress={isCompiling ? compileProgress : progress}
-          isUploading={isUploading}
-          isCompiling={isCompiling}
-          uploadError={uploadError}
-        />
-      </div>
-    </UploadCard>
+      workflowStatus={workflowStatus}
+      footer={formFooter}
+    />
   )
 
   // 미리보기 패널 (우측)
   const previewPanel = (
     <UnifiedPreviewCanvas
-      items={mediaItems}
-      selectedItemId={selectedMediaItemId}
-      onItemSelect={setSelectedMediaItemId}
+      items={formState.mediaItems}
+      selectedItemId={formState.selectedMediaItemId}
+      onItemSelect={(id) => handleFormChange({ selectedMediaItemId: id })}
       onItemPositionChange={handleMediaItemPositionChange}
       onItemScaleChange={handleMediaItemScaleChange}
       zoom={previewZoom}

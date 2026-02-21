@@ -203,7 +203,8 @@ const MindARViewer: React.FC<Props> = ({
   // 현재 재생 중인 비디오 URL (프리뷰 → 원본 전환)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
-  const [isTargetFound, setIsTargetFound] = useState(false) // 타겟 인식 여부 (안내문구 숨김용)
+  const [isTargetFound, setIsTargetFound] = useState(false) // 타겟 인식 여부
+  const [isVideoReady, setIsVideoReady] = useState(false) // 비디오 로드 완료 여부 (안내문구 숨김용)
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
   const [videoResolution, setVideoResolution] = useState<string | null>(null) // 비디오 해상도
 
@@ -486,6 +487,7 @@ const MindARViewer: React.FC<Props> = ({
       if (!videoEl) return
 
       const tryPlay = () => {
+        setIsVideoReady(true) // 비디오 로드 완료 - 안내문구 숨김
         void videoEl.play().catch((err) => {
           console.warn('[MindAR] video autoplay blocked', err)
         })
@@ -643,8 +645,8 @@ const MindARViewer: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 안내문구 이미지 (타겟 인식 전까지 표시) */}
-      {guideImageUrl && !isTargetFound && !isLoading && (
+      {/* 안내문구 이미지 (영상 로드 전까지만 표시) */}
+      {guideImageUrl && !isVideoReady && !isLoading && (
         <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
           <img
             src={guideImageUrl}

@@ -1,3 +1,5 @@
+// ProjectMode는 더 이상 사용하지 않음 - 미디어 아이템의 mode로 대체
+// 기존 데이터 호환성을 위해 타입만 유지
 export type ProjectMode = 'ar' | 'basic'
 export type CameraResolution = 'fhd' | 'hd'
 export type VideoQuality = 'high' | 'medium' | 'low' // 고화질(압축x), 중간화질, 저화질
@@ -52,7 +54,7 @@ export const createDefaultMediaItem = (
 ): MediaItem => ({
   id,
   type,
-  mode: 'basic',
+  mode: 'tracking', // 기본값: 트래킹 모드 (AR)
   file: null,
   previewFile: null,
   existingFileId: null,

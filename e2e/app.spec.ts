@@ -750,9 +750,8 @@ test.describe('Media Item Mode Switch (Tracking/Basic)', () => {
     // 영상 추가
     await page.getByRole('button', { name: /영상 추가하기/i }).click()
 
-    // 섹션 헤더에 '트래킹' 뱃지가 보여야 함
-    // getByText로 정확한 텍스트 매칭
-    await expect(page.getByText('트래킹', { exact: true })).toBeVisible()
+    // 섹션 헤더에 '트래킹' 뱃지가 보여야 함 (bg-purple-100 클래스를 가진 span 요소)
+    await expect(page.locator('span.bg-purple-100', { hasText: '트래킹' })).toBeVisible()
   })
 
   test('should show basic badge when mode is changed to basic', async ({ page }) => {

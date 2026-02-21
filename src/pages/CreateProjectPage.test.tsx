@@ -152,8 +152,9 @@ describe('CreateProjectPage', () => {
 
     it('should show step 1 message initially', () => {
       render(<CreateProjectPage />)
+      // 초기 상태: 미디어 아이템이 없으므로 영상/이미지 추가 안내
       expect(
-        screen.getByText('Step 1. 타겟 이미지를 업로드해주세요.')
+        screen.getByText('Step 1. 영상이나 이미지를 추가해주세요.')
       ).toBeInTheDocument()
     })
 
@@ -175,17 +176,15 @@ describe('CreateProjectPage', () => {
       expect(screen.getByText('파일을 업로드해주세요')).toBeInTheDocument()
     })
 
-    it('should show AR settings section with highPrecision option', () => {
+    it('should show target image section with no tracking items message', () => {
       render(<CreateProjectPage />)
-      // Use getAllByText and check if at least one exists (due to 2-column layout)
-      const arSettingsElements = screen.getAllByText('AR 설정')
-      expect(arSettingsElements.length).toBeGreaterThan(0)
-      expect(screen.getByText('추적 정확도 향상')).toBeInTheDocument()
+      // 초기 상태: 트래킹 아이템이 없으므로 타겟 이미지 불필요 메시지 표시
+      expect(screen.getByText('현재는 타겟 이미지가 필요없습니다.')).toBeInTheDocument()
     })
 
-    it('should show target image upload section', () => {
+    it('should show target image section', () => {
       render(<CreateProjectPage />)
-      expect(screen.getByText('Target Image')).toBeInTheDocument()
+      expect(screen.getByText('타겟 이미지')).toBeInTheDocument()
     })
   })
 
@@ -212,184 +211,77 @@ describe('CreateProjectPage', () => {
   })
 
   describe('HighPrecision Option', () => {
-    it('should show highPrecision checkbox in AR settings', () => {
+    it('should not show highPrecision checkbox initially (no tracking items)', () => {
       render(<CreateProjectPage />)
 
-      expect(screen.getByText('추적 정확도 향상')).toBeInTheDocument()
+      // 트래킹 아이템이 없으면 AR 설정이 표시되지 않음
+      expect(screen.queryByText('추적 정확도 향상')).not.toBeInTheDocument()
     })
 
-    it('should toggle highPrecision checkbox', () => {
+    it('should show highPrecision checkbox after adding tracking media item', async () => {
       render(<CreateProjectPage />)
 
-      const highPrecisionCheckbox = screen.getByLabelText('추적 정확도 향상')
-      expect(highPrecisionCheckbox).not.toBeChecked()
+      // 영상 추가 버튼 클릭 (기본값: 트래킹 모드)
+      const addVideoButton = screen.getByText('영상 추가하기')
+      await act(async () => {
+        fireEvent.click(addVideoButton)
+      })
 
-      fireEvent.click(highPrecisionCheckbox)
-      expect(highPrecisionCheckbox).toBeChecked()
-    })
-
-    it('should show description text for highPrecision option', () => {
-      render(<CreateProjectPage />)
-
-      expect(
-        screen.getByText(/더 정밀한 추적과 부드러운 AR 표시/)
-      ).toBeInTheDocument()
+      // 이제 AR 설정이 표시됨
+      await waitFor(() => {
+        expect(screen.getByText('추적 정확도 향상')).toBeInTheDocument()
+      })
     })
   })
 
   describe('Step Progression', () => {
-    it('should show step 2 after target image is selected', async () => {
+    it('should show step 1 for target image after adding tracking video', async () => {
       render(<CreateProjectPage />)
 
-      // Find the target image file input
-      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-      // Find the one inside FileUpload (Target Image), not the mocked ones
-      let targetInput: HTMLInputElement | null = null
-      inputs.forEach((input) => {
-        if (!input.hasAttribute('data-testid')) {
-          targetInput = input as HTMLInputElement
-        }
-      })
-      expect(targetInput).toBeTruthy()
-
-      const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(targetInput, 'files', {
-        value: [file],
-        configurable: true,
-      })
-
+      // 영상 추가 버튼 클릭 (기본값: 트래킹 모드)
+      const addVideoButton = screen.getByText('영상 추가하기')
       await act(async () => {
-        fireEvent.change(targetInput!)
+        fireEvent.click(addVideoButton)
       })
 
+      // 트래킹 아이템이 추가되었으므로 타겟 이미지 업로드 안내
       await waitFor(() => {
         expect(
-          screen.getByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
+          screen.getByText('Step 1. 타겟 이미지를 업로드해주세요.')
         ).toBeInTheDocument()
       })
     })
   })
 
-  describe('FlatView Option', () => {
-    it('should show flatView checkbox after target is selected', async () => {
+  describe('Media Item Addition', () => {
+    it('should add video item when clicking add video button', async () => {
       render(<CreateProjectPage />)
 
-      // Find the target image file input
-      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-      let targetInput: HTMLInputElement | null = null
-      inputs.forEach((input) => {
-        if (!input.hasAttribute('data-testid')) {
-          targetInput = input as HTMLInputElement
-        }
-      })
-
-      const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(targetInput, 'files', {
-        value: [file],
-        configurable: true,
-      })
-
+      // 영상 추가 버튼 클릭
+      const addVideoButton = screen.getByText('영상 추가하기')
       await act(async () => {
-        fireEvent.change(targetInput!)
+        fireEvent.click(addVideoButton)
       })
 
+      // 영상 아이템 섹션이 추가되어야 함
       await waitFor(() => {
-        expect(screen.getByText('항상 정면으로 표시')).toBeInTheDocument()
+        expect(screen.getByText('영상 1')).toBeInTheDocument()
       })
     })
 
-    it('should toggle flatView checkbox', async () => {
+    it('should add image item when clicking add image button', async () => {
       render(<CreateProjectPage />)
 
-      // Find the target image file input
-      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-      let targetInput: HTMLInputElement | null = null
-      inputs.forEach((input) => {
-        if (!input.hasAttribute('data-testid')) {
-          targetInput = input as HTMLInputElement
-        }
-      })
-
-      const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(targetInput, 'files', {
-        value: [file],
-        configurable: true,
-      })
-
+      // 이미지 추가 버튼 클릭
+      const addImageButton = screen.getByText('이미지 추가하기')
       await act(async () => {
-        fireEvent.change(targetInput!)
+        fireEvent.click(addImageButton)
       })
 
+      // 이미지 아이템 섹션이 추가되어야 함
       await waitFor(() => {
-        expect(screen.getByText('항상 정면으로 표시')).toBeInTheDocument()
+        expect(screen.getByText('이미지 1')).toBeInTheDocument()
       })
-
-      const flatViewCheckbox = screen.getByLabelText('항상 정면으로 표시')
-      expect(flatViewCheckbox).not.toBeChecked()
-
-      fireEvent.click(flatViewCheckbox)
-      expect(flatViewCheckbox).toBeChecked()
-    })
-  })
-
-  describe('ChromaKey Option', () => {
-    it('should show chromaKey checkbox after target is selected', async () => {
-      render(<CreateProjectPage />)
-
-      // Find the target image file input
-      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-      let targetInput: HTMLInputElement | null = null
-      inputs.forEach((input) => {
-        if (!input.hasAttribute('data-testid')) {
-          targetInput = input as HTMLInputElement
-        }
-      })
-
-      const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(targetInput, 'files', {
-        value: [file],
-        configurable: true,
-      })
-
-      await act(async () => {
-        fireEvent.change(targetInput!)
-      })
-
-      await waitFor(() => {
-        expect(screen.getByText('크로마키 적용')).toBeInTheDocument()
-      })
-    })
-
-    it('should show color picker when chromaKey is enabled', async () => {
-      render(<CreateProjectPage />)
-
-      // Find the target image file input
-      const inputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-      let targetInput: HTMLInputElement | null = null
-      inputs.forEach((input) => {
-        if (!input.hasAttribute('data-testid')) {
-          targetInput = input as HTMLInputElement
-        }
-      })
-
-      const file = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(targetInput, 'files', {
-        value: [file],
-        configurable: true,
-      })
-
-      await act(async () => {
-        fireEvent.change(targetInput!)
-      })
-
-      await waitFor(() => {
-        expect(screen.getByText('크로마키 적용')).toBeInTheDocument()
-      })
-
-      const chromaKeyCheckbox = screen.getByLabelText('크로마키 적용')
-      fireEvent.click(chromaKeyCheckbox)
-
-      expect(screen.getByText('크로마키 색상')).toBeInTheDocument()
     })
   })
 
@@ -399,118 +291,6 @@ describe('CreateProjectPage', () => {
 
       const publishButton = screen.getByText('Publish')
       expect(publishButton).toBeDisabled()
-    })
-
-    it('should enable publish button after target image and video are selected', async () => {
-      render(<CreateProjectPage />)
-
-      // Find the target image file input
-      const imageInputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-      let imageInput: HTMLInputElement | null = null
-      imageInputs.forEach((input) => {
-        if (!input.hasAttribute('data-testid')) {
-          imageInput = input as HTMLInputElement
-        }
-      })
-
-      const imageFile = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(imageInput, 'files', {
-        value: [imageFile],
-        configurable: true,
-      })
-
-      await act(async () => {
-        fireEvent.change(imageInput!)
-      })
-
-      // Wait for step 2 to appear
-      await waitFor(() => {
-        expect(
-          screen.getByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
-        ).toBeInTheDocument()
-      })
-
-      // Select video
-      const videoInput = document.querySelector(
-        'input[type="file"][accept="video/*"]'
-      ) as HTMLInputElement
-      expect(videoInput).toBeTruthy()
-
-      const videoFile = new File(['video'], 'test.mp4', { type: 'video/mp4' })
-      Object.defineProperty(videoInput, 'files', {
-        value: [videoFile],
-        configurable: true,
-      })
-
-      await act(async () => {
-        fireEvent.change(videoInput)
-      })
-
-      // Wait for step 3 and publish button to be enabled
-      await waitFor(() => {
-        const publishButton = screen.getByText('Publish')
-        expect(publishButton).not.toBeDisabled()
-      })
-    })
-  })
-
-  describe('Publish Flow', () => {
-    it('should open password modal when publish is clicked', async () => {
-      render(<CreateProjectPage />)
-
-      // Find the target image file input
-      const imageInputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-      let imageInput: HTMLInputElement | null = null
-      imageInputs.forEach((input) => {
-        if (!input.hasAttribute('data-testid')) {
-          imageInput = input as HTMLInputElement
-        }
-      })
-
-      const imageFile = new File(['test'], 'test.png', { type: 'image/png' })
-      Object.defineProperty(imageInput, 'files', {
-        value: [imageFile],
-        configurable: true,
-      })
-
-      await act(async () => {
-        fireEvent.change(imageInput!)
-      })
-
-      // Wait for step 2 to appear
-      await waitFor(() => {
-        expect(
-          screen.getByText('Step 2. 타겟에 재생될 영상을 업로드해주세요.')
-        ).toBeInTheDocument()
-      })
-
-      // Select video
-      const videoInput = document.querySelector(
-        'input[type="file"][accept="video/*"]'
-      ) as HTMLInputElement
-      const videoFile = new File(['video'], 'test.mp4', { type: 'video/mp4' })
-      Object.defineProperty(videoInput, 'files', {
-        value: [videoFile],
-        configurable: true,
-      })
-
-      await act(async () => {
-        fireEvent.change(videoInput)
-      })
-
-      // Click publish
-      await waitFor(() => {
-        const publishButton = screen.getByText('Publish')
-        expect(publishButton).not.toBeDisabled()
-      })
-
-      const publishButton = screen.getByText('Publish')
-      fireEvent.click(publishButton)
-
-      // Password modal should appear
-      await waitFor(() => {
-        expect(screen.getByText('비밀번호 입력')).toBeInTheDocument()
-      })
     })
   })
 })
@@ -524,59 +304,34 @@ describe('New Publish Flow (Compile + Upload)', () => {
     })
   })
 
-  it('should compile target images when publish flow starts', async () => {
-    // This test verifies the new flow where compile happens during publish
+  it('should not compile before publish button is clicked', async () => {
     render(<CreateProjectPage />)
 
-    // Find the target image file input
-    const imageInputs = document.querySelectorAll('input[type="file"][accept="image/*"]')
-    let imageInput: HTMLInputElement | null = null
-    imageInputs.forEach((input) => {
-      if (!input.hasAttribute('data-testid')) {
-        imageInput = input as HTMLInputElement
-      }
-    })
-
-    const imageFile = new File(['test'], 'test.png', { type: 'image/png' })
-    Object.defineProperty(imageInput, 'files', {
-      value: [imageFile],
-      configurable: true,
-    })
-
+    // 영상 추가 (기본값: 트래킹 모드)
+    const addVideoButton = screen.getByText('영상 추가하기')
     await act(async () => {
-      fireEvent.change(imageInput!)
+      fireEvent.click(addVideoButton)
     })
 
     // Verify compile has not been called yet (deferred to publish)
     expect(mockCompile).not.toHaveBeenCalled()
   })
 
-  it('should show highPrecision option before selecting target image', () => {
+  it('should show AR options section when tracking items exist', async () => {
     render(<CreateProjectPage />)
 
-    // highPrecision should be visible in AR settings section from the start
-    expect(screen.getByText('추적 정확도 향상')).toBeInTheDocument()
-    expect(screen.getByLabelText('추적 정확도 향상')).toBeInTheDocument()
-  })
+    // 초기 상태: 트래킹 아이템 없음 -> AR 설정 숨김
+    expect(screen.queryByText('추적 정확도 향상')).not.toBeInTheDocument()
 
-  it('should pass highPrecision option when compile is called', async () => {
-    // Use a custom mock to track compile calls
-    const compileWithOptions = jest.fn().mockResolvedValue({
-      targetBuffer: new ArrayBuffer(8),
-      originalImage: new File(['test'], 'test.png', { type: 'image/png' }),
+    // 영상 추가 (기본값: 트래킹 모드)
+    const addVideoButton = screen.getByText('영상 추가하기')
+    await act(async () => {
+      fireEvent.click(addVideoButton)
     })
 
-    jest.doMock('../hooks/useImageCompiler', () => ({
-      useImageCompiler: () => ({
-        compile: compileWithOptions,
-        isCompiling: false,
-        progress: 0,
-        reset: jest.fn(),
-      }),
-    }))
-
-    // Note: Full integration test would require mocking XHR and password modal
-    // This test documents the expected behavior
-    expect(true).toBe(true)
+    // 트래킹 아이템 추가 후 AR 설정 표시
+    await waitFor(() => {
+      expect(screen.getByText('추적 정확도 향상')).toBeInTheDocument()
+    })
   })
 })

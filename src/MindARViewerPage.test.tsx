@@ -109,6 +109,7 @@ describe('MindARViewerPage', () => {
 
   describe('AR mode rendering', () => {
     beforeEach(() => {
+      // 트래킹 아이템이 있으면 AR 모드로 렌더링
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
@@ -117,6 +118,15 @@ describe('MindARViewerPage', () => {
             targetImageFileId: 'target-123',
             mode: 'ar',
             cameraResolution: 'fhd',
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'tracking', // 트래킹 아이템이 있어야 AR 모드
+                fileId: 'file-1',
+                order: 0,
+              },
+            ],
           },
           assets: {
             mindUrl: 'blob:mind-url',
@@ -173,14 +183,24 @@ describe('MindARViewerPage', () => {
 
   describe('Basic mode rendering', () => {
     beforeEach(() => {
+      // 트래킹 아이템이 없으면 기본 모드로 렌더링
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
             videoFileId: 'video-123',
-            mode: 'basic',
+            mode: 'basic', // 백엔드 호환성을 위해 유지되지만 실제 결정은 mediaItems로
             videoPosition: { x: 0.5, y: 0.5 },
             videoScale: 1,
             cameraResolution: 'fhd',
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'basic', // 트래킹 아이템 없음
+                fileId: 'file-1',
+                order: 0,
+              },
+            ],
           },
           assets: {
             mainVideo: {
@@ -283,46 +303,39 @@ describe('MindARViewerPage', () => {
       })
     })
 
-    it('should not select basic mode video as mainVideo in AR mode', async () => {
-      // AR 모드에서 basic 모드 비디오는 메인 비디오로 선택되지 않아야 함
-      // mainVideo가 없으면 에러 메시지 표시
+    it('should render BasicModeViewer when only basic mode videos exist', async () => {
+      // basic 모드 비디오만 있으면 BasicModeViewer로 렌더링 (트래킹 아이템이 없으므로)
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
-            mindFileId: 'mind-123',
-            targetImageFileId: 'target-123',
-            mode: 'ar',
+            mode: 'ar', // 프로젝트 모드가 ar이어도
             cameraResolution: 'fhd',
             mediaItems: [
               {
                 id: 'video-1',
                 type: 'video',
-                mode: 'basic', // basic 모드 비디오
+                mode: 'basic', // 트래킹 아이템이 없으면
                 fileId: 'file-1',
                 order: 0,
               },
             ],
           },
           assets: {
-            mindUrl: 'blob:mind-url',
-            targetImageUrl: 'blob:target-url',
-            mainVideo: undefined, // basic 모드 비디오만 있으면 mainVideo가 없음
-            mediaItems: [
-              {
-                id: 'video-1',
-                type: 'video',
-                mode: 'basic',
-                fileUrl: 'blob:video-url',
-                position: { x: 0.5, y: 0.5 },
-                scale: 1,
-                aspectRatio: 16 / 9,
-                chromaKeyEnabled: false,
-                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-                flatView: false,
-                linkEnabled: false,
-                order: 0,
-              },
-            ],
+            mainVideo: {
+              id: 'video-1',
+              type: 'video',
+              mode: 'basic',
+              fileUrl: 'blob:video-url',
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+              aspectRatio: 16 / 9,
+              chromaKeyEnabled: false,
+              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+              flatView: false,
+              linkEnabled: false,
+              order: 0,
+            },
+            mediaItems: [],
           },
         },
         isLoading: false,
@@ -331,8 +344,8 @@ describe('MindARViewerPage', () => {
       render(<MindARViewerPage />)
 
       await waitFor(() => {
-        // mainVideo가 없으면 에러 메시지 표시
-        expect(screen.getByText('비디오가 없습니다.')).toBeInTheDocument()
+        // 트래킹 아이템이 없으므로 BasicModeViewer로 렌더링
+        expect(screen.getByTestId('basic-mode-viewer')).toBeInTheDocument()
       })
     })
 
@@ -409,24 +422,74 @@ describe('MindARViewerPage', () => {
       })
     })
 
-    it('should select any video as mainVideo in basic project mode regardless of item mode', async () => {
-      // 프로젝트가 basic 모드이면 비디오의 mode에 관계없이 첫 번째 비디오가 메인 비디오
+    it('should render BasicModeViewer when all items are basic mode', async () => {
+      // 모든 미디어 아이템이 basic 모드이면 BasicModeViewer 렌더링
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
-            mode: 'basic', // 프로젝트 모드가 basic
+            mode: 'basic', // 백엔드 호환성
             cameraResolution: 'fhd',
             mediaItems: [
               {
                 id: 'video-1',
                 type: 'video',
-                mode: 'tracking', // 비디오의 mode는 tracking이지만
+                mode: 'basic', // basic 모드만 있음
                 fileId: 'file-1',
                 order: 0,
               },
             ],
           },
           assets: {
+            mainVideo: {
+              id: 'video-1',
+              type: 'video',
+              mode: 'basic',
+              fileUrl: 'blob:video-url',
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+              aspectRatio: 16 / 9,
+              chromaKeyEnabled: false,
+              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+              flatView: false,
+              linkEnabled: false,
+              order: 0,
+            },
+            mediaItems: [],
+          },
+        },
+        isLoading: false,
+      } as any)
+
+      render(<MindARViewerPage />)
+
+      await waitFor(() => {
+        // 트래킹 아이템이 없으므로 BasicModeViewer가 렌더링됨
+        expect(screen.getByTestId('basic-mode-viewer')).toBeInTheDocument()
+      })
+    })
+
+    it('should render MindARViewer when tracking items exist regardless of project mode', async () => {
+      // 트래킹 아이템이 있으면 프로젝트 모드와 관계없이 AR 모드로 렌더링
+      mockUseQuery.mockReturnValue({
+        data: {
+          fileIds: {
+            mindFileId: 'mind-123',
+            targetImageFileId: 'target-123',
+            mode: 'basic', // 프로젝트 모드가 basic이더라도
+            cameraResolution: 'fhd',
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'tracking', // tracking 아이템이 있으면
+                fileId: 'file-1',
+                order: 0,
+              },
+            ],
+          },
+          assets: {
+            mindUrl: 'blob:mind-url',
+            targetImageUrl: 'blob:target-url',
             mainVideo: {
               id: 'video-1',
               type: 'video',
@@ -450,8 +513,8 @@ describe('MindARViewerPage', () => {
       render(<MindARViewerPage />)
 
       await waitFor(() => {
-        // BasicModeViewer가 렌더링되어야 함 (프로젝트가 basic 모드이므로)
-        expect(screen.getByTestId('basic-mode-viewer')).toBeInTheDocument()
+        // 트래킹 아이템이 있으므로 MindARViewer가 렌더링됨
+        expect(screen.getByTestId('mindar-viewer')).toBeInTheDocument()
       })
     })
   })

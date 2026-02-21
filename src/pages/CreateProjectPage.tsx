@@ -23,7 +23,6 @@ export default function CreateProjectPage() {
   // Form state
   const [formState, setFormState] = useState<ProjectFormState>({
     title: '',
-    mode: 'ar',
     cameraResolution: 'fhd',
     videoQuality: 'low',
     thumbnailFile: null,
@@ -76,20 +75,21 @@ export default function CreateProjectPage() {
   }, [])
 
   // 퍼블리시 가능 여부
-  // AR 모드: 타겟 이미지 파일 + 미디어 아이템 필요
-  // 기본 모드: 미디어 아이템만 필요
+  // 트래킹 미디어가 있으면: 타겟 이미지 파일 + 미디어 아이템 필요
+  // 트래킹 미디어가 없으면: 미디어 아이템만 필요
   const canPublish = useMemo(() => {
-    const { mode, targetImageFiles, mediaItems } = formState
+    const { targetImageFiles, mediaItems } = formState
     const hasMediaItems = mediaItems.some(item => item.file !== null)
+    const hasTrackingItems = mediaItems.some(item => item.mode === 'tracking')
     // 크로마키 검증: 크로마키 활성화된 아이템의 색상이 모두 유효한지 확인
     const hasValidChromaKey = mediaItems
       .filter(item => item.chromaKeyEnabled)
       .every(item => isValidHexColor(item.chromaKeyColor))
 
-    if (mode === 'ar') {
+    if (hasTrackingItems) {
       return targetImageFiles.length > 0 && hasMediaItems && hasValidChromaKey
     }
-    // 기본 모드
+    // 트래킹 미디어가 없으면 타겟 이미지 불필요
     return hasMediaItems && hasValidChromaKey
   }, [formState])
 
@@ -107,7 +107,6 @@ export default function CreateProjectPage() {
 
     const {
       title,
-      mode,
       cameraResolution,
       videoQuality,
       thumbnailFile,
@@ -120,9 +119,10 @@ export default function CreateProjectPage() {
     } = formState
 
     const mediaItemsWithFiles = mediaItems.filter(item => item.file !== null)
+    const hasTrackingItems = mediaItems.some(item => item.mode === 'tracking')
 
-    // AR 모드에서는 타겟 이미지 필수
-    if (mode === 'ar' && targetImageFiles.length === 0) return
+    // 트래킹 미디어가 있으면 타겟 이미지 필수
+    if (hasTrackingItems && targetImageFiles.length === 0) return
     // 미디어 아이템 필수
     if (mediaItemsWithFiles.length === 0) return
 
@@ -142,8 +142,8 @@ export default function CreateProjectPage() {
       // 2. FormData 구성
       const formData = new FormData()
 
-      // AR 모드: 타겟 이미지 컴파일 필요
-      if (mode === 'ar') {
+      // 트래킹 미디어가 있으면 타겟 이미지 컴파일 필요
+      if (hasTrackingItems) {
         const { targetBuffer, originalImage } = await compile(targetImageFiles, {
           highPrecision,
         })
@@ -181,12 +181,13 @@ export default function CreateProjectPage() {
         }
       })
 
-      formData.append('mode', mode)
+      // 모드는 트래킹 미디어 존재 여부로 결정 (백엔드 호환성)
+      formData.append('mode', hasTrackingItems ? 'ar' : 'basic')
       formData.append('cameraResolution', cameraResolution)
       formData.append('videoQuality', videoQuality)
 
-      // 추적 정확도 향상 옵션 전송 (AR 모드에서만)
-      if (mode === 'ar' && highPrecision) {
+      // 추적 정확도 향상 옵션 전송 (트래킹 미디어가 있을 때만)
+      if (hasTrackingItems && highPrecision) {
         formData.append('highPrecision', 'true')
       }
       if (title) {
@@ -270,10 +271,12 @@ export default function CreateProjectPage() {
 
   // 현재 단계 메시지
   const stepMessage = useMemo(() => {
-    const { mode, targetImageFiles, mediaItems } = formState
+    const { targetImageFiles, mediaItems } = formState
     const hasMediaContent = mediaItems.some(item => item.file !== null)
+    const hasTrackingItems = mediaItems.some(item => item.mode === 'tracking')
 
-    if (mode === 'ar') {
+    // 트래킹 미디어가 있으면 타겟 이미지 필요
+    if (hasTrackingItems) {
       if (targetImageFiles.length === 0) {
         return 'Step 1. 타겟 이미지를 업로드해주세요.'
       }
@@ -282,7 +285,7 @@ export default function CreateProjectPage() {
       }
       return 'Step 3. 배포 버튼을 클릭하세요.'
     }
-    // 기본 모드
+    // 트래킹 미디어가 없으면 타겟 이미지 불필요
     if (!hasMediaContent) {
       return 'Step 1. 영상이나 이미지를 추가해주세요.'
     }

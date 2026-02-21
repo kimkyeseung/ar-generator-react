@@ -30,7 +30,6 @@ export default function EditProjectPage() {
   // Form state
   const [formState, setFormState] = useState<ProjectFormState>({
     title: '',
-    mode: 'ar',
     cameraResolution: 'fhd',
     videoQuality: 'low',
     thumbnailFile: null,
@@ -103,7 +102,6 @@ export default function EditProjectPage() {
 
         setFormState({
           title: data.title || '',
-          mode: data.mode || 'ar',
           cameraResolution: data.cameraResolution || 'fhd',
           videoQuality: data.videoQuality || 'low',
           thumbnailFile: null,
@@ -150,8 +148,13 @@ export default function EditProjectPage() {
     }))
   }, [])
 
-  // AR 모드로 변경 시 타겟 이미지가 필요한지 확인
-  const needsTargetImage = formState.mode === 'ar' && !project?.targetImageFileId && formState.targetImageFiles.length === 0
+  // 트래킹 모드 미디어가 있는지 확인
+  const hasTrackingItems = useMemo(() => {
+    return formState.mediaItems.some(item => item.mode === 'tracking')
+  }, [formState.mediaItems])
+
+  // 트래킹 모드 미디어가 있으면 타겟 이미지 필요 (기존 타겟 이미지가 없고 새로 업로드도 안 한 경우)
+  const needsTargetImage = hasTrackingItems && !project?.targetImageFileId && formState.targetImageFiles.length === 0
 
   const canSave =
     !isUploading &&
@@ -172,7 +175,6 @@ export default function EditProjectPage() {
 
     const {
       title,
-      mode,
       cameraResolution,
       videoQuality,
       thumbnailFile,
@@ -201,7 +203,8 @@ export default function EditProjectPage() {
 
       // 메타데이터
       formData.append('title', title)
-      formData.append('mode', mode)
+      // 모드는 트래킹 미디어 존재 여부로 결정 (백엔드 호환성)
+      formData.append('mode', hasTrackingItems ? 'ar' : 'basic')
       formData.append('cameraResolution', cameraResolution)
       formData.append('videoQuality', videoQuality)
       formData.append('highPrecision', highPrecision ? 'true' : 'false')
@@ -221,8 +224,8 @@ export default function EditProjectPage() {
         formData.append('guideImage', guideImageFile)
       }
 
-      // 새 타겟 이미지가 있으면 컴파일 후 추가
-      if (targetImageFiles.length > 0) {
+      // 새 타겟 이미지가 있으면 컴파일 후 추가 (트래킹 아이템이 있을 때만)
+      if (hasTrackingItems && targetImageFiles.length > 0) {
         const { targetBuffer, originalImage } = await compile(targetImageFiles, {
           highPrecision,
         })

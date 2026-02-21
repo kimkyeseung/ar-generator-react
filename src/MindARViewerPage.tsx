@@ -64,8 +64,9 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
   if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
   const fileIds: ArFilesResponse = await res.json()
 
-  // 기본 모드: .mind 파일과 타겟 이미지 불필요
-  const isBasicMode = fileIds.mode === 'basic'
+  // 트래킹 모드 미디어 아이템이 하나라도 있으면 AR 모드, 없으면 기본 모드
+  const hasTrackingItems = (fileIds.mediaItems || []).some(item => item.mode === 'tracking')
+  const isBasicMode = !hasTrackingItems
 
   // Step 2: 에셋 로드 (모드에 따라 다름)
   let mindUrl: string | undefined
@@ -277,7 +278,9 @@ export default function MindARViewerPage() {
     )
   }
 
-  const isBasicMode = data.fileIds.mode === 'basic'
+  // 트래킹 모드 미디어 아이템이 하나라도 있으면 AR 모드, 없으면 기본 모드
+  const hasTrackingItems = (data.fileIds.mediaItems || []).some(item => item.mode === 'tracking')
+  const isBasicMode = !hasTrackingItems
 
   // 기본 모드: BasicModeViewer 렌더링
   if (isBasicMode) {

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Video, Image as ImageIcon, Trash2 } from 'lucide-react'
 import TargetImageUpload from './TargetImageUpload'
 import ThumbnailUpload from './ThumbnailUpload'
@@ -6,14 +6,12 @@ import OverlayImageUpload from './OverlayImageUpload'
 import GuideImageUpload from './GuideImageUpload'
 import ArOptionsSection from './home/ArOptionsSection'
 import CameraResolutionSelector from './home/CameraResolutionSelector'
-import ModeSelector from './home/ModeSelector'
 import UploadCard from './home/UploadCard'
 import VideoQualitySelector from './home/VideoQualitySelector'
 import MediaItemEditor from './media/MediaItemEditor'
 import { CollapsibleSection } from './ui/CollapsibleSection'
 import {
   CameraResolution,
-  ProjectMode,
   VideoQuality,
   MediaItem,
   MediaType,
@@ -25,7 +23,6 @@ const generateMediaItemId = () => `media-${Date.now()}-${++mediaItemIdCounter}`
 
 export interface ProjectFormState {
   title: string
-  mode: ProjectMode
   cameraResolution: CameraResolution
   videoQuality: VideoQuality
   thumbnailFile: File | null
@@ -69,7 +66,6 @@ export default function ProjectForm({
 }: ProjectFormProps) {
   const {
     title,
-    mode,
     cameraResolution,
     videoQuality,
     thumbnailFile,
@@ -82,16 +78,10 @@ export default function ProjectForm({
     highPrecision,
   } = state
 
-  // 모드 변경 핸들러
-  const handleModeChange = useCallback((newMode: ProjectMode) => {
-    const updates: Partial<ProjectFormState> = { mode: newMode }
-    // 기본 모드로 변경 시 AR 관련 상태 초기화
-    if (newMode === 'basic') {
-      updates.targetImageFiles = []
-      updates.highPrecision = false
-    }
-    onChange(updates)
-  }, [onChange])
+  // 트래킹 모드 미디어 아이템 존재 여부
+  const hasTrackingItems = useMemo(() => {
+    return mediaItems.some(item => item.mode === 'tracking')
+  }, [mediaItems])
 
   // 미디어 아이템 추가
   const handleAddItem = useCallback((type: MediaType) => {
@@ -149,8 +139,8 @@ export default function ProjectForm({
     })
   }, [mediaItems, onChange])
 
-  // AR 모드에서 타겟 이미지가 필요한지 확인
-  const needsTargetImage = mode === 'ar' && !hasExistingTargetImage && targetImageFiles.length === 0
+  // 트래킹 모드 미디어가 있을 때 타겟 이미지가 필요한지 확인
+  const needsTargetImage = hasTrackingItems && !hasExistingTargetImage && targetImageFiles.length === 0
 
   return (
     <UploadCard
@@ -182,17 +172,6 @@ export default function ProjectForm({
         />
 
         {/* 모드 선택 */}
-        <ModeSelector
-          mode={mode}
-          onModeChange={handleModeChange}
-          disabled={disabled}
-        />
-        {mode === 'ar' && hasExistingTargetImage && !existingData?.targetImageUrl && (
-          <p className='text-xs text-amber-600'>
-            AR 모드로 변경하면 타겟 이미지를 업로드해야 합니다.
-          </p>
-        )}
-
         {/* 안내문구 이미지 */}
         <GuideImageUpload
           file={guideImageFile}
@@ -232,7 +211,7 @@ export default function ProjectForm({
       </div>
 
       {/* 현재 에셋 미리보기 (Edit 모드에서 기존 타겟 이미지 표시) */}
-      {mode === 'ar' && existingData?.targetImageUrl && targetImageFiles.length === 0 && (
+      {hasTrackingItems && existingData?.targetImageUrl && targetImageFiles.length === 0 && (
         <CollapsibleSection title="현재 에셋" defaultOpen={true} className="mt-4">
           <div className='flex gap-4 flex-wrap'>
             <div className='flex flex-col items-center'>
@@ -247,32 +226,42 @@ export default function ProjectForm({
         </CollapsibleSection>
       )}
 
-      {/* AR 설정 (AR 모드에서만) */}
-      {mode === 'ar' && (
-        <CollapsibleSection title="AR 설정" defaultOpen={true} className="mt-4">
-          <div className='space-y-4'>
-            <ArOptionsSection
-              highPrecision={highPrecision}
-              onHighPrecisionChange={(value) => onChange({ highPrecision: value })}
-            />
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                타겟 이미지 {needsTargetImage ? '(필수)' : '변경 (선택)'}
-                {needsTargetImage && <span className='text-red-500 ml-1'>*</span>}
-              </label>
-              <TargetImageUpload
-                files={targetImageFiles}
-                onFileSelect={(files) => onChange({ targetImageFiles: files })}
+      {/* 타겟 이미지 설정 */}
+      <CollapsibleSection title="타겟 이미지" defaultOpen={true} className="mt-4">
+        <div className='space-y-4'>
+          {hasTrackingItems ? (
+            <>
+              <ArOptionsSection
+                highPrecision={highPrecision}
+                onHighPrecisionChange={(value) => onChange({ highPrecision: value })}
               />
-              {needsTargetImage && (
-                <p className='text-xs text-red-500 mt-1'>
-                  AR 모드에서는 타겟 이미지가 필요합니다.
-                </p>
-              )}
-            </div>
-          </div>
-        </CollapsibleSection>
-      )}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  타겟 이미지 {needsTargetImage ? '(필수)' : '변경 (선택)'}
+                  {needsTargetImage && <span className='text-red-500 ml-1'>*</span>}
+                </label>
+                <TargetImageUpload
+                  files={targetImageFiles}
+                  onFileSelect={(files) => onChange({ targetImageFiles: files })}
+                />
+                {needsTargetImage && (
+                  <p className='text-xs text-red-500 mt-1'>
+                    트래킹 모드 미디어가 있으면 타겟 이미지가 필요합니다.
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className='text-sm text-gray-500 py-4 text-center'>
+              현재는 타겟 이미지가 필요없습니다.
+              <br />
+              <span className='text-xs text-gray-400'>
+                트래킹 모드 미디어를 추가하면 타겟 이미지를 설정할 수 있습니다.
+              </span>
+            </p>
+          )}
+        </div>
+      </CollapsibleSection>
 
       {/* 미디어 아이템들 (각각 CollapsibleSection) */}
       {mediaItems.length === 0 && (

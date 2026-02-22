@@ -29,6 +29,7 @@ export interface ProcessedMediaItem {
 interface ArFilesResponse {
   mindFileId?: string // 트래킹 아이템 없으면 null
   targetImageFileId?: string
+  thumbnailFileId?: string // 썸네일 이미지 ID (로딩 화면용)
   guideImageFileId?: string // 안내문구 이미지 ID
   highPrecision?: boolean
   cameraResolution?: CameraResolution // 'fhd' | 'hd'
@@ -39,6 +40,7 @@ interface ArFilesResponse {
 interface ArAssets {
   mindUrl?: string // 기본 모드에서는 undefined
   targetImageUrl?: string // 기본 모드에서는 undefined
+  thumbnailUrl?: string // 썸네일 이미지 URL (로딩 화면 우선 표시)
   guideImageUrl?: string // 안내문구 이미지 URL
   mediaItems: ProcessedMediaItem[] // 모든 미디어 아이템
   // 첫 번째 비디오 (메인 비디오) - BasicModeViewer/MindARViewer 호환용
@@ -132,6 +134,9 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
     assets: {
       mindUrl,
       targetImageUrl,
+      thumbnailUrl: fileIds.thumbnailFileId
+        ? `${API_URL}/file/${fileIds.thumbnailFileId}?t=${cacheBuster}`
+        : undefined,
       guideImageUrl: fileIds.guideImageFileId
         ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
         : undefined,
@@ -335,6 +340,7 @@ export default function MindARViewerPage() {
             videoUrl={mainVideo.fileUrl}
             previewVideoUrl={mainVideo.previewFileUrl}
             targetImageUrl={data.assets.targetImageUrl!}
+            thumbnailUrl={data.assets.thumbnailUrl}
             chromaKeyColor={mainVideo.chromaKeyEnabled ? mainVideo.chromaKeyColor : undefined}
             chromaKeySettings={mainVideo.chromaKeySettings}
             flatView={mainVideo.flatView}

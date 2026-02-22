@@ -4,15 +4,19 @@
 
 interface LoadingScreenProps {
   targetImageUrl: string
+  thumbnailUrl?: string // 썸네일이 있으면 우선 표시, 없으면 타겟 이미지 표시
 }
 
-export function LoadingScreen({ targetImageUrl }: LoadingScreenProps) {
+export function LoadingScreen({ targetImageUrl, thumbnailUrl }: LoadingScreenProps) {
+  // 썸네일이 있으면 썸네일, 없으면 타겟 이미지
+  const displayImageUrl = thumbnailUrl || targetImageUrl
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
       <div className="mb-6">
         <img
-          src={targetImageUrl}
-          alt="타겟 이미지"
+          src={displayImageUrl}
+          alt="로딩 이미지"
           className="h-40 w-40 rounded-xl border-4 border-white/30 object-cover shadow-2xl"
         />
       </div>

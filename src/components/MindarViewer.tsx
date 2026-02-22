@@ -30,6 +30,7 @@ interface Props {
   videoUrl: string
   previewVideoUrl?: string
   targetImageUrl: string
+  thumbnailUrl?: string // 로딩 화면용 썸네일 (없으면 targetImageUrl 사용)
   chromaKeyColor?: string
   chromaKeySettings?: ChromaKeySettings
   flatView?: boolean
@@ -47,6 +48,7 @@ const MindARViewer: React.FC<Props> = ({
   videoUrl,
   previewVideoUrl,
   targetImageUrl,
+  thumbnailUrl,
   chromaKeyColor,
   chromaKeySettings = DEFAULT_CHROMAKEY_SETTINGS,
   flatView,
@@ -230,7 +232,7 @@ const MindARViewer: React.FC<Props> = ({
   return (
     <>
       {/* 로딩 화면 */}
-      {isLoading && <LoadingScreen targetImageUrl={targetImageUrl} />}
+      {isLoading && <LoadingScreen targetImageUrl={targetImageUrl} thumbnailUrl={thumbnailUrl} />}
 
       {/* 안내문구 이미지 */}
       {guideImageUrl && !isAllVideosReady && !isLoading && (

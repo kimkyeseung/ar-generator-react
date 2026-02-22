@@ -29,6 +29,7 @@ interface MediaPreview {
   id: string
   element: HTMLVideoElement | HTMLImageElement | null
   objectUrl: string | null
+  actualAspectRatio?: number // 실제 미디어에서 계산된 비율
 }
 
 export default function UnifiedPreviewCanvas({
@@ -206,20 +207,32 @@ export default function UnifiedPreviewCanvas({
           video.loop = true
           video.playsInline = true
           video.preload = 'auto'
+          const preview: MediaPreview = { id: item.id, element: video, objectUrl: url }
+          video.onloadedmetadata = () => {
+            // 실제 영상에서 비율 계산
+            if (video.videoWidth && video.videoHeight) {
+              preview.actualAspectRatio = video.videoWidth / video.videoHeight
+            }
+          }
           video.onloadeddata = () => {
             video.play().catch(() => {})
             setMediaPreviewsMap((prev) => new Map(prev))
           }
           video.onerror = () => {}
-          newPreviews.set(item.id, { id: item.id, element: video, objectUrl: url })
+          newPreviews.set(item.id, preview)
         } else {
           const img = new window.Image()
           img.src = url
+          const preview: MediaPreview = { id: item.id, element: img, objectUrl: url }
           img.onload = () => {
+            // 실제 이미지에서 비율 계산
+            if (img.naturalWidth && img.naturalHeight) {
+              preview.actualAspectRatio = img.naturalWidth / img.naturalHeight
+            }
             setMediaPreviewsMap((prev) => new Map(prev))
           }
           img.onerror = () => {}
-          newPreviews.set(item.id, { id: item.id, element: img, objectUrl: url })
+          newPreviews.set(item.id, preview)
         }
       } else if (item.existingFileId) {
         const url = `${API_URL}/file/${item.existingFileId}`
@@ -231,21 +244,33 @@ export default function UnifiedPreviewCanvas({
           video.playsInline = true
           video.preload = 'auto'
           video.crossOrigin = 'anonymous'
+          const preview: MediaPreview = { id: item.id, element: video, objectUrl: null }
+          video.onloadedmetadata = () => {
+            // 실제 영상에서 비율 계산 (DB 값 대신 사용)
+            if (video.videoWidth && video.videoHeight) {
+              preview.actualAspectRatio = video.videoWidth / video.videoHeight
+            }
+          }
           video.onloadeddata = () => {
             video.play().catch(() => {})
             setMediaPreviewsMap((prev) => new Map(prev))
           }
           video.onerror = () => {}
-          newPreviews.set(item.id, { id: item.id, element: video, objectUrl: null })
+          newPreviews.set(item.id, preview)
         } else {
           const img = new window.Image()
           img.src = url
           img.crossOrigin = 'anonymous'
+          const preview: MediaPreview = { id: item.id, element: img, objectUrl: null }
           img.onload = () => {
+            // 실제 이미지에서 비율 계산 (DB 값 대신 사용)
+            if (img.naturalWidth && img.naturalHeight) {
+              preview.actualAspectRatio = img.naturalWidth / img.naturalHeight
+            }
             setMediaPreviewsMap((prev) => new Map(prev))
           }
           img.onerror = () => {}
-          newPreviews.set(item.id, { id: item.id, element: img, objectUrl: null })
+          newPreviews.set(item.id, preview)
         }
       }
     })
@@ -352,17 +377,20 @@ export default function UnifiedPreviewCanvas({
       const position = isSelected && localOverride?.position ? localOverride.position : item.position
       const itemScale = isSelected && localOverride?.scale !== undefined ? localOverride.scale : item.scale
 
+      // 실제 미디어에서 계산된 비율 사용 (DB 값보다 우선)
+      const aspectRatio = preview.actualAspectRatio ?? item.aspectRatio
+
       // 미디어 크기 계산: scale=1(100%)일 때 화면을 가득 채움
       let baseWidth: number
       let baseHeight: number
-      if (item.aspectRatio < 1) {
+      if (aspectRatio < 1) {
         // 세로 미디어: 너비 기준
         baseWidth = CANVAS_WIDTH
-        baseHeight = baseWidth / item.aspectRatio
+        baseHeight = baseWidth / aspectRatio
       } else {
         // 가로 미디어: 높이 기준
         baseHeight = CANVAS_HEIGHT
-        baseWidth = baseHeight * item.aspectRatio
+        baseWidth = baseHeight * aspectRatio
       }
       const mediaWidth = baseWidth * itemScale * zoom
       const mediaHeight = baseHeight * itemScale * zoom
@@ -517,17 +545,21 @@ export default function UnifiedPreviewCanvas({
     const position = localOverride?.position ?? selectedItem.position
     const scale = localOverride?.scale ?? selectedItem.scale
 
+    // 실제 미디어에서 계산된 비율 사용 (DB 값보다 우선)
+    const preview = mediaPreviewsMap.get(selectedItemId)
+    const aspectRatio = preview?.actualAspectRatio ?? selectedItem.aspectRatio
+
     // 미디어 크기 계산: scale=1(100%)일 때 화면을 가득 채움
     let baseWidth: number
     let baseHeight: number
-    if (selectedItem.aspectRatio < 1) {
+    if (aspectRatio < 1) {
       // 세로 미디어: 너비 기준
       baseWidth = CANVAS_WIDTH
-      baseHeight = baseWidth / selectedItem.aspectRatio
+      baseHeight = baseWidth / aspectRatio
     } else {
       // 가로 미디어: 높이 기준
       baseHeight = CANVAS_HEIGHT
-      baseWidth = baseHeight * selectedItem.aspectRatio
+      baseWidth = baseHeight * aspectRatio
     }
     const mediaWidth = baseWidth * scale * zoom
     const mediaHeight = baseHeight * scale * zoom
@@ -541,7 +573,7 @@ export default function UnifiedPreviewCanvas({
       width: mediaWidth,
       height: mediaHeight,
     }
-  }, [selectedItemId, items, zoom, localOverride])
+  }, [selectedItemId, items, zoom, localOverride, mediaPreviewsMap])
 
   // 전역 마우스 이벤트 핸들러 (드래그/리사이즈 중)
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
@@ -719,17 +751,20 @@ export default function UnifiedPreviewCanvas({
       const preview = mediaPreviewsMap.get(item.id)
       if (!preview?.element) continue
 
+      // 실제 미디어에서 계산된 비율 사용 (DB 값보다 우선)
+      const aspectRatio = preview.actualAspectRatio ?? item.aspectRatio
+
       // 미디어 크기 계산: scale=1(100%)일 때 화면을 가득 채움
       let baseWidth: number
       let baseHeight: number
-      if (item.aspectRatio < 1) {
+      if (aspectRatio < 1) {
         // 세로 미디어: 너비 기준
         baseWidth = CANVAS_WIDTH
-        baseHeight = baseWidth / item.aspectRatio
+        baseHeight = baseWidth / aspectRatio
       } else {
         // 가로 미디어: 높이 기준
         baseHeight = CANVAS_HEIGHT
-        baseWidth = baseHeight * item.aspectRatio
+        baseWidth = baseHeight * aspectRatio
       }
       const mediaWidth = (baseWidth * item.scale * zoom) / CANVAS_WIDTH
       const mediaHeight = (baseHeight * item.scale * zoom) / CANVAS_HEIGHT

@@ -341,7 +341,7 @@ export default function MediaItemEditor({
                   onChange={(e) => handleChromaKeyColorChange(e.target.value)}
                   disabled={disabled}
                   placeholder="#00FF00"
-                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                  className="flex-1 px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded bg-white"
                 />
                 {/* 세부 설정 토글 버튼 */}
                 <button
@@ -464,7 +464,7 @@ export default function MediaItemEditor({
               onChange={(e) => handleLinkUrlChange(e.target.value)}
               disabled={disabled}
               placeholder="https://example.com"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           )}
         </div>

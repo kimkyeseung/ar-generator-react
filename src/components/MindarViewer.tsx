@@ -74,9 +74,10 @@ const MindARViewer: React.FC<Props> = ({
   const [filterBeta, setFilterBeta] = useState(1500)
 
   // ==================== 계산 ====================
-  const videoMediaItems = mediaItems.filter((item) => item.type === 'video')
   const basicModeItems = mediaItems.filter((item) => item.mode === 'basic')
-  const isAllVideosReady = isMainVideoReady && loadedMediaCount >= videoMediaItems.length
+  // basic 모드 비디오만 카운트 (tracking 모드 비디오는 A-Frame에서 별도로 처리됨)
+  const basicModeVideoCount = basicModeItems.filter((item) => item.type === 'video').length
+  const isAllVideosReady = isMainVideoReady && loadedMediaCount >= basicModeVideoCount
 
   // ==================== 콜백 ====================
   const handleLoadingComplete = useCallback(() => setIsLoading(false), [])

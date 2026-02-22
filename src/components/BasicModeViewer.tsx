@@ -51,9 +51,10 @@ const BasicModeViewer: React.FC<Props> = ({
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
   const [videoResolution, setVideoResolution] = useState<string | null>(null) // 비디오 해상도
 
-  // 모든 비디오가 로드되었는지 계산 (메인 비디오 + mediaItems 내 비디오)
-  const videoMediaItems = mediaItems.filter((item) => item.type === 'video')
-  const isAllVideosReady = isMainVideoReady && loadedMediaCount >= videoMediaItems.length
+  // 모든 비디오가 로드되었는지 계산 (메인 비디오 + 기본 모드 비디오만)
+  // 렌더링되는 것은 basic 모드 아이템만이므로 카운트도 basic 모드 비디오만 해야 함
+  const basicModeVideoCount = mediaItems.filter((item) => item.type === 'video' && item.mode === 'basic').length
+  const isAllVideosReady = isMainVideoReady && loadedMediaCount >= basicModeVideoCount
 
   // props 변경 시 상태 리셋
   useEffect(() => {

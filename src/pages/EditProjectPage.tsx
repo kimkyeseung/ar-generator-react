@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import HeroHeader from '../components/home/HeroHeader'
 import PageBackground from '../components/home/PageBackground'
 import PasswordModal from '../components/PasswordModal'
@@ -17,6 +18,14 @@ import {
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { API_URL } from '../config/api'
 import { verifyPassword } from '../utils/auth'
+
+// 애셋 체크 결과 타입
+interface AssetCheckResult {
+  name: string
+  url: string
+  status: 'pending' | 'loading' | 'success' | 'error'
+  error?: string
+}
 
 export default function EditProjectPage() {
   const { id } = useParams<{ id: string }>()
@@ -51,6 +60,11 @@ export default function EditProjectPage() {
   // 비밀번호 모달 상태
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+
+  // 애셋 체크 상태
+  const [showAssetCheckModal, setShowAssetCheckModal] = useState(false)
+  const [assetCheckResults, setAssetCheckResults] = useState<AssetCheckResult[]>([])
+  const [isCheckingAssets, setIsCheckingAssets] = useState(false)
 
   // 훅
   const { compile, isCompiling, progress: compileProgress } = useImageCompiler()
@@ -308,6 +322,112 @@ export default function EditProjectPage() {
     return '편집 모드'
   }, [isCompiling, isUploading, compileProgress, progress])
 
+  // 애셋 체크 함수
+  const handleAssetCheck = useCallback(async () => {
+    if (!project) return
+
+    setIsCheckingAssets(true)
+    setShowAssetCheckModal(true)
+
+    // 체크할 애셋 목록 생성
+    const assets: AssetCheckResult[] = []
+
+    // 썸네일 이미지
+    if (project.thumbnailFileId) {
+      assets.push({
+        name: '썸네일 이미지',
+        url: `${API_URL}/file/${project.thumbnailFileId}`,
+        status: 'pending',
+      })
+    }
+
+    // 타겟 이미지
+    if (project.targetImageFileId) {
+      assets.push({
+        name: '타겟 이미지',
+        url: `${API_URL}/file/${project.targetImageFileId}`,
+        status: 'pending',
+      })
+    }
+
+    // .mind 파일
+    if (project.targetFileId) {
+      assets.push({
+        name: '타겟 파일 (.mind)',
+        url: `${API_URL}/file/${project.targetFileId}`,
+        status: 'pending',
+      })
+    }
+
+    // 안내 이미지
+    if (project.guideImageFileId) {
+      assets.push({
+        name: '안내문구 이미지',
+        url: `${API_URL}/file/${project.guideImageFileId}`,
+        status: 'pending',
+      })
+    }
+
+    // 미디어 아이템들
+    formState.mediaItems.forEach((item, index) => {
+      if (item.existingFileId) {
+        assets.push({
+          name: `미디어 ${index + 1} (${item.type === 'video' ? '영상' : '이미지'}, ${item.mode === 'tracking' ? '트래킹' : '기본'})`,
+          url: `${API_URL}/file/${item.existingFileId}`,
+          status: 'pending',
+        })
+      }
+      if (item.existingPreviewFileId) {
+        assets.push({
+          name: `미디어 ${index + 1} 프리뷰`,
+          url: `${API_URL}/file/${item.existingPreviewFileId}`,
+          status: 'pending',
+        })
+      }
+    })
+
+    setAssetCheckResults(assets)
+
+    // 각 애셋 체크
+    const checkAsset = async (asset: AssetCheckResult, index: number) => {
+      setAssetCheckResults(prev =>
+        prev.map((a, i) => (i === index ? { ...a, status: 'loading' } : a))
+      )
+
+      try {
+        const response = await fetch(asset.url, { method: 'HEAD' })
+        if (response.ok) {
+          setAssetCheckResults(prev =>
+            prev.map((a, i) => (i === index ? { ...a, status: 'success' } : a))
+          )
+        } else {
+          setAssetCheckResults(prev =>
+            prev.map((a, i) =>
+              i === index
+                ? { ...a, status: 'error', error: `HTTP ${response.status}` }
+                : a
+            )
+          )
+        }
+      } catch (err) {
+        setAssetCheckResults(prev =>
+          prev.map((a, i) =>
+            i === index
+              ? { ...a, status: 'error', error: err instanceof Error ? err.message : '네트워크 오류' }
+              : a
+          )
+        )
+      }
+    }
+
+    // 모든 애셋을 순차적으로 체크
+    for (let i = 0; i < assets.length; i++) {
+      await checkAsset(assets[i], i)
+    }
+
+    setIsCheckingAssets(false)
+  }, [project, formState.mediaItems])
+
   // 기존 데이터 (ProjectForm에 전달)
   const existingData: ProjectFormExistingData | undefined = project ? {
     thumbnailUrl: project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined,
@@ -384,6 +504,14 @@ export default function EditProjectPage() {
           취소
         </Button>
         <Button
+          variant='outline'
+          onClick={handleAssetCheck}
+          disabled={isUploading || isCompiling || isCheckingAssets}
+          className='flex-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+        >
+          {isCheckingAssets ? '확인 중...' : '애셋확인'}
+        </Button>
+        <Button
           onClick={handleSaveClick}
           disabled={!canSave}
           className='flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
@@ -455,6 +583,87 @@ export default function EditProjectPage() {
         isLoading={isUploading || isCompiling}
         error={passwordError}
       />
+
+      {/* 애셋 체크 모달 */}
+      {showAssetCheckModal && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50'>
+          <div className='bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden flex flex-col'>
+            <div className='p-4 border-b'>
+              <h3 className='text-lg font-semibold text-gray-900'>애셋 확인</h3>
+              <p className='text-sm text-gray-500 mt-1'>
+                모든 미디어 파일의 로드 상태를 확인합니다.
+              </p>
+            </div>
+
+            <div className='flex-1 overflow-y-auto p-4 space-y-3'>
+              {assetCheckResults.length === 0 ? (
+                <p className='text-gray-500 text-center py-4'>
+                  확인할 애셋이 없습니다.
+                </p>
+              ) : (
+                assetCheckResults.map((result, index) => (
+                  <div
+                    key={index}
+                    className='flex items-center gap-3 p-3 bg-gray-50 rounded-lg'
+                  >
+                    <div className='flex-shrink-0'>
+                      {result.status === 'pending' && (
+                        <div className='w-5 h-5 rounded-full bg-gray-300' />
+                      )}
+                      {result.status === 'loading' && (
+                        <Loader2 className='w-5 h-5 text-blue-500 animate-spin' />
+                      )}
+                      {result.status === 'success' && (
+                        <CheckCircle className='w-5 h-5 text-green-500' />
+                      )}
+                      {result.status === 'error' && (
+                        <XCircle className='w-5 h-5 text-red-500' />
+                      )}
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium text-gray-900 truncate'>
+                        {result.name}
+                      </p>
+                      {result.status === 'error' && result.error && (
+                        <p className='text-xs text-red-500 mt-0.5'>
+                          {result.error}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className='p-4 border-t bg-gray-50'>
+              <div className='flex items-center justify-between mb-3'>
+                <div className='text-sm'>
+                  {isCheckingAssets ? (
+                    <span className='text-blue-600'>확인 중...</span>
+                  ) : (
+                    <>
+                      <span className='text-green-600'>
+                        성공: {assetCheckResults.filter(r => r.status === 'success').length}
+                      </span>
+                      <span className='mx-2 text-gray-400'>|</span>
+                      <span className='text-red-600'>
+                        실패: {assetCheckResults.filter(r => r.status === 'error').length}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <Button
+                onClick={() => setShowAssetCheckModal(false)}
+                className='w-full'
+                disabled={isCheckingAssets}
+              >
+                닫기
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageBackground>
   )
 }

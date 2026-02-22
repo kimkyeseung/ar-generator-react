@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { ArrowUp, ArrowDown, Upload, X, Move, Maximize2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '../ui/button'
 import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'
-import { isValidHexColor } from '../../utils/validation'
+import { isValidHexColor, isValidUrl } from '../../utils/validation'
 
 const MIN_SCALE = 0.2
 const MAX_SCALE = 5.0
@@ -458,14 +458,21 @@ export default function MediaItemEditor({
             </label>
           </div>
           {item.linkEnabled && (
-            <input
-              type="url"
-              value={item.linkUrl || ''}
-              onChange={(e) => handleLinkUrlChange(e.target.value)}
-              disabled={disabled}
-              placeholder="https://example.com"
-              className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
+            <>
+              <input
+                type="url"
+                value={item.linkUrl || ''}
+                onChange={(e) => handleLinkUrlChange(e.target.value)}
+                disabled={disabled}
+                placeholder="https://example.com"
+                className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              {item.linkUrl && !isValidUrl(item.linkUrl) && (
+                <p className="text-xs text-red-500 mt-1">
+                  유효한 URL을 입력하세요
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

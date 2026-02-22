@@ -22,3 +22,20 @@ export function normalizeUrl(url: string | undefined | null): string {
   // 프로토콜이 없으면 https:// 추가
   return `https://${trimmed}`
 }
+
+/**
+ * 유효한 URL인지 검증
+ * @param url - 검증할 URL 문자열
+ * @returns 유효한 URL이면 true
+ */
+export function isValidUrl(url: string): boolean {
+  if (!url || !url.trim()) return true // 빈 값은 유효 (선택 필드)
+  const normalized = normalizeUrl(url)
+  try {
+    const parsed = new URL(normalized)
+    // http 또는 https 프로토콜만 허용
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}

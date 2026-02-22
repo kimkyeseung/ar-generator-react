@@ -35,8 +35,6 @@ export default function EditProjectPage() {
     thumbnailFile: null,
     targetImageFiles: [],
     guideImageFile: null,
-    overlayImageFile: null,
-    overlayLinkUrl: '',
     mediaItems: [],
     selectedMediaItemId: null,
     highPrecision: false,
@@ -107,8 +105,6 @@ export default function EditProjectPage() {
           thumbnailFile: null,
           targetImageFiles: [],
           guideImageFile: null,
-          overlayImageFile: null,
-          overlayLinkUrl: data.overlayLinkUrl || '',
           mediaItems: loadedItems,
           selectedMediaItemId: null,
           highPrecision: data.highPrecision || false,
@@ -180,8 +176,6 @@ export default function EditProjectPage() {
       thumbnailFile,
       targetImageFiles,
       guideImageFile,
-      overlayImageFile,
-      overlayLinkUrl,
       mediaItems,
       highPrecision,
     } = formState
@@ -211,12 +205,6 @@ export default function EditProjectPage() {
       if (thumbnailFile) {
         formData.append('thumbnail', thumbnailFile)
       }
-      // 오버레이 이미지 전송 (있는 경우)
-      if (overlayImageFile) {
-        formData.append('overlayImage', overlayImageFile)
-      }
-      // 오버레이 링크 URL 전송
-      formData.append('overlayLinkUrl', overlayLinkUrl)
       // 안내문구 이미지 전송 (있는 경우)
       if (guideImageFile) {
         formData.append('guideImage', guideImageFile)
@@ -325,7 +313,6 @@ export default function EditProjectPage() {
     thumbnailUrl: project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined,
     targetImageUrl: project.targetImageFileId ? `${API_URL}/file/${project.targetImageFileId}` : undefined,
     guideImageUrl: project.guideImageFileId ? `${API_URL}/file/${project.guideImageFileId}` : undefined,
-    overlayImageUrl: project.overlayImageFileId ? `${API_URL}/file/${project.overlayImageFileId}` : undefined,
   } : undefined
 
   if (isLoading) {

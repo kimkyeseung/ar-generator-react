@@ -354,7 +354,10 @@ export default function UnifiedPreviewCanvas({
     }
 
     // 미디어 아이템 렌더링 (순서대로)
-    const sortedItems = [...items].sort((a, b) => a.order - b.order)
+    // tracking 모드 아이템은 AR 타겟 위에 표시되므로 화면 배치 미리보기에서 제외
+    const sortedItems = [...items]
+      .filter((item) => item.mode !== 'tracking')
+      .sort((a, b) => a.order - b.order)
 
     sortedItems.forEach((item) => {
       const preview = mediaPreviewsMap.get(item.id)
@@ -540,6 +543,9 @@ export default function UnifiedPreviewCanvas({
 
     const selectedItem = items.find((item) => item.id === selectedItemId)
     if (!selectedItem) return null
+
+    // tracking 모드 아이템은 화면 배치 미리보기에서 제외
+    if (selectedItem.mode === 'tracking') return null
 
     // 드래그 중이면 로컬 오버라이드 값 사용
     const position = localOverride?.position ?? selectedItem.position
@@ -746,7 +752,10 @@ export default function UnifiedPreviewCanvas({
     const y = (e.clientY - rect.top) / rect.height
 
     // 클릭 위치에서 가장 가까운 아이템 찾기
-    const sortedItems = [...items].sort((a, b) => b.order - a.order) // 위에서부터 검사
+    // tracking 모드 아이템은 화면 배치 미리보기에서 제외
+    const sortedItems = [...items]
+      .filter((item) => item.mode !== 'tracking')
+      .sort((a, b) => b.order - a.order) // 위에서부터 검사
     for (const item of sortedItems) {
       const preview = mediaPreviewsMap.get(item.id)
       if (!preview?.element) continue

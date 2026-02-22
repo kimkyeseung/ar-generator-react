@@ -28,8 +28,6 @@ export default function CreateProjectPage() {
     thumbnailFile: null,
     targetImageFiles: [],
     guideImageFile: null,
-    overlayImageFile: null,
-    overlayLinkUrl: '',
     mediaItems: [],
     selectedMediaItemId: null,
     highPrecision: false,
@@ -112,8 +110,6 @@ export default function CreateProjectPage() {
       thumbnailFile,
       targetImageFiles,
       guideImageFile,
-      overlayImageFile,
-      overlayLinkUrl,
       mediaItems,
       highPrecision,
     } = formState
@@ -194,14 +190,6 @@ export default function CreateProjectPage() {
       // 썸네일 이미지 전송 (있는 경우)
       if (thumbnailFile) {
         formData.append('thumbnail', thumbnailFile)
-      }
-      // 오버레이 이미지 전송 (있는 경우)
-      if (overlayImageFile) {
-        formData.append('overlayImage', overlayImageFile)
-      }
-      // 오버레이 링크 URL 전송 (있는 경우)
-      if (overlayLinkUrl) {
-        formData.append('overlayLinkUrl', overlayLinkUrl)
       }
       // 안내문구 이미지 전송 (있는 경우)
       if (guideImageFile) {

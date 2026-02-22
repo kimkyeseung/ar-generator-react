@@ -19,7 +19,6 @@ import {
   GuideImageOverlay,
   DebugPanel,
   BasicModeMediaItem,
-  OverlayImageButton,
 } from './mindar'
 
 // A-Frame 컴포넌트 등록 (모듈 로드 시 1회만 실행)
@@ -37,8 +36,6 @@ interface Props {
   highPrecision?: boolean
   cameraResolution?: CameraResolution
   videoQuality?: VideoQuality
-  overlayImageUrl?: string
-  overlayLinkUrl?: string
   guideImageUrl?: string
   mediaItems?: ProcessedMediaItem[]
   debugMode?: boolean
@@ -55,8 +52,6 @@ const MindARViewer: React.FC<Props> = ({
   flatView,
   cameraResolution = 'fhd',
   videoQuality = 'low',
-  overlayImageUrl,
-  overlayLinkUrl,
   guideImageUrl,
   mediaItems = [],
   debugMode = false,
@@ -88,12 +83,6 @@ const MindARViewer: React.FC<Props> = ({
   const handleMainVideoReady = useCallback(() => setIsMainVideoReady(true), [])
   const handleVideoResolutionChange = useCallback((res: string) => setVideoResolution(res), [])
   const handleMediaVideoLoaded = useCallback(() => setLoadedMediaCount((c) => c + 1), [])
-
-  const handleOverlayClick = useCallback(() => {
-    if (overlayLinkUrl) {
-      window.open(overlayLinkUrl, '_blank', 'noopener,noreferrer')
-    }
-  }, [overlayLinkUrl])
 
   const handleToggleMute = useCallback(async () => {
     const sceneEl = sceneRef.current
@@ -255,15 +244,6 @@ const MindARViewer: React.FC<Props> = ({
       >
         <SpeakerIcon muted={isMuted} />
       </button>
-
-      {/* 오버레이 이미지 버튼 */}
-      {overlayImageUrl && (
-        <OverlayImageButton
-          imageUrl={overlayImageUrl}
-          linkUrl={overlayLinkUrl}
-          onClick={handleOverlayClick}
-        />
-      )}
 
       {/* 기본 모드 미디어 아이템 */}
       {basicModeItems.map((item) => (

@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react'
 import { Video, Image as ImageIcon, Trash2 } from 'lucide-react'
 import TargetImageUpload from './TargetImageUpload'
 import ThumbnailUpload from './ThumbnailUpload'
-import OverlayImageUpload from './OverlayImageUpload'
 import GuideImageUpload from './GuideImageUpload'
 import ArOptionsSection from './home/ArOptionsSection'
 import CameraResolutionSelector from './home/CameraResolutionSelector'
@@ -28,8 +27,6 @@ export interface ProjectFormState {
   thumbnailFile: File | null
   targetImageFiles: File[]
   guideImageFile: File | null
-  overlayImageFile: File | null
-  overlayLinkUrl: string
   mediaItems: MediaItem[]
   selectedMediaItemId: string | null
   highPrecision: boolean
@@ -39,7 +36,6 @@ export interface ProjectFormExistingData {
   thumbnailUrl?: string
   targetImageUrl?: string
   guideImageUrl?: string
-  overlayImageUrl?: string
 }
 
 export interface ProjectFormProps {
@@ -71,8 +67,6 @@ export default function ProjectForm({
     thumbnailFile,
     targetImageFiles,
     guideImageFile,
-    overlayImageFile,
-    overlayLinkUrl,
     mediaItems,
     selectedMediaItemId,
     highPrecision,
@@ -335,21 +329,6 @@ export default function ProjectForm({
           />
         </div>
       )}
-
-      {/* 추가 옵션 */}
-      <CollapsibleSection title="추가 옵션" defaultOpen={false} className="mt-4">
-        <div className='space-y-4'>
-          {/* 오버레이 이미지 편집 */}
-          <OverlayImageUpload
-            file={overlayImageFile}
-            linkUrl={overlayLinkUrl}
-            existingImageUrl={existingData?.overlayImageUrl}
-            onFileSelect={(file) => onChange({ overlayImageFile: file })}
-            onLinkUrlChange={(url) => onChange({ overlayLinkUrl: url })}
-            disabled={disabled}
-          />
-        </div>
-      </CollapsibleSection>
 
       {/* Footer (저장/배포 버튼 영역) */}
       {footer}

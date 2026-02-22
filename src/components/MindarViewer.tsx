@@ -204,9 +204,14 @@ const MindARViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
   const [isTargetFound, setIsTargetFound] = useState(false) // 타겟 인식 여부
-  const [isVideoReady, setIsVideoReady] = useState(false) // 비디오 로드 완료 여부 (안내문구 숨김용)
+  const [isMainVideoReady, setIsMainVideoReady] = useState(false) // 메인 비디오 로드 완료 여부
+  const [loadedMediaCount, setLoadedMediaCount] = useState(0) // 로드 완료된 미디어 아이템 수
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
   const [videoResolution, setVideoResolution] = useState<string | null>(null) // 비디오 해상도
+
+  // 모든 비디오가 로드되었는지 계산 (메인 비디오 + mediaItems 내 비디오)
+  const videoMediaItems = mediaItems.filter((item) => item.type === 'video')
+  const isAllVideosReady = isMainVideoReady && loadedMediaCount >= videoMediaItems.length
 
   // props 변경 시 상태 리셋 (영상 교체 시)
   useEffect(() => {
@@ -282,6 +287,11 @@ const MindARViewer: React.FC<Props> = ({
       window.open(overlayLinkUrl, '_blank', 'noopener,noreferrer')
     }
   }, [overlayLinkUrl])
+
+  // 미디어 아이템 비디오 로드 완료 핸들러
+  const handleMediaVideoLoaded = useCallback(() => {
+    setLoadedMediaCount((prev) => prev + 1)
+  }, [])
 
   // 스피커 버튼 클릭 핸들러
   const handleToggleMute = useCallback(async () => {
@@ -487,7 +497,7 @@ const MindARViewer: React.FC<Props> = ({
       if (!videoEl) return
 
       const tryPlay = () => {
-        setIsVideoReady(true) // 비디오 로드 완료 - 안내문구 숨김
+        setIsMainVideoReady(true) // 메인 비디오 로드 완료
         void videoEl.play().catch((err) => {
           console.warn('[MindAR] video autoplay blocked', err)
         })
@@ -645,8 +655,8 @@ const MindARViewer: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 안내문구 이미지 (영상 로드 전까지만 표시) */}
-      {guideImageUrl && !isVideoReady && !isLoading && (
+      {/* 안내문구 이미지 (모든 영상 로드 전까지만 표시) */}
+      {guideImageUrl && !isAllVideosReady && !isLoading && (
         <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
           <img
             src={guideImageUrl}
@@ -744,6 +754,7 @@ const MindARViewer: React.FC<Props> = ({
                 chromaKeyColor={item.chromaKeyColor || '#00FF00'}
                 chromaKeySettings={item.chromaKeySettings}
                 className="w-full h-full object-contain pointer-events-none"
+                onLoadedData={handleMediaVideoLoaded}
               />
             ) : (
               // 일반 비디오
@@ -755,6 +766,7 @@ const MindARViewer: React.FC<Props> = ({
                 autoPlay
                 crossOrigin="anonymous"
                 className="w-full h-full object-contain pointer-events-none"
+                onLoadedData={handleMediaVideoLoaded}
               />
             )}
           </div>

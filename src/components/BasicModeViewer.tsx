@@ -53,11 +53,16 @@ const BasicModeViewer: React.FC<Props> = ({
   const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [actualCameraResolution, setActualCameraResolution] = useState<string | null>(null)
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false) // 영상 재생 중 여부 (안내문구 숨김용)
+  const [isMainVideoReady, setIsMainVideoReady] = useState(false) // 메인 영상 로드 완료 여부
+  const [loadedMediaCount, setLoadedMediaCount] = useState(0) // 로드 완료된 미디어 아이템 수
 
   const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null) // 영상 비율 (width/height)
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
   const [videoResolution, setVideoResolution] = useState<string | null>(null) // 비디오 해상도
+
+  // 모든 비디오가 로드되었는지 계산 (메인 비디오 + mediaItems 내 비디오)
+  const videoMediaItems = mediaItems.filter((item) => item.type === 'video')
+  const isAllVideosReady = isMainVideoReady && loadedMediaCount >= videoMediaItems.length
 
   // props 변경 시 상태 리셋
   useEffect(() => {
@@ -327,6 +332,11 @@ const BasicModeViewer: React.FC<Props> = ({
     }
   }, [overlayLinkUrl])
 
+  // 미디어 아이템 비디오 로드 완료 핸들러
+  const handleMediaVideoLoaded = useCallback(() => {
+    setLoadedMediaCount((prev) => prev + 1)
+  }, [])
+
   // 음소거 토글
   const handleToggleMute = useCallback(async () => {
     const video = videoRef.current
@@ -477,8 +487,8 @@ const BasicModeViewer: React.FC<Props> = ({
           </div>
         )}
 
-        {/* 안내문구 이미지 (영상 재생 전까지 표시) */}
-        {guideImageUrl && !isVideoPlaying && !isLoading && !cameraError && (
+        {/* 안내문구 이미지 (모든 영상 로드 전까지 표시) */}
+        {guideImageUrl && !isAllVideosReady && !isLoading && !cameraError && (
           <div className="absolute inset-0 z-20 flex items-center justify-center">
             <img
               src={guideImageUrl}
@@ -513,7 +523,7 @@ const BasicModeViewer: React.FC<Props> = ({
                 muted
                 playsInline
                 crossOrigin="anonymous"
-                onPlay={() => setIsVideoPlaying(true)}
+                onLoadedData={() => setIsMainVideoReady(true)}
                 className="hidden"
               />
               {/* 크로마키 처리된 캔버스 */}
@@ -529,7 +539,7 @@ const BasicModeViewer: React.FC<Props> = ({
               muted
               playsInline
               crossOrigin="anonymous"
-              onPlay={() => setIsVideoPlaying(true)}
+              onLoadedData={() => setIsMainVideoReady(true)}
               className="h-full w-full object-contain"
             />
           )}
@@ -585,6 +595,7 @@ const BasicModeViewer: React.FC<Props> = ({
                   chromaKeyColor={item.chromaKeyColor || '#00FF00'}
                   chromaKeySettings={item.chromaKeySettings}
                   className="w-full h-full object-contain"
+                  onLoadedData={handleMediaVideoLoaded}
                 />
               ) : (
                 // 일반 비디오
@@ -596,6 +607,7 @@ const BasicModeViewer: React.FC<Props> = ({
                   autoPlay
                   crossOrigin="anonymous"
                   className="w-full h-full object-contain"
+                  onLoadedData={handleMediaVideoLoaded}
                 />
               )}
             </div>

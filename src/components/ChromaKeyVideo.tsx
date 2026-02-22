@@ -9,6 +9,7 @@ interface ChromaKeyVideoProps {
   autoPlay?: boolean
   loop?: boolean
   muted?: boolean
+  onLoadedData?: () => void
 }
 
 /**
@@ -23,6 +24,7 @@ export default function ChromaKeyVideo({
   autoPlay = true,
   loop = true,
   muted = true,
+  onLoadedData,
 }: ChromaKeyVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -111,6 +113,7 @@ export default function ChromaKeyVideo({
       if (autoPlay) {
         video.play().catch(() => {})
       }
+      onLoadedData?.()
     }
 
     video.addEventListener('play', handlePlay)
@@ -126,7 +129,7 @@ export default function ChromaKeyVideo({
       video.removeEventListener('play', handlePlay)
       video.removeEventListener('loadeddata', handleLoadedData)
     }
-  }, [src, chromaKeyColor, chromaKeySettings, autoPlay])
+  }, [src, chromaKeyColor, chromaKeySettings, autoPlay, onLoadedData])
 
   return (
     <>

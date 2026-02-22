@@ -413,7 +413,7 @@ const BasicModeViewer: React.FC<Props> = ({
       {/* 스피커 토글 버튼 */}
       <button
         onClick={handleToggleMute}
-        className="fixed top-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-black/70 active:scale-95"
+        className="fixed top-4 right-4 z-40 flex items-center justify-center text-white transition-all active:scale-95"
         aria-label={isMuted ? '소리 켜기' : '소리 끄기'}
       >
         <SpeakerIcon muted={isMuted} />

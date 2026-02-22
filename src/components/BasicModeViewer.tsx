@@ -495,15 +495,12 @@ const BasicModeViewer: React.FC<Props> = ({
             left: `${position.x * 100}%`,
             top: `${position.y * 100}%`,
             transform: `translate(-50%, -50%) scale(${scale})`,
-            // aspectRatio 미확인 시: 100% x 100%로 object-contain에 위임
-            // 세로 영상 (aspectRatio < 1): width 기준
-            // 가로 영상 (aspectRatio >= 1): height 기준
-            ...(videoAspectRatio === null
-              ? { width: '100%', height: '100%' }
-              : videoAspectRatio < 1
-                ? { width: '100%', aspectRatio: `${videoAspectRatio}` }
-                : { height: '100%', aspectRatio: `${videoAspectRatio}` }
-            ),
+            // VideoPositionEditor와 동일한 로직: 편집기 미리보기와 실제 뷰어가 일치하도록
+            // 가로 영상: 50% 너비, 세로 영상: 50% * aspectRatio 너비
+            width: videoAspectRatio
+              ? (videoAspectRatio >= 1 ? '50%' : `${50 * videoAspectRatio}%`)
+              : '50%',
+            aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : '16/9',
           }}
         >
           {chromaKeyColor ? (
@@ -548,14 +545,11 @@ const BasicModeViewer: React.FC<Props> = ({
                 left: `${item.position.x * 100}%`,
                 top: `${item.position.y * 100}%`,
                 transform: `translate(-50%, -50%) scale(${item.scale})`,
-                // aspectRatio 미확인 시: 100% x 100%로 object-contain에 위임
-                // 세로 미디어: width 기준, 가로 미디어: height 기준
-                ...(!item.aspectRatio
-                  ? { width: '100%', height: '100%' }
-                  : item.aspectRatio < 1
-                    ? { width: '100%', aspectRatio: `${item.aspectRatio}` }
-                    : { height: '100%', aspectRatio: `${item.aspectRatio}` }
-                ),
+                // VideoPositionEditor와 동일한 로직
+                width: item.aspectRatio
+                  ? (item.aspectRatio >= 1 ? '50%' : `${50 * item.aspectRatio}%`)
+                  : '50%',
+                aspectRatio: item.aspectRatio ? `${item.aspectRatio}` : '16/9',
                 pointerEvents: item.linkEnabled && item.linkUrl ? 'auto' : 'none',
                 zIndex: 10 + item.order, // 레이어 순서
               }}

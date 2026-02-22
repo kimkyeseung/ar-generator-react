@@ -116,12 +116,11 @@ describe('BasicModeViewer', () => {
     })
   })
 
-  it('applies correct sizing to video overlay based on aspect ratio', async () => {
-    // 비디오 aspectRatio에 따라 적절한 크기 설정이 적용되는지 확인
-    // - aspectRatio 미확인 시 (null): width: 100%, height: 100% (object-contain에 위임)
-    // - 세로 영상 (aspectRatio < 1): width: 100%
-    // - 가로 영상 (aspectRatio >= 1): height: 100%
-    // Note: jsdom에서 videoAspectRatio는 null이므로 기본값(100% x 100%) 적용
+  it('applies correct sizing to video overlay matching VideoPositionEditor', async () => {
+    // VideoPositionEditor와 동일한 크기 계산 로직 적용 확인
+    // - 가로 영상 (aspectRatio >= 1): width: 50%
+    // - 세로 영상 (aspectRatio < 1): width: 50% * aspectRatio
+    // Note: jsdom에서 videoAspectRatio는 null이므로 기본값(50%) 적용
     const { container } = render(
       <BasicModeViewer
         {...defaultProps}
@@ -132,10 +131,9 @@ describe('BasicModeViewer', () => {
 
     await waitFor(() => {
       const overlay = container.querySelector('.pointer-events-none')
-      // videoAspectRatio가 null일 때 100% x 100% 기본값 적용 (object-contain에 위임)
+      // videoAspectRatio가 null일 때 기본값 50% 적용
       expect(overlay).toHaveStyle({
-        width: '100%',
-        height: '100%',
+        width: '50%',
       })
     })
   })

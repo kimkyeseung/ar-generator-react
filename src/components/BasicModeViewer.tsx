@@ -495,9 +495,11 @@ const BasicModeViewer: React.FC<Props> = ({
             left: `${position.x * 100}%`,
             top: `${position.y * 100}%`,
             transform: `translate(-50%, -50%) scale(${scale})`,
-            // 화면 높이 기준으로 비디오 크기 설정 (scale=1일 때 화면 높이에 맞춤)
-            height: '100%',
-            aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : '16/9',
+            // 세로 영상: width 기준, 가로 영상: height 기준 (화면에 맞춤)
+            ...(videoAspectRatio && videoAspectRatio < 1
+              ? { width: '100%', aspectRatio: `${videoAspectRatio}` }
+              : { height: '100%', aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : '16/9' }
+            ),
           }}
         >
           {chromaKeyColor ? (
@@ -542,9 +544,11 @@ const BasicModeViewer: React.FC<Props> = ({
                 left: `${item.position.x * 100}%`,
                 top: `${item.position.y * 100}%`,
                 transform: `translate(-50%, -50%) scale(${item.scale})`,
-                // 화면 높이 기준으로 미디어 크기 설정
-                height: '100%',
-                aspectRatio: `${item.aspectRatio}`,
+                // 세로 미디어: width 기준, 가로 미디어: height 기준 (화면에 맞춤)
+                ...(item.aspectRatio < 1
+                  ? { width: '100%', aspectRatio: `${item.aspectRatio}` }
+                  : { height: '100%', aspectRatio: `${item.aspectRatio}` }
+                ),
                 pointerEvents: item.linkEnabled && item.linkUrl ? 'auto' : 'none',
                 zIndex: 10 + item.order, // 레이어 순서
               }}

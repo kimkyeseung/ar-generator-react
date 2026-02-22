@@ -116,10 +116,11 @@ describe('BasicModeViewer', () => {
     })
   })
 
-  it('applies height-based sizing to video overlay for fullscreen display', async () => {
-    // 비디오가 화면을 채우도록 height: 100% 스타일이 적용되는지 확인
-    // Note: jsdom에서는 실제 레이아웃이 계산되지 않으므로 인라인 스타일만 검증
-    // Note: aspectRatio CSS property는 jsdom에서 지원되지 않아 검증 불가
+  it('applies correct sizing to video overlay based on aspect ratio', async () => {
+    // 비디오 aspectRatio에 따라 적절한 크기 설정이 적용되는지 확인
+    // - 세로 영상 (aspectRatio < 1): width: 100%
+    // - 가로 영상 (aspectRatio >= 1): height: 100%
+    // Note: jsdom에서 videoAspectRatio는 null이므로 가로 영상 기본값(height: 100%) 적용
     const { container } = render(
       <BasicModeViewer
         {...defaultProps}
@@ -130,7 +131,7 @@ describe('BasicModeViewer', () => {
 
     await waitFor(() => {
       const overlay = container.querySelector('.pointer-events-none')
-      // 핵심: width 기반이 아닌 height: 100% 기반 크기 설정 검증
+      // videoAspectRatio가 null일 때 가로 영상 기본값 적용 (height: 100%)
       expect(overlay).toHaveStyle({
         height: '100%',
       })

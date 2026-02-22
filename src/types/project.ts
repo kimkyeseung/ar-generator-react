@@ -1,6 +1,3 @@
-// ProjectMode는 더 이상 사용하지 않음 - 미디어 아이템의 mode로 대체
-// 기존 데이터 호환성을 위해 타입만 유지
-export type ProjectMode = 'ar' | 'basic'
 export type CameraResolution = 'fhd' | 'hd'
 export type VideoQuality = 'high' | 'medium' | 'low' // 고화질(압축x), 중간화질, 저화질
 
@@ -122,8 +119,7 @@ export interface Project {
   chromaKeySmoothness: number | null // 크로마키 경계 부드러움 (0.0~0.5)
   flatView: boolean
   highPrecision: boolean
-  mode: ProjectMode // 'ar' | 'basic'
-  cameraResolution: CameraResolution // '4k' | 'fhd' | 'hd'
+  cameraResolution: CameraResolution // 'fhd' | 'hd'
   videoQuality: VideoQuality // 'high' | 'medium' | 'low' - 영상 품질
   videoPosition: VideoPosition | null // 기본모드에서 비디오 위치
   videoScale: number | null // 기본모드에서 비디오 크기 (0.2~5.0)

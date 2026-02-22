@@ -116,7 +116,6 @@ describe('MindARViewerPage', () => {
             mindFileId: 'mind-123',
             videoFileId: 'video-123',
             targetImageFileId: 'target-123',
-            mode: 'ar',
             cameraResolution: 'fhd',
             mediaItems: [
               {
@@ -188,7 +187,6 @@ describe('MindARViewerPage', () => {
         data: {
           fileIds: {
             videoFileId: 'video-123',
-            mode: 'basic', // 백엔드 호환성을 위해 유지되지만 실제 결정은 mediaItems로
             videoPosition: { x: 0.5, y: 0.5 },
             videoScale: 1,
             cameraResolution: 'fhd',
@@ -261,7 +259,6 @@ describe('MindARViewerPage', () => {
           fileIds: {
             mindFileId: 'mind-123',
             targetImageFileId: 'target-123',
-            mode: 'ar',
             cameraResolution: 'fhd',
             mediaItems: [
               {
@@ -308,13 +305,12 @@ describe('MindARViewerPage', () => {
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
-            mode: 'ar', // 프로젝트 모드가 ar이어도
             cameraResolution: 'fhd',
             mediaItems: [
               {
                 id: 'video-1',
                 type: 'video',
-                mode: 'basic', // 트래킹 아이템이 없으면
+                mode: 'basic', // 트래킹 아이템이 없으면 BasicModeViewer
                 fileId: 'file-1',
                 order: 0,
               },
@@ -357,7 +353,6 @@ describe('MindARViewerPage', () => {
           fileIds: {
             mindFileId: 'mind-123',
             targetImageFileId: 'target-123',
-            mode: 'ar',
             cameraResolution: 'fhd',
             mediaItems: [
               {
@@ -427,7 +422,6 @@ describe('MindARViewerPage', () => {
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
-            mode: 'basic', // 백엔드 호환성
             cameraResolution: 'fhd',
             mediaItems: [
               {
@@ -468,20 +462,19 @@ describe('MindARViewerPage', () => {
       })
     })
 
-    it('should render MindARViewer when tracking items exist regardless of project mode', async () => {
-      // 트래킹 아이템이 있으면 프로젝트 모드와 관계없이 AR 모드로 렌더링
+    it('should render MindARViewer when tracking items exist', async () => {
+      // 트래킹 아이템이 있으면 MindARViewer로 렌더링
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
             mindFileId: 'mind-123',
             targetImageFileId: 'target-123',
-            mode: 'basic', // 프로젝트 모드가 basic이더라도
             cameraResolution: 'fhd',
             mediaItems: [
               {
                 id: 'video-1',
                 type: 'video',
-                mode: 'tracking', // tracking 아이템이 있으면
+                mode: 'tracking',
                 fileId: 'file-1',
                 order: 0,
               },

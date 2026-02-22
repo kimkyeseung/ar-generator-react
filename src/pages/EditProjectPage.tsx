@@ -203,8 +203,6 @@ export default function EditProjectPage() {
 
       // 메타데이터
       formData.append('title', title)
-      // 모드는 트래킹 미디어 존재 여부로 결정 (백엔드 호환성)
-      formData.append('mode', hasTrackingItems ? 'ar' : 'basic')
       formData.append('cameraResolution', cameraResolution)
       formData.append('videoQuality', videoQuality)
       formData.append('highPrecision', highPrecision ? 'true' : 'false')

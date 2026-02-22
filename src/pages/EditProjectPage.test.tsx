@@ -100,7 +100,6 @@ const mockBasicModeProject: Project = {
   folderId: 'test-folder-id',
   title: '테스트 프로젝트',
   description: null,
-  mode: 'basic',
   width: 1,
   height: 1.5,
   videoFileId: 'video-123',

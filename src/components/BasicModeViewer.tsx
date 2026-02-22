@@ -523,7 +523,10 @@ const BasicModeViewer: React.FC<Props> = ({
                 muted
                 playsInline
                 crossOrigin="anonymous"
-                onLoadedData={() => setIsMainVideoReady(true)}
+                onLoadedData={() => {
+                  console.log('[BasicMode] Main video loaded - hiding guide image')
+                  setIsMainVideoReady(true)
+                }}
                 className="hidden"
               />
               {/* 크로마키 처리된 캔버스 */}
@@ -539,7 +542,10 @@ const BasicModeViewer: React.FC<Props> = ({
               muted
               playsInline
               crossOrigin="anonymous"
-              onLoadedData={() => setIsMainVideoReady(true)}
+              onLoadedData={() => {
+                console.log('[BasicMode] Main video loaded - hiding guide image')
+                setIsMainVideoReady(true)
+              }}
               className="h-full w-full object-contain"
             />
           )}

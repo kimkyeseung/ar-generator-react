@@ -4,7 +4,7 @@ import ConsoleLogOverlay from './components/ConsoleLogOverlay'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, MediaItemResponse, MediaMode, MediaType, ProjectMode, VideoPosition, VideoQuality } from './types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, MediaItemResponse, MediaMode, MediaType, VideoPosition, VideoQuality } from './types/project'
 import { API_URL } from './config/api'
 
 // 뷰어용 처리된 미디어 아이템 (URL 포함)
@@ -27,11 +27,10 @@ export interface ProcessedMediaItem {
 }
 
 interface ArFilesResponse {
-  mindFileId?: string // 기본 모드에서는 null
+  mindFileId?: string // 트래킹 아이템 없으면 null
   targetImageFileId?: string
   guideImageFileId?: string // 안내문구 이미지 ID
   highPrecision?: boolean
-  mode?: ProjectMode // 'ar' | 'basic'
   cameraResolution?: CameraResolution // 'fhd' | 'hd'
   videoQuality?: VideoQuality // 'high' | 'medium' | 'low'
   mediaItems?: MediaItemResponse[] // 모든 미디어는 여기에 포함

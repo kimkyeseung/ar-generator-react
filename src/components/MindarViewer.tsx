@@ -203,7 +203,6 @@ const MindARViewer: React.FC<Props> = ({
   // 현재 재생 중인 비디오 URL (프리뷰 → 원본 전환)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl) // 프리뷰가 없으면 이미 HD
-  const [isTargetFound, setIsTargetFound] = useState(false) // 타겟 인식 여부
   const [isMainVideoReady, setIsMainVideoReady] = useState(false) // 메인 비디오 로드 완료 여부
   const [loadedMediaCount, setLoadedMediaCount] = useState(0) // 로드 완료된 미디어 아이템 수
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null) // 비디오 파일 크기 (bytes)
@@ -427,7 +426,6 @@ const MindARViewer: React.FC<Props> = ({
     /** ---------- 타겟 이벤트 ---------- **/
     const handleTargetFound = async () => {
       console.log('[MindAR] targetFound')
-      setIsTargetFound(true) // 안내문구 이미지 숨김
       const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
       if (!video) return
 
@@ -497,6 +495,7 @@ const MindARViewer: React.FC<Props> = ({
       if (!videoEl) return
 
       const tryPlay = () => {
+        console.log('[MindAR] Main video ready - hiding guide image')
         setIsMainVideoReady(true) // 메인 비디오 로드 완료
         void videoEl.play().catch((err) => {
           console.warn('[MindAR] video autoplay blocked', err)

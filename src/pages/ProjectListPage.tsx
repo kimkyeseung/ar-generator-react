@@ -150,21 +150,17 @@ export default function ProjectListPage() {
                   <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
                     {/* 썸네일 + 정보 영역 */}
                     <div className='flex flex-1 items-start gap-3 sm:items-center sm:gap-4'>
-                      {/* 타겟 이미지 썸네일 (AR 모드) / 모드 아이콘 (기본 모드) */}
+                      {/* 타겟 이미지 썸네일 (트래킹 아이템 있음) / 모드 아이콘 (없음) */}
                       <div className='flex-shrink-0'>
-                        {project.mode === 'basic' ? (
-                          <div className='flex h-16 w-16 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 sm:h-20 sm:w-20'>
-                            <span className='text-xl sm:text-2xl'>📹</span>
-                          </div>
-                        ) : project.targetImageFileId ? (
+                        {project.targetImageFileId ? (
                           <img
                             src={`${API_URL}/file/${project.targetImageFileId}`}
                             alt='타겟 이미지'
                             className='h-16 w-16 rounded-lg border border-gray-200 object-cover sm:h-20 sm:w-20'
                           />
                         ) : (
-                          <div className='flex h-16 w-16 items-center justify-center rounded-lg border border-gray-200 bg-gray-100 sm:h-20 sm:w-20'>
-                            <span className='text-xl sm:text-2xl'>🎯</span>
+                          <div className='flex h-16 w-16 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 sm:h-20 sm:w-20'>
+                            <span className='text-xl sm:text-2xl'>📹</span>
                           </div>
                         )}
                       </div>
@@ -193,13 +189,13 @@ export default function ProjectListPage() {
                         </p>
                         {/* 뱃지들 */}
                         <div className='mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2'>
-                          {/* 모드 뱃지 */}
+                          {/* 모드 뱃지 (트래킹 아이템 유무로 판단) */}
                           <span className={`rounded-full px-1.5 py-0.5 text-[10px] sm:px-2 sm:text-xs ${
-                            project.mode === 'basic'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-purple-100 text-purple-700'
+                            project.mediaItems?.some(item => item.mode === 'tracking')
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {project.mode === 'basic' ? '📹 기본' : '🎯 AR'}
+                            {project.mediaItems?.some(item => item.mode === 'tracking') ? '🎯 AR' : '📹 기본'}
                           </span>
                           {project.chromaKeyColor && (
                             <span className='flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] text-green-700 sm:px-2 sm:text-xs'>

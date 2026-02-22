@@ -39,11 +39,9 @@ src/
 │   ├── Home.tsx                # 메인 업로드 페이지
 │   ├── TargetImageUpload.tsx   # 타겟 이미지 업로드 UI
 │   └── home/                   # Home 페이지 하위 컴포넌트
-│       ├── ModeSelector.tsx        # AR/기본 모드 선택 UI
 │       ├── ArOptionsSection.tsx    # AR 옵션 설정 (추적 정확도 등)
 │       ├── VideoUploadSection.tsx  # 비디오 업로드 UI
 │       ├── PublishSection.tsx      # 발행 버튼 섹션
-│       ├── StepIndicator.tsx       # 단계 표시기
 │       └── ...                     # 기타 UI 컴포넌트
 ├── pages/
 │   ├── CreateProjectPage.tsx   # 프로젝트 생성 페이지
@@ -117,20 +115,27 @@ vendor/
 REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 ```
 
-## Project Modes
+## Media Item Modes (개별 미디어 모드)
 
-### AR 모드 (기본)
-- 타겟 이미지를 인식하면 영상이 재생되는 전통적인 AR 경험
-- `.mind` 파일 컴파일 필요
+프로젝트 전체 모드 개념은 삭제되고, **각 미디어 아이템(영상/이미지)별로 개별 모드**를 지정합니다.
+
+### Tracking 모드 (트래킹)
+- 타겟 이미지를 인식하면 해당 미디어가 표시되는 AR 경험
+- `.mind` 파일 컴파일 필요 (프로젝트에 tracking 아이템이 1개 이상 있을 때)
 - MindAR + A-Frame 기반
-- 옵션: flatView, highPrecision, chromaKey
+- 옵션: flatView, chromaKey
 
-### 기본 모드
-- 타겟 이미지 없이 카메라 화면에 바로 비디오 표시
-- `.mind` 파일 불필요 (컴파일 시간 절약)
-- 순수 WebRTC + CSS Transform 기반
-- 사용자가 비디오 위치/크기를 드래그로 조정
-- 옵션: chromaKey만 지원 (flatView, highPrecision 불필요)
+### Basic 모드 (기본)
+- 카메라 화면에 바로 미디어 오버레이
+- 타겟 이미지 인식 없이 항상 표시
+- 순수 CSS Transform 기반
+- 사용자가 위치/크기를 드래그로 조정
+- 옵션: chromaKey (flatView 불필요)
+
+### 혼합 사용
+- 하나의 프로젝트에서 tracking과 basic 모드 미디어를 혼합 사용 가능
+- tracking 아이템이 1개 이상 있으면 MindarViewer 사용 (AR 모드)
+- tracking 아이템이 없으면 BasicModeViewer 사용 (기본 모드)
 
 ## AR Viewer Features
 

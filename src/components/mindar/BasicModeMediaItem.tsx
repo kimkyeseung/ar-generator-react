@@ -5,6 +5,7 @@
 
 import { ProcessedMediaItem } from '../../MindARViewerPage'
 import ChromaKeyVideo from '../ChromaKeyVideo'
+import { normalizeUrl } from '../../utils/validation'
 
 interface BasicModeMediaItemProps {
   item: ProcessedMediaItem
@@ -47,10 +48,11 @@ function ImageContent({ item }: { item: ProcessedMediaItem }) {
     />
   )
 
-  if (item.linkEnabled && item.linkUrl) {
+  const normalizedLinkUrl = normalizeUrl(item.linkUrl)
+  if (item.linkEnabled && normalizedLinkUrl) {
     return (
       <a
-        href={item.linkUrl}
+        href={normalizedLinkUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="block w-full h-full"

@@ -5,6 +5,7 @@ import { SpeakerIcon } from './ui/SpeakerIcon'
 import ChromaKeyVideo from './ChromaKeyVideo'
 import { hexToRgb } from '../utils/chromakey'
 import { getCameraResolution, isIOSDevice } from '../utils/camera'
+import { normalizeUrl } from '../utils/validation'
 
 interface Props {
   videoUrl: string
@@ -522,47 +523,49 @@ const BasicModeViewer: React.FC<Props> = ({
         {/* 멀티 미디어 아이템 (기본 모드용) */}
         {mediaItems
           .filter((item) => item.mode === 'basic')
-          .map((item) => (
-            <div
-              key={item.id}
-              className="absolute"
-              style={{
-                left: `${item.position.x * 100}%`,
-                top: `${item.position.y * 100}%`,
-                transform: `translate(-50%, -50%) scale(${item.scale})`,
-                // scale=1(100%)일 때 화면에 맞춤
-                ...(!item.aspectRatio
-                  ? { width: '100%', height: '100%' }
-                  : item.aspectRatio < 1
-                    ? { width: '100%', aspectRatio: `${item.aspectRatio}` }
-                    : { height: '100%', aspectRatio: `${item.aspectRatio}` }
-                ),
-                pointerEvents: item.linkEnabled && item.linkUrl ? 'auto' : 'none',
-                zIndex: 10 + item.order, // 레이어 순서
-              }}
-            >
-              {item.type === 'image' ? (
-                item.linkEnabled && item.linkUrl ? (
-                  <a
-                    href={item.linkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full h-full"
-                  >
+          .map((item) => {
+            const normalizedLinkUrl = normalizeUrl(item.linkUrl)
+            return (
+              <div
+                key={item.id}
+                className="absolute"
+                style={{
+                  left: `${item.position.x * 100}%`,
+                  top: `${item.position.y * 100}%`,
+                  transform: `translate(-50%, -50%) scale(${item.scale})`,
+                  // scale=1(100%)일 때 화면에 맞춤
+                  ...(!item.aspectRatio
+                    ? { width: '100%', height: '100%' }
+                    : item.aspectRatio < 1
+                      ? { width: '100%', aspectRatio: `${item.aspectRatio}` }
+                      : { height: '100%', aspectRatio: `${item.aspectRatio}` }
+                  ),
+                  pointerEvents: item.linkEnabled && normalizedLinkUrl ? 'auto' : 'none',
+                  zIndex: 10 + item.order, // 레이어 순서
+                }}
+              >
+                {item.type === 'image' ? (
+                  item.linkEnabled && normalizedLinkUrl ? (
+                    <a
+                      href={normalizedLinkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full h-full"
+                    >
+                      <img
+                        src={item.fileUrl}
+                        alt={`Media item ${item.order}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </a>
+                  ) : (
                     <img
                       src={item.fileUrl}
                       alt={`Media item ${item.order}`}
                       className="w-full h-full object-contain"
                     />
-                  </a>
-                ) : (
-                  <img
-                    src={item.fileUrl}
-                    alt={`Media item ${item.order}`}
-                    className="w-full h-full object-contain"
-                  />
-                )
-              ) : item.chromaKeyEnabled ? (
+                  )
+                ) : item.chromaKeyEnabled ? (
                 // 크로마키가 활성화된 비디오
                 <ChromaKeyVideo
                   src={item.previewFileUrl || item.fileUrl}
@@ -584,8 +587,9 @@ const BasicModeViewer: React.FC<Props> = ({
                   onLoadedData={handleMediaVideoLoaded}
                 />
               )}
-            </div>
-          ))}
+              </div>
+            )
+          })}
       </div>
     </>
   )

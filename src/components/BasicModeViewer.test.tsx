@@ -1,6 +1,13 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import BasicModeViewer from './BasicModeViewer'
 
+// Mock SpeakerIcon to avoid image loading issues in jsdom
+jest.mock('./ui/SpeakerIcon', () => ({
+  SpeakerIcon: ({ muted }: { muted: boolean }) => (
+    <span data-testid="speaker-icon">{muted ? '🔇' : '🔊'}</span>
+  ),
+}))
+
 // Mock navigator.mediaDevices
 const mockGetUserMedia = jest.fn()
 Object.defineProperty(navigator, 'mediaDevices', {
@@ -75,7 +82,8 @@ describe('BasicModeViewer', () => {
     })
   })
 
-  it('should use previewVideoUrl initially when provided', async () => {
+  it('should use original videoUrl (preview disabled)', async () => {
+    // Note: 프리뷰 기능이 비활성화되어 항상 원본 URL 사용
     const { container } = render(
       <BasicModeViewer
         {...defaultProps}
@@ -84,8 +92,8 @@ describe('BasicModeViewer', () => {
     )
 
     await waitFor(() => {
-      // Should use preview URL initially
-      const video = container.querySelector('video[src="https://example.com/preview.mp4"]')
+      // Should use original URL (preview is disabled in BasicModeViewer)
+      const video = container.querySelector('video[src="https://example.com/video.mp4"]')
       expect(video).toBeInTheDocument()
     })
   })
@@ -104,6 +112,27 @@ describe('BasicModeViewer', () => {
       expect(overlay).toHaveStyle({
         left: '30%',
         top: '70%',
+      })
+    })
+  })
+
+  it('applies height-based sizing to video overlay for fullscreen display', async () => {
+    // 비디오가 화면을 채우도록 height: 100% 스타일이 적용되는지 확인
+    // Note: jsdom에서는 실제 레이아웃이 계산되지 않으므로 인라인 스타일만 검증
+    // Note: aspectRatio CSS property는 jsdom에서 지원되지 않아 검증 불가
+    const { container } = render(
+      <BasicModeViewer
+        {...defaultProps}
+        position={{ x: 0.5, y: 0.5 }}
+        scale={1}
+      />
+    )
+
+    await waitFor(() => {
+      const overlay = container.querySelector('.pointer-events-none')
+      // 핵심: width 기반이 아닌 height: 100% 기반 크기 설정 검증
+      expect(overlay).toHaveStyle({
+        height: '100%',
       })
     })
   })

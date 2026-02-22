@@ -12,12 +12,17 @@ interface BasicModeMediaItemProps {
 }
 
 export function BasicModeMediaItem({ item, onVideoLoaded }: BasicModeMediaItemProps) {
+  // scale=1(100%)일 때 화면에 맞춤: 세로 미디어는 width 100%, 가로 미디어는 height 100%
+  // 미리보기(UnifiedPreviewCanvas) 및 BasicModeViewer와 동일한 로직
+  const sizeStyle = item.aspectRatio < 1
+    ? { width: '100%', aspectRatio: `${item.aspectRatio}` }
+    : { height: '100%', aspectRatio: `${item.aspectRatio}` }
+
   const containerStyle = {
     left: `${item.position.x * 100}%`,
     top: `${item.position.y * 100}%`,
     transform: `translate(-50%, -50%) scale(${item.scale})`,
-    width: item.aspectRatio >= 1 ? '50vw' : `${50 * item.aspectRatio}vw`,
-    aspectRatio: `${item.aspectRatio}`,
+    ...sizeStyle,
     zIndex: 30 + item.order,
   }
 

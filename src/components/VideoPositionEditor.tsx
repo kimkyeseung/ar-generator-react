@@ -277,8 +277,11 @@ export default function VideoPositionEditor({
               left: `${position.x * 100}%`,
               top: `${position.y * 100}%`,
               transform: `translate(-50%, -50%) scale(${scale})`,
-              width: videoAspectRatio >= 1 ? '50%' : `${50 * videoAspectRatio}%`,
-              aspectRatio: `${videoAspectRatio}`,
+              // scale=1(100%)일 때 화면에 맞춤: 세로 영상은 width 100%, 가로 영상은 height 100%
+              ...(videoAspectRatio < 1
+                ? { width: '100%', aspectRatio: `${videoAspectRatio}` }
+                : { height: '100%', aspectRatio: `${videoAspectRatio}` }
+              ),
             }}
             onMouseDown={handleVideoMouseDown}
             onTouchStart={handleVideoTouchStart}

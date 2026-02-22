@@ -313,13 +313,20 @@ export default function UnifiedPreviewCanvas({
       const video = mainVideoRef.current
       const videoAspect = video.videoWidth / video.videoHeight
 
-      // 기본 크기 계산 (VideoPositionEditor와 동일한 로직)
-      // 가로가 긴 비디오: 캔버스 너비의 50%
-      // 세로가 긴 비디오: 50% * aspectRatio
-      const baseWidth = videoAspect >= 1
-        ? CANVAS_WIDTH * 0.5
-        : CANVAS_WIDTH * 0.5 * videoAspect
-      const baseHeight = baseWidth / videoAspect
+      // 기본 크기 계산: scale=1(100%)일 때 화면을 가득 채움
+      // 세로 영상: 캔버스 너비 100%
+      // 가로 영상: 캔버스 높이 100%
+      let baseWidth: number
+      let baseHeight: number
+      if (videoAspect < 1) {
+        // 세로 영상: 너비 기준
+        baseWidth = CANVAS_WIDTH
+        baseHeight = baseWidth / videoAspect
+      } else {
+        // 가로 영상: 높이 기준
+        baseHeight = CANVAS_HEIGHT
+        baseWidth = baseHeight * videoAspect
+      }
 
       // 스케일 적용 (CSS transform scale과 동일하게)
       const drawWidth = baseWidth * mainVideoScale
@@ -354,11 +361,22 @@ export default function UnifiedPreviewCanvas({
       // 드래그 중인 선택된 아이템은 로컬 오버라이드 값 사용
       const isSelected = selectedItemId === item.id
       const position = isSelected && localOverride?.position ? localOverride.position : item.position
-      const scale = isSelected && localOverride?.scale !== undefined ? localOverride.scale : item.scale
+      const itemScale = isSelected && localOverride?.scale !== undefined ? localOverride.scale : item.scale
 
-      // 미디어 크기 계산
-      const mediaWidth = CANVAS_WIDTH * 0.4 * scale * zoom
-      const mediaHeight = mediaWidth / item.aspectRatio
+      // 미디어 크기 계산: scale=1(100%)일 때 화면을 가득 채움
+      let baseWidth: number
+      let baseHeight: number
+      if (item.aspectRatio < 1) {
+        // 세로 미디어: 너비 기준
+        baseWidth = CANVAS_WIDTH
+        baseHeight = baseWidth / item.aspectRatio
+      } else {
+        // 가로 미디어: 높이 기준
+        baseHeight = CANVAS_HEIGHT
+        baseWidth = baseHeight * item.aspectRatio
+      }
+      const mediaWidth = baseWidth * itemScale * zoom
+      const mediaHeight = baseHeight * itemScale * zoom
 
       // 위치 계산 (normalized coordinates)
       const mediaX = position.x * CANVAS_WIDTH - mediaWidth / 2
@@ -510,8 +528,20 @@ export default function UnifiedPreviewCanvas({
     const position = localOverride?.position ?? selectedItem.position
     const scale = localOverride?.scale ?? selectedItem.scale
 
-    const mediaWidth = CANVAS_WIDTH * 0.4 * scale * zoom
-    const mediaHeight = mediaWidth / selectedItem.aspectRatio
+    // 미디어 크기 계산: scale=1(100%)일 때 화면을 가득 채움
+    let baseWidth: number
+    let baseHeight: number
+    if (selectedItem.aspectRatio < 1) {
+      // 세로 미디어: 너비 기준
+      baseWidth = CANVAS_WIDTH
+      baseHeight = baseWidth / selectedItem.aspectRatio
+    } else {
+      // 가로 미디어: 높이 기준
+      baseHeight = CANVAS_HEIGHT
+      baseWidth = baseHeight * selectedItem.aspectRatio
+    }
+    const mediaWidth = baseWidth * scale * zoom
+    const mediaHeight = baseHeight * scale * zoom
 
     const mediaX = position.x * CANVAS_WIDTH - mediaWidth / 2
     const mediaY = position.y * CANVAS_HEIGHT - mediaHeight / 2
@@ -700,8 +730,20 @@ export default function UnifiedPreviewCanvas({
       const preview = mediaPreviewsMap.get(item.id)
       if (!preview?.element) continue
 
-      const mediaWidth = (CANVAS_WIDTH * 0.4 * item.scale * zoom) / CANVAS_WIDTH
-      const mediaHeight = mediaWidth / item.aspectRatio
+      // 미디어 크기 계산: scale=1(100%)일 때 화면을 가득 채움
+      let baseWidth: number
+      let baseHeight: number
+      if (item.aspectRatio < 1) {
+        // 세로 미디어: 너비 기준
+        baseWidth = CANVAS_WIDTH
+        baseHeight = baseWidth / item.aspectRatio
+      } else {
+        // 가로 미디어: 높이 기준
+        baseHeight = CANVAS_HEIGHT
+        baseWidth = baseHeight * item.aspectRatio
+      }
+      const mediaWidth = (baseWidth * item.scale * zoom) / CANVAS_WIDTH
+      const mediaHeight = (baseHeight * item.scale * zoom) / CANVAS_HEIGHT
 
       const left = item.position.x - mediaWidth / 2
       const right = item.position.x + mediaWidth / 2

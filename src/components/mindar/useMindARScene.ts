@@ -61,26 +61,39 @@ export function useMindARScene({
     // ==================== 타겟 이벤트 핸들러 ====================
     const handleTargetFound = async () => {
       console.log('[MindAR] targetFound')
-      const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-      if (!video) return
 
-      try {
-        video.currentTime = 0
-        await video.play()
+      // 모든 AR 비디오 요소 가져오기 (메인 + 추가 tracking 비디오)
+      const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
+      console.log(`[MindAR] Found ${allVideos.length} video(s) to play`)
 
-        const resolution = `${video.videoWidth}x${video.videoHeight}`
+      for (let i = 0; i < allVideos.length; i++) {
+        const video = allVideos[i]
+        try {
+          video.currentTime = 0
+          await video.play()
+          console.log(`[MindAR] Video ${video.id} playing - Resolution: ${video.videoWidth}x${video.videoHeight}`)
+        } catch (e) {
+          console.warn(`[MindAR] targetFound -> play() error for ${video.id}`, e)
+          video.play().catch(() => {})
+        }
+      }
+
+      // 메인 비디오 해상도 보고
+      const mainVideo = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+      if (mainVideo) {
+        const resolution = `${mainVideo.videoWidth}x${mainVideo.videoHeight}`
         onVideoResolutionChange(resolution)
-        console.log(`[MindAR] Video playing - Resolution: ${resolution}, ReadyState: ${video.readyState}`)
-      } catch (e) {
-        console.warn('[MindAR] targetFound -> play() error', e)
-        video.play().catch(() => {})
       }
     }
 
     const handleTargetLost = () => {
       console.log('[MindAR] targetLost')
-      const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-      video?.pause()
+      // 모든 AR 비디오 일시정지
+      const allVideos = sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]')
+      allVideos.forEach((video) => {
+        video.pause()
+        console.log(`[MindAR] Video ${video.id} paused`)
+      })
     }
 
     targetEntity?.addEventListener('targetFound', handleTargetFound)
@@ -119,20 +132,25 @@ export function useMindARScene({
 
     // ==================== 비디오 재생 보장 ====================
     const ensureVideoPlayback = () => {
-      const videoEl = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-      if (!videoEl) {
-        console.warn('[MindAR] Video element not found')
+      // 모든 AR 비디오 요소 가져오기
+      const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
+      if (allVideos.length === 0) {
+        console.warn('[MindAR] No video elements found')
         return
       }
 
-      // 비디오가 이미 로드되었으면 상태 업데이트
-      if (videoEl.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        console.log('[MindAR] Video already loaded at renderstart, readyState:', videoEl.readyState)
+      // 첫 번째 비디오가 이미 로드되었으면 상태 업데이트
+      const firstVideo = allVideos[0]
+      if (firstVideo && firstVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        console.log('[MindAR] First video already loaded at renderstart, readyState:', firstVideo.readyState)
         onMainVideoReady()
       }
 
-      void videoEl.play().catch((err) => {
-        console.warn('[MindAR] video autoplay blocked', err)
+      // 모든 비디오 재생 시도
+      allVideos.forEach((videoEl) => {
+        void videoEl.play().catch((err) => {
+          console.warn(`[MindAR] video ${videoEl.id} autoplay blocked`, err)
+        })
       })
     }
 
@@ -212,12 +230,13 @@ export function useMindARScene({
         }
       } else {
         console.log('[MindAR] Tab became hidden')
-        const video = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
-        if (video) {
+        // 모든 AR 비디오 일시정지 및 음소거
+        const allVideos = sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]')
+        allVideos.forEach((video) => {
           video.pause()
           video.muted = true
-          console.log('[MindAR] Video paused and muted')
-        }
+          console.log(`[MindAR] Video ${video.id} paused and muted`)
+        })
       }
     }
 

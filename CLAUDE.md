@@ -73,6 +73,9 @@ vendor/
 
 ### MindarViewer
 - A-Frame 기반 AR 뷰어 (AR 모드용)
+- **여러 tracking 비디오 동시 표시**: 모든 tracking 모드 비디오가 order 순서대로 렌더링됨
+- 각 비디오는 개별 position, scale, chromaKey, flatView 설정 가능
+- order 값에 따라 Z축 순서(레이어) 결정 (order가 높을수록 카메라에 가까움)
 - 커스텀 컴포넌트:
   - `billboard`: flatView 모드에서 비디오가 항상 카메라를 향함
   - `chromakey-material`: 크로마키(그린스크린) 제거 셰이더
@@ -123,7 +126,8 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 - 타겟 이미지를 인식하면 해당 미디어가 표시되는 AR 경험
 - `.mind` 파일 컴파일 필요 (프로젝트에 tracking 아이템이 1개 이상 있을 때)
 - MindAR + A-Frame 기반
-- 옵션: flatView, chromaKey
+- **여러 tracking 비디오 동시 재생**: order 순서대로 레이어링됨
+- 각 비디오별 개별 옵션: position, scale, flatView, chromaKey
 
 ### Basic 모드 (기본)
 - 카메라 화면에 바로 미디어 오버레이
@@ -140,10 +144,9 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 ## AR Viewer Features
 
 ### Preview Video (프리뷰 영상)
-1. 업로드 시 클라이언트에서 480p로 압축
-2. AR 뷰어 진입 시 프리뷰 먼저 재생 (빠른 로딩)
-3. 백그라운드에서 HD 영상 로드
-4. HD 준비 완료 시 자동 전환
+1. 업로드 시 클라이언트에서 480p로 압축하여 previewFile 생성
+2. AR 뷰어 진입 시 각 비디오의 previewFileUrl 먼저 재생 (빠른 로딩)
+3. 각 tracking 비디오는 개별 previewFileUrl 또는 fileUrl 사용
 
 ### Flat View (Billboard)
 - `flatView: true` 설정 시 활성화
@@ -192,6 +195,7 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 
 - 비디오 크기 제한: 32MB
 - 타겟 이미지 비율이 AR 오버레이에 보존됨
+- **다중 tracking 비디오**: 각 비디오는 `ar-video-{id}` ID로 A-Frame에 등록되며, order 값으로 Z축 순서 결정 (`posZ = 0.001 * (order + 1)`)
 - MindAR 컴파일은 클라이언트에서 실행 (서버 부하 없음)
 - ffmpeg.wasm은 UMD 빌드 사용 (ESM 모듈 문제 회피)
 - 커스텀 MindAR 라이브러리 사용 (`src/lib/image-target/aframe.js`) - npm 패키지 대신 로컬 수정 버전

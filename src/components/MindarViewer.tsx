@@ -27,31 +27,69 @@ registerAllAFrameComponents()
 // ==================== Props ====================
 interface Props {
   mindUrl: string
-  videoUrl: string
-  previewVideoUrl?: string
   targetImageUrl: string
   thumbnailUrl?: string // 로딩 화면용 썸네일 (없으면 targetImageUrl 사용)
-  chromaKeyColor?: string
-  chromaKeySettings?: ChromaKeySettings
-  flatView?: boolean
   highPrecision?: boolean
   cameraResolution?: CameraResolution
   videoQuality?: VideoQuality
   guideImageUrl?: string
-  mediaItems?: ProcessedMediaItem[]
+  mediaItems?: ProcessedMediaItem[] // 모든 미디어 아이템 (tracking + basic)
   debugMode?: boolean
+}
+
+// Tracking 모드 비디오를 A-Frame 씬에서 렌더링하기 위한 컴포넌트
+interface TrackingVideoEntityProps {
+  item: ProcessedMediaItem
+  videoId: string
+  isMuted: boolean
+}
+
+function TrackingVideoEntity({ item, videoId, isMuted }: TrackingVideoEntityProps) {
+  // position과 scale을 A-Frame 좌표로 변환
+  // position.x, position.y는 0~1 범위 (화면 비율)
+  // A-Frame에서는 중앙이 0,0이고 타겟 이미지 크기가 width=1
+  const posX = (item.position.x - 0.5) * 1 // -0.5 ~ 0.5 범위
+  const posY = (0.5 - item.position.y) * 1 // Y축 반전
+  const posZ = 0.001 * (item.order + 1) // Z-fighting 방지를 위해 약간 앞으로
+
+  // 비디오 크기 계산 (scale 적용)
+  const videoWidth = item.scale
+  const videoHeight = item.scale / item.aspectRatio
+
+  if (item.chromaKeyEnabled && item.chromaKeyColor) {
+    return (
+      <a-plane
+        position={`${posX} ${posY} ${posZ}`}
+        width={videoWidth.toString()}
+        height={videoHeight.toString()}
+        rotation="0 0 0"
+        chromakey-material={`src: #${videoId}; color: ${item.chromaKeyColor}; similarity: ${item.chromaKeySettings.similarity}; smoothness: ${item.chromaKeySettings.smoothness}`}
+        {...(item.flatView ? { billboard: '' } : {})}
+      />
+    )
+  }
+
+  return (
+    <a-video
+      src={`#${videoId}`}
+      position={`${posX} ${posY} ${posZ}`}
+      width={videoWidth.toString()}
+      height={videoHeight.toString()}
+      rotation="0 0 0"
+      loop="true"
+      muted={isMuted ? 'true' : 'false'}
+      autoplay="true"
+      playsinline="true"
+      {...(item.flatView ? { billboard: '' } : {})}
+    />
+  )
 }
 
 // ==================== Component ====================
 const MindARViewer: React.FC<Props> = ({
   mindUrl,
-  videoUrl,
-  previewVideoUrl,
   targetImageUrl,
   thumbnailUrl,
-  chromaKeyColor,
-  chromaKeySettings = DEFAULT_CHROMAKEY_SETTINGS,
-  flatView,
   cameraResolution = 'fhd',
   videoQuality = 'low',
   guideImageUrl,
@@ -63,10 +101,7 @@ const MindARViewer: React.FC<Props> = ({
   // ==================== 상태 ====================
   const [isMuted, setIsMuted] = useState(isIOSDevice())
   const [isLoading, setIsLoading] = useState(true)
-  const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl)
-  const [isHDReady, setIsHDReady] = useState(!previewVideoUrl)
-  const [isMainVideoReady, setIsMainVideoReady] = useState(false)
-  const [loadedMediaCount, setLoadedMediaCount] = useState(0)
+  const [loadedVideoCount, setLoadedVideoCount] = useState(0)
 
   // 디버그 모드 상태
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null)
@@ -77,38 +112,47 @@ const MindARViewer: React.FC<Props> = ({
 
   // ==================== 계산 ====================
   const basicModeItems = mediaItems.filter((item) => item.mode === 'basic')
-  // basic 모드 비디오만 카운트 (tracking 모드 비디오는 A-Frame에서 별도로 처리됨)
+  // tracking 모드 비디오 (order 순서대로)
+  const trackingModeVideos = mediaItems
+    .filter((item) => item.mode === 'tracking' && item.type === 'video')
+    .sort((a, b) => a.order - b.order)
+  // basic 모드 비디오 개수
   const basicModeVideoCount = basicModeItems.filter((item) => item.type === 'video').length
-  const isAllVideosReady = isMainVideoReady && loadedMediaCount >= basicModeVideoCount
+  // tracking 모드 비디오 개수
+  const trackingModeVideoCount = trackingModeVideos.length
+  // 모든 비디오가 로드되었는지 확인
+  const totalVideoCount = basicModeVideoCount + trackingModeVideoCount
+  const isAllVideosReady = loadedVideoCount >= totalVideoCount
 
   // ==================== 콜백 ====================
   const handleLoadingComplete = useCallback(() => setIsLoading(false), [])
-  const handleMainVideoReady = useCallback(() => setIsMainVideoReady(true), [])
   const handleVideoResolutionChange = useCallback((res: string) => setVideoResolution(res), [])
-  const handleMediaVideoLoaded = useCallback(() => setLoadedMediaCount((c) => c + 1), [])
+  const handleVideoLoaded = useCallback(() => setLoadedVideoCount((c) => c + 1), [])
 
   const handleToggleMute = useCallback(async () => {
     const sceneEl = sceneRef.current
-    const video = sceneEl?.querySelector<HTMLVideoElement>('#ar-video')
-    if (!video) return
+    // 모든 AR 비디오의 음소거 토글
+    const allVideos = sceneEl?.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]')
+    if (!allVideos || allVideos.length === 0) return
 
     const newMuted = !isMuted
 
-    if (!newMuted) {
-      try {
-        video.muted = false
-        if (video.paused) await video.play()
-        setIsMuted(false)
-        console.log('[MindAR] Sound enabled')
-      } catch (e) {
-        console.warn('[MindAR] Failed to unmute:', e)
+    allVideos.forEach(async (video) => {
+      if (!newMuted) {
+        try {
+          video.muted = false
+          if (video.paused) await video.play()
+        } catch (e) {
+          console.warn(`[MindAR] Failed to unmute ${video.id}:`, e)
+          video.muted = true
+        }
+      } else {
         video.muted = true
       }
-    } else {
-      video.muted = true
-      setIsMuted(true)
-      console.log('[MindAR] Sound disabled')
-    }
+    })
+
+    setIsMuted(newMuted)
+    console.log(`[MindAR] Sound ${newMuted ? 'disabled' : 'enabled'}`)
   }, [isMuted])
 
   // ==================== MindAR 씬 훅 ====================
@@ -116,29 +160,26 @@ const MindARViewer: React.FC<Props> = ({
     sceneRef,
     targetImageUrl,
     onLoadingComplete: handleLoadingComplete,
-    onMainVideoReady: handleMainVideoReady,
+    onMainVideoReady: handleVideoLoaded, // 첫 번째 비디오 로드 시 호출
     onVideoResolutionChange: handleVideoResolutionChange,
   })
 
   // ==================== Effects ====================
 
-  // props 변경 시 상태 리셋
+  // 디버그 모드: 첫 번째 tracking 비디오 파일 크기 가져오기
   useEffect(() => {
-    setCurrentVideoUrl(videoUrl)
-    setIsHDReady(true)
-  }, [videoUrl])
+    if (!debugMode || trackingModeVideos.length === 0) return
 
-  // 디버그 모드: 비디오 파일 크기 가져오기
-  useEffect(() => {
-    if (!debugMode) return
+    const firstVideo = trackingModeVideos[0]
+    const videoUrl = firstVideo.previewFileUrl || firstVideo.fileUrl
 
-    fetch(currentVideoUrl, { method: 'HEAD' })
+    fetch(videoUrl, { method: 'HEAD' })
       .then((res) => {
         const length = res.headers.get('Content-Length')
         if (length) setVideoFileSize(parseInt(length, 10))
       })
       .catch((e) => console.warn('[MindAR] Failed to fetch video size:', e))
-  }, [debugMode, currentVideoUrl])
+  }, [debugMode, trackingModeVideos])
 
   // 디버그 모드: 필터 파라미터 실시간 업데이트
   useEffect(() => {
@@ -164,57 +205,6 @@ const MindARViewer: React.FC<Props> = ({
 
     console.log('[Debug] Filter updated:', { stabilizationEnabled, minCutOff: newMinCF, beta: newBeta })
   }, [debugMode, stabilizationEnabled, filterMinCF, filterBeta])
-
-  // HD 비디오 백그라운드 프리로드
-  useEffect(() => {
-    if (!previewVideoUrl || isHDReady) return
-
-    console.log('[MindAR] Preloading HD video in background...')
-    const hdVideo = document.createElement('video')
-    hdVideo.preload = 'auto'
-    hdVideo.muted = true
-    hdVideo.playsInline = true
-    hdVideo.crossOrigin = 'anonymous'
-    hdVideo.src = videoUrl
-
-    const handleCanPlay = () => {
-      console.log('[MindAR] HD video ready, switching source...')
-      setIsHDReady(true)
-      setCurrentVideoUrl(videoUrl)
-    }
-
-    hdVideo.addEventListener('canplaythrough', handleCanPlay, { once: true })
-    hdVideo.load()
-
-    return () => {
-      hdVideo.removeEventListener('canplaythrough', handleCanPlay)
-      hdVideo.pause()
-      hdVideo.src = ''
-      hdVideo.load()
-    }
-  }, [videoUrl, previewVideoUrl, isHDReady])
-
-  // 비디오 소스 변경 시 업데이트
-  useEffect(() => {
-    const video = sceneRef.current?.querySelector<HTMLVideoElement>('#ar-video')
-    if (!video || video.src === currentVideoUrl) return
-
-    const currentTime = video.currentTime
-    const wasPlaying = !video.paused
-
-    console.log('[MindAR] Switching video source to:', currentVideoUrl.includes('preview') ? 'preview' : 'HD')
-    video.pause()
-    video.src = currentVideoUrl
-
-    const handleCanPlay = () => {
-      video.currentTime = currentTime
-      if (wasPlaying) video.play().catch(() => {})
-      video.removeEventListener('canplaythrough', handleCanPlay)
-    }
-
-    video.addEventListener('canplaythrough', handleCanPlay)
-    video.load()
-  }, [currentVideoUrl])
 
   // ==================== A-Frame 설정 ====================
   const mindARImageConfig = [
@@ -253,7 +243,7 @@ const MindARViewer: React.FC<Props> = ({
         <BasicModeMediaItem
           key={item.id}
           item={item}
-          onVideoLoaded={handleMediaVideoLoaded}
+          onVideoLoaded={handleVideoLoaded}
         />
       ))}
 
@@ -262,8 +252,8 @@ const MindARViewer: React.FC<Props> = ({
         <DebugPanel
           cameraResolution={cameraResolution}
           videoQuality={videoQuality}
-          isHDReady={isHDReady}
-          hasPreviewVideo={!!previewVideoUrl}
+          isHDReady={true}
+          hasPreviewVideo={false}
           videoResolution={videoResolution}
           videoFileSize={videoFileSize}
           stabilizationEnabled={stabilizationEnabled}
@@ -289,49 +279,39 @@ const MindARViewer: React.FC<Props> = ({
         device-orientation-permission-ui="enabled: false"
       >
         <a-assets>
-          <video
-            id="ar-video"
-            src={currentVideoUrl}
-            loop
-            crossOrigin="anonymous"
-            playsInline
-            webkit-playsinline="true"
-            muted={isMuted}
-            preload="auto"
-            autoPlay
-            onLoadedData={() => {
-              console.log('[MindAR] Main video loaded via onLoadedData')
-              setIsMainVideoReady(true)
-            }}
-          />
+          {/* 모든 tracking 모드 비디오들 */}
+          {trackingModeVideos.map((item) => (
+            <video
+              key={item.id}
+              id={`ar-video-${item.id}`}
+              src={item.previewFileUrl || item.fileUrl}
+              loop
+              crossOrigin="anonymous"
+              playsInline
+              webkit-playsinline="true"
+              muted={isMuted}
+              preload="auto"
+              autoPlay
+              onLoadedData={() => {
+                console.log(`[MindAR] Tracking video ${item.id} loaded`)
+                setLoadedVideoCount((c) => c + 1)
+              }}
+            />
+          ))}
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false" />
 
         <a-entity mindar-image-target="targetIndex: 0">
-          {chromaKeyColor ? (
-            <a-plane
-              position="0 0 0"
-              height="1"
-              width="1"
-              rotation="0 0 0"
-              chromakey-material={`src: #ar-video; color: ${chromaKeyColor}; similarity: ${chromaKeySettings.similarity}; smoothness: ${chromaKeySettings.smoothness}`}
-              {...(flatView ? { billboard: '' } : {})}
+          {/* 모든 tracking 모드 비디오들 (order 순서대로 렌더링) */}
+          {trackingModeVideos.map((item) => (
+            <TrackingVideoEntity
+              key={item.id}
+              item={item}
+              videoId={`ar-video-${item.id}`}
+              isMuted={isMuted}
             />
-          ) : (
-            <a-video
-              src="#ar-video"
-              position="0 0 0"
-              height="1"
-              width="1"
-              rotation="0 0 0"
-              loop="true"
-              muted={isMuted ? 'true' : 'false'}
-              autoplay="true"
-              playsinline="true"
-              {...(flatView ? { billboard: '' } : {})}
-            />
-          )}
+          ))}
         </a-entity>
       </a-scene>
     </>

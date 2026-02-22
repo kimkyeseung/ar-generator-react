@@ -119,15 +119,10 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       order: item.order,
     }))
 
-  // AR 모드: 첫 번째 트래킹 모드 비디오를 메인 비디오로 추출
-  // 기본 모드: 첫 번째 비디오를 메인 비디오로 추출
-  const mainVideo = isBasicMode
+  // 기본 모드: 첫 번째 비디오를 메인 비디오로 추출 (BasicModeViewer 호환용)
+  const mainVideoForBasicMode = isBasicMode
     ? processedMediaItems.find((item) => item.type === 'video')
-    : processedMediaItems.find((item) => item.type === 'video' && item.mode === 'tracking')
-  // 메인 비디오를 제외한 나머지 미디어 아이템
-  const otherMediaItems = mainVideo
-    ? processedMediaItems.filter((item) => item.id !== mainVideo.id)
-    : processedMediaItems
+    : undefined
 
   return {
     fileIds,
@@ -140,8 +135,8 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       guideImageUrl: fileIds.guideImageFileId
         ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
         : undefined,
-      mediaItems: otherMediaItems,
-      mainVideo,
+      mediaItems: processedMediaItems, // 모든 미디어 아이템 전달
+      mainVideo: mainVideoForBasicMode, // 기본 모드에서만 사용
     },
   }
 }
@@ -321,8 +316,11 @@ export default function MindARViewerPage() {
   }
 
   // AR 모드: MindARViewer 렌더링
-  const mainVideo = data.assets.mainVideo
-  if (!mainVideo) {
+  // tracking 모드 비디오가 하나도 없으면 에러
+  const hasTrackingVideo = data.assets.mediaItems.some(
+    (item) => item.type === 'video' && item.mode === 'tracking'
+  )
+  if (!hasTrackingVideo) {
     return (
       <div className="flex h-[100dvh] w-full items-center justify-center bg-red-500">
         <p className="text-white">비디오가 없습니다.</p>
@@ -337,13 +335,8 @@ export default function MindARViewerPage() {
         <div className="absolute inset-0">
           <MindARViewer
             mindUrl={data.assets.mindUrl!}
-            videoUrl={mainVideo.fileUrl}
-            previewVideoUrl={mainVideo.previewFileUrl}
             targetImageUrl={data.assets.targetImageUrl!}
             thumbnailUrl={data.assets.thumbnailUrl}
-            chromaKeyColor={mainVideo.chromaKeyEnabled ? mainVideo.chromaKeyColor : undefined}
-            chromaKeySettings={mainVideo.chromaKeySettings}
-            flatView={mainVideo.flatView}
             highPrecision={data.fileIds.highPrecision}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
             videoQuality={data.fileIds.videoQuality || 'low'}

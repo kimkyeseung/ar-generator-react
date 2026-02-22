@@ -4,6 +4,13 @@ import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 import ChromaKeyVideo from './ChromaKeyVideo'
 
+// iOS 감지
+const isIOS = () => {
+  if (typeof navigator === 'undefined') return false
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
 interface Props {
   videoUrl: string
   previewVideoUrl?: string
@@ -40,7 +47,8 @@ const BasicModeViewer: React.FC<Props> = ({
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const [isMuted, setIsMuted] = useState(true) // 항상 음소거로 시작 (자동 재생 지원)
+  // iOS는 muted 기본값 (자동재생 정책), Android는 unmuted 기본값
+  const [isMuted, setIsMuted] = useState(isIOS())
   const [isLoading, setIsLoading] = useState(true)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [cameraError, setCameraError] = useState<string | null>(null)

@@ -495,8 +495,8 @@ const BasicModeViewer: React.FC<Props> = ({
             left: `${position.x * 100}%`,
             top: `${position.y * 100}%`,
             transform: `translate(-50%, -50%) scale(${scale})`,
-            // VideoPositionEditor와 동일한 로직: 세로 영상은 폭을 비율만큼 좁게
-            width: videoAspectRatio && videoAspectRatio >= 1 ? '50%' : `${50 * (videoAspectRatio || 1)}%`,
+            // 화면 높이 기준으로 비디오 크기 설정 (scale=1일 때 화면 높이에 맞춤)
+            height: '100%',
             aspectRatio: videoAspectRatio ? `${videoAspectRatio}` : '16/9',
           }}
         >
@@ -542,7 +542,8 @@ const BasicModeViewer: React.FC<Props> = ({
                 left: `${item.position.x * 100}%`,
                 top: `${item.position.y * 100}%`,
                 transform: `translate(-50%, -50%) scale(${item.scale})`,
-                width: item.aspectRatio >= 1 ? '50%' : `${50 * item.aspectRatio}%`,
+                // 화면 높이 기준으로 미디어 크기 설정
+                height: '100%',
                 aspectRatio: `${item.aspectRatio}`,
                 pointerEvents: item.linkEnabled && item.linkUrl ? 'auto' : 'none',
                 zIndex: 10 + item.order, // 레이어 순서

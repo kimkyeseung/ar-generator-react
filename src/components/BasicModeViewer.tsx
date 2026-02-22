@@ -3,13 +3,8 @@ import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoP
 import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 import ChromaKeyVideo from './ChromaKeyVideo'
-
-// iOS 감지
-const isIOS = () => {
-  if (typeof navigator === 'undefined') return false
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
+import { hexToRgb } from '../utils/chromakey'
+import { getCameraResolution, isIOSDevice } from '../utils/camera'
 
 interface Props {
   videoUrl: string
@@ -48,7 +43,7 @@ const BasicModeViewer: React.FC<Props> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // iOS는 muted 기본값 (자동재생 정책), Android는 unmuted 기본값
-  const [isMuted, setIsMuted] = useState(isIOS())
+  const [isMuted, setIsMuted] = useState(isIOSDevice())
   const [isLoading, setIsLoading] = useState(true)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl) // 항상 원본 재생 (프리뷰 비활성화)
   const [cameraError, setCameraError] = useState<string | null>(null)
@@ -92,12 +87,7 @@ const BasicModeViewer: React.FC<Props> = ({
   useEffect(() => {
     let stream: MediaStream | null = null
 
-    // 해상도 설정에 따른 카메라 크기 (iPhone 브라우저 최대 FHD 지원)
-    const resolutionMap: Record<CameraResolution, { width: number; height: number }> = {
-      'fhd': { width: 1920, height: 1080 },
-      'hd': { width: 1280, height: 720 },
-    }
-    const { width: cameraWidth, height: cameraHeight } = resolutionMap[cameraResolution] || resolutionMap['fhd']
+    const { width: cameraWidth, height: cameraHeight } = getCameraResolution(cameraResolution)
     console.log(`[BasicMode Camera] Requested resolution: ${cameraResolution} (${cameraWidth}x${cameraHeight})`)
 
     const startCamera = async () => {
@@ -236,18 +226,6 @@ const BasicModeViewer: React.FC<Props> = ({
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-
-    // 크로마키 색상 파싱
-    const hexToRgb = (hex: string) => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-      return result
-        ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16),
-          }
-        : { r: 0, g: 255, b: 0 }
-    }
 
     const keyColor = hexToRgb(chromaKeyColor)
     const { similarity, smoothness } = chromaKeySettings

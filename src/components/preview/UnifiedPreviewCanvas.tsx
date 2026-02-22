@@ -4,21 +4,10 @@ import { ZoomIn, ZoomOut, Move, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { API_URL } from '../../config/api'
 import { isValidHexColor } from '../../utils/validation'
+import { hexToRgb } from '../../utils/chromakey'
 
 const MIN_SCALE = 0.2
 const MAX_SCALE = 5.0
-
-// HEX to RGB 변환
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : { r: 0, g: 255, b: 0 }
-}
 
 interface UnifiedPreviewCanvasProps {
   items: MediaItem[]

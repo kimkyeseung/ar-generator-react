@@ -9,6 +9,7 @@ import '../lib/image-target/aframe.js'
 import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoQuality } from '../types/project'
 import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
+import { isIOSDevice } from '../utils/camera'
 import {
   MindARScene,
   MindARSystem,
@@ -23,13 +24,6 @@ import {
 
 // A-Frame 컴포넌트 등록 (모듈 로드 시 1회만 실행)
 registerAllAFrameComponents()
-
-// iOS 감지
-const isIOS = () => {
-  if (typeof navigator === 'undefined') return false
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
 
 // ==================== Props ====================
 interface Props {
@@ -70,7 +64,7 @@ const MindARViewer: React.FC<Props> = ({
   const sceneRef = useRef<MindARScene | null>(null)
 
   // ==================== 상태 ====================
-  const [isMuted, setIsMuted] = useState(isIOS())
+  const [isMuted, setIsMuted] = useState(isIOSDevice())
   const [isLoading, setIsLoading] = useState(true)
   const [currentVideoUrl, setCurrentVideoUrl] = useState(videoUrl)
   const [isHDReady, setIsHDReady] = useState(!previewVideoUrl)

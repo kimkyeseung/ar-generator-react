@@ -1,24 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChromaKeySettings } from '../../types/project'
 import { isValidHexColor } from '../../utils/validation'
+import { hexToRgb } from '../../utils/chromakey'
 
 interface ChromaKeyPreviewProps {
   videoFile?: File
   videoUrl?: string // 기존 비디오 URL (편집 시)
   chromaKeyColor: string
   chromaKeySettings: ChromaKeySettings
-}
-
-// HEX to RGB 변환
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : { r: 0, g: 255, b: 0 } // 기본값: 그린
 }
 
 export default function ChromaKeyPreview({

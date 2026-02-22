@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS } from '../types/project'
+import { hexToRgb } from '../utils/chromakey'
 
 interface ChromaKeyVideoProps {
   src: string
@@ -37,18 +38,6 @@ export default function ChromaKeyVideo({
     // willReadFrequently 옵션으로 성능 최적화
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) return
-
-    // 크로마키 색상 파싱
-    const hexToRgb = (hex: string) => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-      return result
-        ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16),
-          }
-        : { r: 0, g: 255, b: 0 }
-    }
 
     const keyColor = hexToRgb(chromaKeyColor)
     const { similarity, smoothness } = chromaKeySettings

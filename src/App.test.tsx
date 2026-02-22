@@ -32,6 +32,9 @@ import { QRCodePage } from './QRCodePage'
 const mockFetch = jest.fn()
 global.fetch = mockFetch
 
+// Set up environment before tests
+process.env.REACT_APP_API_URL = 'http://localhost:4000'
+
 // Mock AFRAME
 beforeAll(() => {
   ;(global as any).AFRAME = {
@@ -127,7 +130,7 @@ describe('App Core Components', () => {
           updatedAt: '2024-01-01T00:00:00.000Z',
           videoFileId: 'video-1',
           targetFileId: 'target-1',
-          targetImageFileId: 'image-1',
+          targetImageFileId: null, // null to avoid canvas image loading issues in jsdom
           chromaKeyColor: null,
           flatView: false,
         },
@@ -170,7 +173,8 @@ describe('App Core Components', () => {
       await screen.findByText('아직 프로젝트가 없습니다')
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/projects')
+        expect.stringContaining('/projects'),
+        expect.anything()
       )
     })
   })

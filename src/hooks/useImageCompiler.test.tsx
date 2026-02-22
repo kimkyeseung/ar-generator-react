@@ -4,27 +4,23 @@
  * Tests verify the hook's interface, state management, and compilation flow.
  */
 
-// Mock the entire image-target module chain before any imports
-jest.mock('../lib/image-target/compiler', () => {
-  const mockCompileImageTargets = jest.fn().mockResolvedValue(undefined)
-  const mockExportData = jest.fn().mockReturnValue(new Uint8Array([1, 2, 3, 4]))
-  return {
-    Compiler: jest.fn().mockImplementation(() => ({
-      compileImageTargets: mockCompileImageTargets,
-      exportData: mockExportData,
-    })),
-    __mockCompileImageTargets: mockCompileImageTargets,
-    __mockExportData: mockExportData,
-  }
-})
-
 import React from 'react'
 import { render, act } from '@testing-library/react'
-import { useImageCompiler } from './useImageCompiler'
 
-// Get mocks from the mocked module
-const { __mockCompileImageTargets: mockCompileImageTargets, __mockExportData: mockExportData } =
-  jest.requireMock('../lib/image-target/compiler')
+// Create mock functions before module mock
+const mockCompileImageTargets = jest.fn()
+const mockExportData = jest.fn()
+
+// Mock the compiler module - must be before useImageCompiler import
+jest.mock('../lib/image-target/compiler', () => ({
+  Compiler: class MockCompiler {
+    compileImageTargets = mockCompileImageTargets
+    exportData = mockExportData
+  },
+}))
+
+// Import the hook after the mock is set up
+import { useImageCompiler } from './useImageCompiler'
 
 // Mock URL.createObjectURL
 global.URL.createObjectURL = jest.fn().mockReturnValue('blob:mock-url')
@@ -115,8 +111,9 @@ describe('useImageCompiler', () => {
     it('should accept files array and options', () => {
       renderTestComponent()
       expect(hookResult.compile).toBeDefined()
-      // Function accepts 2 parameters: files and options
-      expect(hookResult.compile.length).toBe(2)
+      // Function accepts files (required) and options (optional with default)
+      // Note: function.length only counts parameters without default values
+      expect(hookResult.compile.length).toBeGreaterThanOrEqual(1)
     })
 
     it('should return a promise', () => {
@@ -136,13 +133,17 @@ describe('useImageCompiler', () => {
       renderTestComponent()
       const mockFile = new File(['test'], 'test.png', { type: 'image/png' })
 
-      // Create a mock image
-      const mockImage = new Image()
-      Object.defineProperty(mockImage, 'onload', {
-        set(callback) {
-          setTimeout(callback, 0)
-        },
-      })
+      // Mock image loading
+      const originalImage = global.Image
+      ;(global as any).Image = class MockImage {
+        onload: (() => void) | null = null
+        src = ''
+        constructor() {
+          setTimeout(() => {
+            if (this.onload) this.onload()
+          }, 0)
+        }
+      }
 
       let compilingDuringExecution = false
       mockCompileImageTargets.mockImplementation(async () => {
@@ -150,16 +151,14 @@ describe('useImageCompiler', () => {
       })
 
       await act(async () => {
-        try {
-          await hookResult.compile([mockFile])
-        } catch {
-          // Expected to fail due to image loading mock
-        }
+        await hookResult.compile([mockFile])
       })
 
       // Verify that isCompiling was true during execution
-      // Note: Due to async nature, we verify the mock was called
       expect(mockCompileImageTargets).toHaveBeenCalled()
+      expect(compilingDuringExecution).toBe(true)
+
+      global.Image = originalImage
     })
 
     it('should call compileImageTargets with images and progress callback', async () => {

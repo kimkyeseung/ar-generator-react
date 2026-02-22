@@ -80,7 +80,8 @@ describe('VideoPositionEditor', () => {
   })
 
   it('disables + button at maximum scale', () => {
-    render(<VideoPositionEditor {...defaultProps} scale={2} />)
+    // MAX_SCALE is 5.0
+    render(<VideoPositionEditor {...defaultProps} scale={5} />)
 
     const plusButton = screen.getByRole('button', { name: '+' })
     expect(plusButton).toBeDisabled()
@@ -119,7 +120,8 @@ describe('VideoPositionEditor', () => {
   it('displays drag instruction text', () => {
     render(<VideoPositionEditor {...defaultProps} />)
 
-    expect(screen.getByText('드래그하여 위치 조정')).toBeInTheDocument()
+    // Updated text to match current component
+    expect(screen.getByText('드래그: 위치 | 우하단 모서리: 크기')).toBeInTheDocument()
   })
 
   it('shows camera error message when camera access fails', async () => {

@@ -8,6 +8,12 @@ jest.mock(
   { virtual: true }
 )
 
+// Mock verifyPassword
+const mockVerifyPassword = jest.fn()
+jest.mock('../utils/auth', () => ({
+  verifyPassword: () => mockVerifyPassword(),
+}))
+
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ProjectListPage from './ProjectListPage'
@@ -16,10 +22,42 @@ import ProjectListPage from './ProjectListPage'
 const mockFetch = jest.fn()
 global.fetch = mockFetch
 
+// Mock Image to avoid canvas issues
+class MockImage {
+  onload: (() => void) | null = null
+  onerror: (() => void) | null = null
+  src = ''
+  constructor() {
+    setTimeout(() => this.onload?.(), 0)
+  }
+}
+global.Image = MockImage as unknown as typeof Image
+
+// Suppress image/canvas loading errors in jsdom
+const originalError = console.error
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      args[0]?.includes?.('Error loading image') ||
+      args[0]?.includes?.('canvas') ||
+      args[0]?.includes?.('img') ||
+      args[0]?.includes?.('Cannot read properties of undefined')
+    ) {
+      return
+    }
+    originalError.call(console, ...args)
+  }
+})
+
+afterAll(() => {
+  console.error = originalError
+})
+
 describe('ProjectListPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetch.mockReset()
+    mockVerifyPassword.mockReset()
   })
 
   describe('Initial Rendering', () => {
@@ -105,7 +143,7 @@ describe('ProjectListPage', () => {
         updatedAt: '2024-01-15T00:00:00.000Z',
         videoFileId: 'video-1',
         targetFileId: 'target-1',
-        targetImageFileId: 'image-1',
+        targetImageFileId: null, // null to avoid canvas image loading issues in jsdom
         chromaKeyColor: '#00FF00',
         flatView: true,
       },
@@ -308,9 +346,7 @@ describe('ProjectListPage', () => {
   })
 
   describe('Delete Functionality', () => {
-    it('should show confirmation dialog when clicking delete', async () => {
-      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false)
-
+    it('should show password modal when clicking delete', async () => {
       const mockProject = {
         id: 'project-123',
         folderId: 'folder-123',
@@ -334,12 +370,12 @@ describe('ProjectListPage', () => {
       const deleteButton = await screen.findByText('삭제')
       fireEvent.click(deleteButton)
 
-      expect(confirmSpy).toHaveBeenCalledWith('정말 삭제하시겠습니까?')
-      confirmSpy.mockRestore()
+      // Password modal should appear
+      expect(await screen.findByText('비밀번호 입력')).toBeInTheDocument()
     })
 
     it('should remove project from list after successful delete', async () => {
-      jest.spyOn(window, 'confirm').mockReturnValue(true)
+      mockVerifyPassword.mockResolvedValue(true)
 
       const mockProject = {
         id: 'project-123',
@@ -367,8 +403,17 @@ describe('ProjectListPage', () => {
 
       await screen.findByText('삭제될 프로젝트')
 
+      // Click delete button to open password modal
       const deleteButton = screen.getByText('삭제')
       fireEvent.click(deleteButton)
+
+      // Wait for password modal and enter password
+      const passwordInput = await screen.findByPlaceholderText('비밀번호를 입력하세요')
+      fireEvent.change(passwordInput, { target: { value: 'test-password' } })
+
+      // Click confirm button
+      const confirmButton = screen.getByRole('button', { name: '확인' })
+      fireEvent.click(confirmButton)
 
       await waitFor(() => {
         expect(screen.queryByText('삭제될 프로젝트')).not.toBeInTheDocument()

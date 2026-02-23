@@ -244,6 +244,7 @@ const MindARViewer: React.FC<Props> = ({
           key={item.id}
           item={item}
           onVideoLoaded={handleVideoLoaded}
+          isMuted={isMuted}
         />
       ))}
 

@@ -10,9 +10,10 @@ import { normalizeUrl } from '../../utils/validation'
 interface BasicModeMediaItemProps {
   item: ProcessedMediaItem
   onVideoLoaded: () => void
+  isMuted: boolean
 }
 
-export function BasicModeMediaItem({ item, onVideoLoaded }: BasicModeMediaItemProps) {
+export function BasicModeMediaItem({ item, onVideoLoaded, isMuted }: BasicModeMediaItemProps) {
   // scale=1(100%)일 때 화면에 맞춤: 세로 미디어는 width 100%, 가로 미디어는 height 100%
   // 미리보기(UnifiedPreviewCanvas) 및 BasicModeViewer와 동일한 로직
   const sizeStyle = item.aspectRatio < 1
@@ -32,7 +33,7 @@ export function BasicModeMediaItem({ item, onVideoLoaded }: BasicModeMediaItemPr
       {item.type === 'image' ? (
         <ImageContent item={item} />
       ) : (
-        <VideoContent item={item} onLoaded={onVideoLoaded} />
+        <VideoContent item={item} onLoaded={onVideoLoaded} isMuted={isMuted} />
       )}
     </div>
   )
@@ -69,9 +70,11 @@ function ImageContent({ item }: { item: ProcessedMediaItem }) {
 function VideoContent({
   item,
   onLoaded,
+  isMuted,
 }: {
   item: ProcessedMediaItem
   onLoaded: () => void
+  isMuted: boolean
 }) {
   const videoSrc = item.previewFileUrl || item.fileUrl
 
@@ -82,6 +85,7 @@ function VideoContent({
         chromaKeyColor={item.chromaKeyColor || '#00FF00'}
         chromaKeySettings={item.chromaKeySettings}
         className="w-full h-full object-contain pointer-events-none"
+        muted={isMuted}
         onLoadedData={onLoaded}
       />
     )
@@ -91,7 +95,7 @@ function VideoContent({
     <video
       src={videoSrc}
       loop
-      muted
+      muted={isMuted}
       playsInline
       autoPlay
       crossOrigin="anonymous"

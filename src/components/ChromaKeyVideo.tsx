@@ -30,6 +30,14 @@ export default function ChromaKeyVideo({
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  // muted prop 변경 시 비디오에 반영
+  useEffect(() => {
+    const video = videoRef.current
+    if (video) {
+      video.muted = muted
+    }
+  }, [muted])
+
   useEffect(() => {
     const video = videoRef.current
     const canvas = canvasRef.current

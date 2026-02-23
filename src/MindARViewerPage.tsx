@@ -43,8 +43,6 @@ interface ArAssets {
   thumbnailUrl?: string // 썸네일 이미지 URL (로딩 화면 우선 표시)
   guideImageUrl?: string // 안내문구 이미지 URL
   mediaItems: ProcessedMediaItem[] // 모든 미디어 아이템
-  // 첫 번째 비디오 (메인 비디오) - BasicModeViewer/MindARViewer 호환용
-  mainVideo?: ProcessedMediaItem
 }
 
 // 단일 fetch + blob 변환
@@ -119,11 +117,6 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       order: item.order,
     }))
 
-  // 기본 모드: 첫 번째 비디오를 메인 비디오로 추출 (BasicModeViewer 호환용)
-  const mainVideoForBasicMode = isBasicMode
-    ? processedMediaItems.find((item) => item.type === 'video')
-    : undefined
-
   return {
     fileIds,
     assets: {
@@ -135,8 +128,7 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       guideImageUrl: fileIds.guideImageFileId
         ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
         : undefined,
-      mediaItems: processedMediaItems, // 모든 미디어 아이템 전달
-      mainVideo: mainVideoForBasicMode, // 기본 모드에서만 사용
+      mediaItems: processedMediaItems,
     },
   }
 }
@@ -283,11 +275,12 @@ export default function MindARViewerPage() {
 
   // 기본 모드: BasicModeViewer 렌더링
   if (isBasicMode) {
-    const mainVideo = data.assets.mainVideo
-    if (!mainVideo) {
+    // basic 모드 미디어가 하나도 없으면 에러
+    const hasBasicMedia = data.assets.mediaItems.some((item) => item.mode === 'basic')
+    if (!hasBasicMedia) {
       return (
         <div className="flex h-[100dvh] w-full items-center justify-center bg-red-500">
-          <p className="text-white">비디오가 없습니다.</p>
+          <p className="text-white">미디어가 없습니다.</p>
         </div>
       )
     }
@@ -297,16 +290,10 @@ export default function MindARViewerPage() {
         <LandscapeWarningOverlay />
         <section className="relative flex h-[100dvh] w-full overflow-hidden">
           <BasicModeViewer
-            videoUrl={mainVideo.fileUrl}
-            previewVideoUrl={mainVideo.previewFileUrl}
-            position={mainVideo.position}
-            scale={mainVideo.scale}
-            chromaKeyColor={mainVideo.chromaKeyEnabled ? mainVideo.chromaKeyColor : undefined}
-            chromaKeySettings={mainVideo.chromaKeySettings}
+            mediaItems={data.assets.mediaItems}
             cameraResolution={data.fileIds.cameraResolution || 'fhd'}
             videoQuality={data.fileIds.videoQuality || 'low'}
             guideImageUrl={data.assets.guideImageUrl}
-            mediaItems={data.assets.mediaItems}
             debugMode={isDebugMode}
           />
           {isLogMode && <ConsoleLogOverlay />}

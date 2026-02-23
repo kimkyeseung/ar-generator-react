@@ -81,10 +81,11 @@ vendor/
   - `chromakey-material`: 크로마키(그린스크린) 제거 셰이더
 
 ### BasicModeViewer
-- 기본 모드 뷰어 (타겟 이미지 없이 카메라에 비디오 오버레이)
-- 카메라 피드 위에 비디오를 지정된 위치/크기로 표시
-- Canvas 2D 기반 크로마키 처리 (WebGL 없이)
-- HD 비디오 백그라운드 프리로드 지원
+- 기본 모드 뷰어 (타겟 이미지 없이 카메라에 미디어 오버레이)
+- `mediaItems` 배열을 받아 basic 모드 아이템만 순환 렌더링
+- 카메라 피드 위에 미디어(영상/이미지)를 지정된 위치/크기로 표시
+- Canvas 2D 기반 크로마키 처리 (ChromaKeyVideo 컴포넌트 사용)
+- 여러 미디어 아이템 동시 표시 지원 (order 순서대로 레이어링)
 
 ### VideoPositionEditor
 - 기본 모드에서 비디오 위치/크기 편집 UI
@@ -186,7 +187,7 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 - 표시 정보:
   - 📷 카메라 해상도 (실제 적용된 해상도)
   - 🎬 영상 품질 (고화질/중화질/저화질)
-  - ⏳/🔄 현재 재생 상태 (프리뷰 재생중 / 원본 재생중)
+  - 📦 미디어 개수 (BasicModeViewer에서 표시)
 - AR 모드에서는 떨림 보정(Stabilization) 파라미터 실시간 조절 가능
   - filterMinCF: 낮을수록 부드러움 (기본값: 0.001)
   - filterBeta: 높을수록 반응 빠름 (기본값: 1000)

@@ -1,5 +1,7 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import BasicModeViewer from './BasicModeViewer'
+import { ProcessedMediaItem } from '../MindARViewerPage'
+import { DEFAULT_CHROMAKEY_SETTINGS } from '../types/project'
 
 // Mock SpeakerIcon to avoid image loading issues in jsdom
 jest.mock('./ui/SpeakerIcon', () => ({
@@ -33,11 +35,26 @@ Object.defineProperty(HTMLMediaElement.prototype, 'load', {
   value: jest.fn(),
 })
 
+// Helper function to create a media item
+const createMediaItem = (overrides: Partial<ProcessedMediaItem> = {}): ProcessedMediaItem => ({
+  id: 'test-item-1',
+  type: 'video',
+  mode: 'basic',
+  fileUrl: 'https://example.com/video.mp4',
+  position: { x: 0.5, y: 0.5 },
+  scale: 1,
+  aspectRatio: 16 / 9,
+  chromaKeyEnabled: false,
+  chromaKeySettings: DEFAULT_CHROMAKEY_SETTINGS,
+  flatView: false,
+  linkEnabled: false,
+  order: 0,
+  ...overrides,
+})
+
 describe('BasicModeViewer', () => {
   const defaultProps = {
-    videoUrl: 'https://example.com/video.mp4',
-    position: { x: 0.5, y: 0.5 },
-    scale: 1,
+    mediaItems: [createMediaItem()],
   }
 
   beforeEach(() => {
@@ -54,13 +71,27 @@ describe('BasicModeViewer', () => {
     expect(screen.getByText('카메라 준비 중...')).toBeInTheDocument()
   })
 
-  it('renders speaker toggle button', async () => {
+  it('renders speaker toggle button when there are videos', async () => {
     render(<BasicModeViewer {...defaultProps} />)
 
     await waitFor(() => {
       const speakerButton = screen.getByRole('button', { name: /소리/i })
       expect(speakerButton).toBeInTheDocument()
     })
+  })
+
+  it('does not render speaker button when there are no videos', async () => {
+    render(
+      <BasicModeViewer
+        mediaItems={[createMediaItem({ type: 'image' })]}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('button', { name: /소리/i })).not.toBeInTheDocument()
   })
 
   it('shows camera error when camera access fails', async () => {
@@ -82,61 +113,19 @@ describe('BasicModeViewer', () => {
     })
   })
 
-  it('should use original videoUrl (preview disabled)', async () => {
-    // Note: 프리뷰 기능이 비활성화되어 항상 원본 URL 사용
+  it('applies position and scale styles to media items', async () => {
     const { container } = render(
       <BasicModeViewer
-        {...defaultProps}
-        previewVideoUrl="https://example.com/preview.mp4"
+        mediaItems={[createMediaItem({ position: { x: 0.3, y: 0.7 }, scale: 1.5 })]}
       />
     )
 
     await waitFor(() => {
-      // Should use original URL (preview is disabled in BasicModeViewer)
-      const video = container.querySelector('video[src="https://example.com/video.mp4"]')
-      expect(video).toBeInTheDocument()
+      expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
     })
-  })
 
-  it('applies position and scale styles to video overlay', async () => {
-    const { container } = render(
-      <BasicModeViewer
-        {...defaultProps}
-        position={{ x: 0.3, y: 0.7 }}
-        scale={1.5}
-      />
-    )
-
-    await waitFor(() => {
-      const overlay = container.querySelector('.pointer-events-none')
-      expect(overlay).toHaveStyle({
-        left: '30%',
-        top: '70%',
-      })
-    })
-  })
-
-  it('applies fullscreen sizing to video overlay at scale 1', async () => {
-    // scale=1(100%)일 때 화면에 맞춤
-    // - 세로 영상 (aspectRatio < 1): width: 100%
-    // - 가로 영상 (aspectRatio >= 1): height: 100%
-    // Note: jsdom에서 videoAspectRatio는 null이므로 기본값(100% x 100%) 적용
-    const { container } = render(
-      <BasicModeViewer
-        {...defaultProps}
-        position={{ x: 0.5, y: 0.5 }}
-        scale={1}
-      />
-    )
-
-    await waitFor(() => {
-      const overlay = container.querySelector('.pointer-events-none')
-      // videoAspectRatio가 null일 때 100% x 100% 기본값 적용
-      expect(overlay).toHaveStyle({
-        width: '100%',
-        height: '100%',
-      })
-    })
+    const mediaContainer = container.querySelector('.absolute[style*="left: 30%"]')
+    expect(mediaContainer).toBeInTheDocument()
   })
 
   it('renders video element with correct src', async () => {
@@ -148,9 +137,50 @@ describe('BasicModeViewer', () => {
     })
   })
 
-  it('renders canvas when chromaKeyColor is provided', async () => {
+  it('renders multiple media items', async () => {
     const { container } = render(
-      <BasicModeViewer {...defaultProps} chromaKeyColor="#00FF00" />
+      <BasicModeViewer
+        mediaItems={[
+          createMediaItem({ id: 'item-1', order: 0 }),
+          createMediaItem({ id: 'item-2', order: 1, fileUrl: 'https://example.com/video2.mp4' }),
+        ]}
+      />
+    )
+
+    await waitFor(() => {
+      const videos = container.querySelectorAll('video[crossorigin="anonymous"]')
+      expect(videos.length).toBe(2)
+    })
+  })
+
+  it('renders image items correctly', async () => {
+    const { container } = render(
+      <BasicModeViewer
+        mediaItems={[
+          createMediaItem({
+            type: 'image',
+            fileUrl: 'https://example.com/image.png',
+          }),
+        ]}
+      />
+    )
+
+    await waitFor(() => {
+      const image = container.querySelector('img[src="https://example.com/image.png"]')
+      expect(image).toBeInTheDocument()
+    })
+  })
+
+  it('renders ChromaKeyVideo when chromaKeyEnabled is true', async () => {
+    const { container } = render(
+      <BasicModeViewer
+        mediaItems={[
+          createMediaItem({
+            chromaKeyEnabled: true,
+            chromaKeyColor: '#00FF00',
+          }),
+        ]}
+      />
     )
 
     await waitFor(() => {
@@ -188,7 +218,6 @@ describe('BasicModeViewer', () => {
       const { unmount } = render(<BasicModeViewer {...defaultProps} />)
 
       await waitFor(() => {
-        // Wait for component to fully mount
         expect(screen.getByRole('button', { name: /소리/i })).toBeInTheDocument()
       })
 
@@ -207,7 +236,6 @@ describe('BasicModeViewer', () => {
         expect(screen.getByRole('button', { name: /소리/i })).toBeInTheDocument()
       })
 
-      // Trigger orientationchange event
       expect(() => {
         window.dispatchEvent(new Event('orientationchange'))
       }).not.toThrow()
@@ -219,11 +247,9 @@ describe('BasicModeViewer', () => {
       render(<BasicModeViewer {...defaultProps} debugMode={true} />)
 
       await waitFor(() => {
-        // Wait for camera to be ready (loading disappears)
         expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
       })
 
-      // Check for camera resolution display
       const debugDisplay = screen.queryByText(/📷/)
       expect(debugDisplay).toBeInTheDocument()
     })
@@ -235,9 +261,45 @@ describe('BasicModeViewer', () => {
         expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
       })
 
-      // Camera resolution should not be shown
       const debugDisplay = screen.queryByText(/1920x1080/)
       expect(debugDisplay).not.toBeInTheDocument()
+    })
+
+    it('should show media count in debug mode', async () => {
+      render(
+        <BasicModeViewer
+          mediaItems={[
+            createMediaItem({ id: 'item-1' }),
+            createMediaItem({ id: 'item-2' }),
+          ]}
+          debugMode={true}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
+      })
+
+      const mediaCountDisplay = screen.queryByText(/📦 2개 미디어/)
+      expect(mediaCountDisplay).toBeInTheDocument()
+    })
+  })
+
+  describe('guide image', () => {
+    it('should show guide image when videos are loading', async () => {
+      const { container } = render(
+        <BasicModeViewer
+          mediaItems={[createMediaItem()]}
+          guideImageUrl="https://example.com/guide.png"
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText('카메라 준비 중...')).not.toBeInTheDocument()
+      })
+
+      const guideImage = container.querySelector('img[alt="안내문구"]')
+      expect(guideImage).toBeInTheDocument()
     })
   })
 })

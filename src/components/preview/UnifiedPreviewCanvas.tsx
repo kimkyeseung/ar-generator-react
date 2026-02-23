@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { MediaItem } from '../../types/project'
-import { ZoomIn, ZoomOut, Move, Maximize2 } from 'lucide-react'
+import { ZoomIn, ZoomOut, Move, Maximize2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '../ui/button'
 import { API_URL } from '../../config/api'
 import { isValidHexColor } from '../../utils/validation'
@@ -77,6 +77,8 @@ export default function UnifiedPreviewCanvas({
   const [chromaKeyZoom, setChromaKeyZoom] = useState(1)
   const chromaKeyCanvasRef = useRef<HTMLCanvasElement>(null)
   const chromaKeyAnimationRef = useRef<number>()
+  // 크로마키 영상별 가시성 상태 (기본값: 모두 보임)
+  const [chromaKeyVisibility, setChromaKeyVisibility] = useState<Record<string, boolean>>({})
 
   // 캔버스 크기
   const CANVAS_WIDTH = 360
@@ -485,27 +487,36 @@ export default function UnifiedPreviewCanvas({
     }
   }, [render])
 
+  // 가시성이 켜진 크로마키 영상만 필터링
+  const visibleChromaKeyItems = useMemo(() => {
+    return chromaKeyItems.filter(item => chromaKeyVisibility[item.id] !== false)
+  }, [chromaKeyItems, chromaKeyVisibility])
+
+  // 크로마키 영상 가시성 토글
+  const toggleChromaKeyVisibility = useCallback((itemId: string) => {
+    setChromaKeyVisibility(prev => ({
+      ...prev,
+      [itemId]: prev[itemId] === false ? true : false,
+    }))
+  }, [])
+
   // 크로마키 미리보기 캔버스 렌더링
   const renderChromaKey = useCallback(() => {
     const canvas = chromaKeyCanvasRef.current
-    const ctx = canvas?.getContext('2d')
+    const ctx = canvas?.getContext('2d', { willReadFrequently: true })
     if (!canvas || !ctx || chromaKeyItems.length === 0) return
 
-    // 첫 번째 크로마키 영상의 비율로 캔버스 크기 결정
+    // 첫 번째 크로마키 영상의 비율로 캔버스 크기 결정 (숨김 여부 상관없이)
     const firstItem = chromaKeyItems[0]
-    const preview = mediaPreviewsMap.get(firstItem.id)
-    if (!preview?.element) return
+    const firstPreview = mediaPreviewsMap.get(firstItem.id)
 
-    const videoElement = preview.element as HTMLVideoElement
-    if (videoElement.readyState < 2) {
-      chromaKeyAnimationRef.current = requestAnimationFrame(renderChromaKey)
-      return
+    let aspectRatio = 16 / 9 // 기본값
+    if (firstPreview?.element) {
+      const videoElement = firstPreview.element as HTMLVideoElement
+      if (videoElement.readyState >= 2 && videoElement.videoWidth && videoElement.videoHeight) {
+        aspectRatio = videoElement.videoWidth / videoElement.videoHeight
+      }
     }
-
-    // 영상 실제 비율 유지
-    const videoWidth = videoElement.videoWidth || 320
-    const videoHeight = videoElement.videoHeight || 180
-    const aspectRatio = videoWidth / videoHeight
 
     // 캔버스 크기 계산 (최대 너비 기준)
     const maxWidth = 360
@@ -515,15 +526,80 @@ export default function UnifiedPreviewCanvas({
     canvas.width = displayWidth
     canvas.height = displayHeight
 
-    // 배경 클리어
-    ctx.fillStyle = '#1a1a2e'
-    ctx.fillRect(0, 0, displayWidth, displayHeight)
+    // 배경: 체커보드 패턴 (투명 영역 표시)
+    const pattern = getCheckerPattern(ctx)
+    if (pattern) {
+      ctx.fillStyle = pattern
+      ctx.fillRect(0, 0, displayWidth, displayHeight)
+    } else {
+      ctx.fillStyle = '#1a1a2e'
+      ctx.fillRect(0, 0, displayWidth, displayHeight)
+    }
 
-    // 영상 그리기
-    ctx.drawImage(videoElement, 0, 0, displayWidth, displayHeight)
+    // 보이는 영상이 없으면 체커보드만 표시
+    if (visibleChromaKeyItems.length === 0) {
+      chromaKeyAnimationRef.current = requestAnimationFrame(renderChromaKey)
+      return
+    }
+
+    // 보이는 영상들만 order 순서대로 합성 (크로마키 적용)
+    const sortedVisibleItems = [...visibleChromaKeyItems].sort((a, b) => a.order - b.order)
+
+    for (const item of sortedVisibleItems) {
+      const itemPreview = mediaPreviewsMap.get(item.id)
+      if (!itemPreview?.element) continue
+
+      const video = itemPreview.element as HTMLVideoElement
+      if (video.readyState < 2) continue
+
+      // 임시 캔버스에 영상 그리기
+      const tempCanvas = document.createElement('canvas')
+      tempCanvas.width = displayWidth
+      tempCanvas.height = displayHeight
+      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
+      if (!tempCtx) continue
+
+      tempCtx.drawImage(video, 0, 0, displayWidth, displayHeight)
+
+      // 크로마키 처리
+      const keyColor = hexToRgb(isValidHexColor(item.chromaKeyColor) ? item.chromaKeyColor : '#00FF00')
+      const { similarity, smoothness } = item.chromaKeySettings
+
+      const imageData = tempCtx.getImageData(0, 0, displayWidth, displayHeight)
+      const data = imageData.data
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i]
+        const g = data[i + 1]
+        const b = data[i + 2]
+
+        // 색상 거리 계산 (정규화)
+        const distance =
+          Math.sqrt(
+            Math.pow(r - keyColor.r, 2) +
+            Math.pow(g - keyColor.g, 2) +
+            Math.pow(b - keyColor.b, 2)
+          ) / Math.sqrt(3) / 255
+
+        // 알파 계산
+        if (distance < similarity) {
+          data[i + 3] = 0
+        } else if (distance < similarity + smoothness) {
+          const alpha = (distance - similarity) / smoothness
+          data[i + 3] = Math.round(alpha * 255)
+        }
+      }
+
+      tempCtx.putImageData(imageData, 0, 0)
+
+      // 처리된 이미지를 메인 캔버스에 합성
+      ctx.drawImage(tempCanvas, 0, 0)
+    }
 
     chromaKeyAnimationRef.current = requestAnimationFrame(renderChromaKey)
-  }, [chromaKeyItems, mediaPreviewsMap, chromaKeyZoom])
+    // items는 chromaKeySettings 변경 감지를 위해 필요
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, chromaKeyItems, visibleChromaKeyItems, mediaPreviewsMap, chromaKeyZoom, getCheckerPattern])
 
   // 크로마키 미리보기 애니메이션 시작/정지
   useEffect(() => {
@@ -947,21 +1023,42 @@ export default function UnifiedPreviewCanvas({
             </Button>
           </div>
 
-          {/* 크로마키 영상 목록 */}
+          {/* 크로마키 영상 목록 (레이어 컨트롤) */}
           <div className="mt-3 space-y-1">
-            {chromaKeyItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/50 px-2 py-1 rounded"
-              >
+            <p className="text-xs text-gray-500 mb-2">
+              눈 아이콘을 클릭하여 각 영상의 미리보기 표시/숨김을 설정하세요
+            </p>
+            {chromaKeyItems
+              .sort((a, b) => a.order - b.order)
+              .map((item) => {
+              const isVisible = chromaKeyVisibility[item.id] !== false
+              return (
                 <div
-                  className="w-3 h-3 rounded-sm border border-gray-600"
-                  style={{ backgroundColor: item.chromaKeyColor }}
-                />
-                <span>영상 {index + 1}</span>
-                <span className="text-gray-500">({item.chromaKeyColor})</span>
-              </div>
-            ))}
+                  key={item.id}
+                  className={`flex items-center gap-2 text-xs bg-gray-800/50 px-2 py-1.5 rounded transition-colors ${
+                    isVisible ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
+                  {/* 눈 모양 아이콘 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => toggleChromaKeyVisibility(item.id)}
+                    className={`p-1 rounded hover:bg-gray-700 transition-colors ${
+                      isVisible ? 'text-purple-400 hover:text-purple-300' : 'text-gray-600 hover:text-gray-500'
+                    }`}
+                    title={isVisible ? '미리보기 숨기기' : '미리보기 표시'}
+                  >
+                    {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                  <div
+                    className={`w-3 h-3 rounded-sm border ${isVisible ? 'border-gray-500' : 'border-gray-700'}`}
+                    style={{ backgroundColor: isVisible ? item.chromaKeyColor : '#333' }}
+                  />
+                  <span className={isVisible ? '' : 'line-through'}>영상 {item.order + 1}</span>
+                  <span className="text-gray-500">({item.chromaKeyColor})</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

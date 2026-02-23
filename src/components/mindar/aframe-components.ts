@@ -72,6 +72,7 @@ export function registerChromakeyMaterialComponent() {
       color: { type: 'color', default: '#00FF00' },
       similarity: { type: 'number', default: 0.4 },
       smoothness: { type: 'number', default: 0.08 },
+      depthTest: { type: 'boolean', default: true },
     },
     init: function () {
       const videoEl = this.data.src as HTMLVideoElement | null
@@ -100,6 +101,8 @@ export function registerChromakeyMaterialComponent() {
         fragmentShader: CHROMAKEY_FRAGMENT_SHADER,
         transparent: true,
         side: THREE.DoubleSide,
+        depthTest: this.data.depthTest,
+        depthWrite: this.data.depthTest, // depthTest가 false면 depthWrite도 false
       })
 
       // mesh에 material 적용

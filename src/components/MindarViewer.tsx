@@ -63,7 +63,7 @@ function TrackingVideoEntity({ item, videoId, isMuted }: TrackingVideoEntityProp
         width={videoWidth.toString()}
         height={videoHeight.toString()}
         rotation="0 0 0"
-        chromakey-material={`src: #${videoId}; color: ${item.chromaKeyColor}; similarity: ${item.chromaKeySettings.similarity}; smoothness: ${item.chromaKeySettings.smoothness}`}
+        chromakey-material={`src: #${videoId}; color: ${item.chromaKeyColor}; similarity: ${item.chromaKeySettings.similarity}; smoothness: ${item.chromaKeySettings.smoothness}${item.flatView ? '; depthTest: false' : ''}`}
         {...(item.flatView ? { billboard: '' } : {})}
       />
     )
@@ -80,7 +80,7 @@ function TrackingVideoEntity({ item, videoId, isMuted }: TrackingVideoEntityProp
       muted={isMuted ? 'true' : 'false'}
       autoplay="true"
       playsinline="true"
-      {...(item.flatView ? { billboard: '' } : {})}
+      {...(item.flatView ? { billboard: '', material: 'depthTest: false' } : {})}
     />
   )
 }

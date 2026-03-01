@@ -146,7 +146,7 @@ AFRAME.registerSystem('mindar-image-system', {
 
     // 트래킹 해상도 제한 - 가로/세로 모드 모두 지원
     // 가장 긴 변이 1920 이하면 그대로 사용 (세로 모드 1080x1920도 OK)
-    const MAX_DIMENSION = 1280
+    const MAX_DIMENSION = 1920
 
     let trackingWidth, trackingHeight
     const maxDimension = Math.max(video.videoWidth, video.videoHeight)

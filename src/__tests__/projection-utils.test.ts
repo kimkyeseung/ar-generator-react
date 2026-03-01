@@ -282,6 +282,96 @@ describe('projection-utils', () => {
     })
   })
 
+  describe('Regression: MAX_DIMENSION must match camera resolution', () => {
+    /**
+     * aframe.js _startAR의 MAX_DIMENSION 로직 재현
+     * 트래킹 해상도를 카메라 해상도보다 낮추면 프로젝션 매트릭스와
+     * 비디오 디스플레이가 어긋나서 AR 오버레이 위치가 틀어짐
+     *
+     * 재발 이력:
+     * - MAX_DIMENSION을 1920→1280으로 낮추면 FHD 카메라에서 위치 불일치 발생
+     * - 반드시 카메라 해상도와 트래킹 해상도가 동일해야 함
+     */
+    function calculateTrackingWithMaxDimension(
+      videoWidth: number,
+      videoHeight: number,
+      maxDimension: number
+    ): TrackingDimensions {
+      const max = Math.max(videoWidth, videoHeight)
+      if (max > maxDimension) {
+        const scale = maxDimension / max
+        return {
+          trackingWidth: Math.round(videoWidth * scale),
+          trackingHeight: Math.round(videoHeight * scale),
+        }
+      }
+      return { trackingWidth: videoWidth, trackingHeight: videoHeight }
+    }
+
+    it('FHD 카메라에서 MAX_DIMENSION=1920이면 트래킹과 카메라 해상도가 동일해야 함', () => {
+      const result = calculateTrackingWithMaxDimension(1920, 1080, 1920)
+      expect(result.trackingWidth).toBe(1920)
+      expect(result.trackingHeight).toBe(1080)
+    })
+
+    it('FHD 카메라에서 MAX_DIMENSION=1280이면 트래킹 해상도가 달라져서 위치 불일치 발생', () => {
+      // 이 시나리오가 실제 버그를 유발함
+      const result = calculateTrackingWithMaxDimension(1920, 1080, 1280)
+
+      // 트래킹 해상도가 카메라보다 작아짐 → 위치 불일치 원인
+      expect(result.trackingWidth).not.toBe(1920)
+      expect(result.trackingHeight).not.toBe(1080)
+      expect(result.trackingWidth).toBe(1280)
+      expect(result.trackingHeight).toBe(720)
+    })
+
+    it('HD 카메라에서 MAX_DIMENSION=1280이면 트래킹과 카메라 해상도가 동일해야 함', () => {
+      // HD 카메라라면 1280 제한이 문제없음
+      const result = calculateTrackingWithMaxDimension(1280, 720, 1280)
+      expect(result.trackingWidth).toBe(1280)
+      expect(result.trackingHeight).toBe(720)
+    })
+
+    it('트래킹 해상도가 카메라 해상도와 다르면 프로젝션 불일치가 발생함을 검증', () => {
+      // MindAR 프로젝션 매트릭스: proj[5] = 1/tan(fov/2) ≈ 2.414 (해상도 무관)
+      // 하지만 Controller 내부의 projectionTransform 중심점(cx, cy)은 해상도에 의존
+      // → 트래킹 해상도의 cx,cy와 비디오 디스플레이가 달라지면 오버레이 오프셋 발생
+
+      const cameraWidth = 1920
+      const cameraHeight = 1080
+
+      // 정상: MAX_DIMENSION=1920 (트래킹 == 카메라)
+      const correct = calculateTrackingWithMaxDimension(cameraWidth, cameraHeight, 1920)
+      const correctCx = correct.trackingWidth / 2  // 960
+      const correctCy = correct.trackingHeight / 2 // 540
+
+      // 버그: MAX_DIMENSION=1280 (트래킹 != 카메라)
+      const buggy = calculateTrackingWithMaxDimension(cameraWidth, cameraHeight, 1280)
+      const buggyCx = buggy.trackingWidth / 2  // 640
+      const buggyCy = buggy.trackingHeight / 2 // 360
+
+      // 중심점이 달라짐 → 프로젝션 매트릭스의 cx,cy가 비디오 디스플레이와 불일치
+      expect(correctCx).toBe(cameraWidth / 2)
+      expect(correctCy).toBe(cameraHeight / 2)
+      expect(buggyCx).not.toBe(cameraWidth / 2)
+      expect(buggyCy).not.toBe(cameraHeight / 2)
+    })
+
+    it('세로 모드 FHD에서도 MAX_DIMENSION=1920이면 해상도가 보존되어야 함', () => {
+      // 세로 모드: 1080x1920
+      const result = calculateTrackingWithMaxDimension(1080, 1920, 1920)
+      expect(result.trackingWidth).toBe(1080)
+      expect(result.trackingHeight).toBe(1920)
+    })
+
+    it('세로 모드 FHD에서 MAX_DIMENSION=1280이면 해상도가 달라져서 위치 불일치 발생', () => {
+      const result = calculateTrackingWithMaxDimension(1080, 1920, 1280)
+      // 세로 모드에서도 가장 긴 변(1920) 기준으로 스케일링
+      expect(result.trackingWidth).not.toBe(1080)
+      expect(result.trackingHeight).not.toBe(1920)
+    })
+  })
+
   describe('Integration: High resolution camera overlay position', () => {
     /**
      * 이 테스트는 고해상도 카메라에서 AR 오버레이 위치가

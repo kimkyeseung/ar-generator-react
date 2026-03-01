@@ -8,10 +8,10 @@ import { Tracker } from './tracker/tracker.js'
 
 const tf = { memory, nextFrame }
 
-const DEFAULT_FILTER_CUTOFF = 0.001 // 1Hz. time period in milliseconds
-const DEFAULT_FILTER_BETA = 1000
-const DEFAULT_WARMUP_TOLERANCE = 5
-const DEFAULT_MISS_TOLERANCE = 5
+const DEFAULT_FILTER_CUTOFF = 0.01 // 1Hz. time period in milliseconds
+const DEFAULT_FILTER_BETA = 500
+const DEFAULT_WARMUP_TOLERANCE = 3
+const DEFAULT_MISS_TOLERANCE = 10
 
 class Controller {
   constructor({
@@ -325,10 +325,7 @@ class Controller {
               worldMatrix
             )
 
-            let clone = []
-            for (let j = 0; j < trackingState.trackingMatrix.length; j++) {
-              clone[j] = trackingState.trackingMatrix[j]
-            }
+            const clone = trackingState.trackingMatrix.slice()
 
             const isInputRotated =
               input.width === this.inputHeight &&

@@ -107,8 +107,8 @@ const MindARViewer: React.FC<Props> = ({
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null)
   const [videoResolution, setVideoResolution] = useState<string | null>(null)
   const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
-  const [filterMinCF, setFilterMinCF] = useState(0.05)
-  const [filterBeta, setFilterBeta] = useState(1500)
+  const [filterMinCF, setFilterMinCF] = useState(0.01)
+  const [filterBeta, setFilterBeta] = useState(500)
 
   // ==================== 계산 ====================
   const basicModeItems = mediaItems.filter((item) => item.mode === 'basic')
@@ -274,7 +274,7 @@ const MindARViewer: React.FC<Props> = ({
         mindar-image={mindARImageConfig}
         color-space="sRGB"
         embedded
-        renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
+        renderer="antialias: false; alpha: true; colorManagement: true"
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
       >

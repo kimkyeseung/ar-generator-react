@@ -1,8 +1,6 @@
 /* eslint-disable no-undef */
 import { Controller, UI } from './index.js'
 
-const needsDOMRefresh =
-  document.readyState === 'complete' || document.readyState == 'interactive'
 AFRAME.registerSystem('mindar-image-system', {
   container: null,
   video: null,
@@ -35,7 +33,9 @@ AFRAME.registerSystem('mindar-image-system', {
     this.warmupTolerance = warmupTolerance
     this.showStats = showStats
     this.cameraResolution = cameraResolution || 'fhd'
-    console.log(`[MindAR Setup] cameraResolution received: "${cameraResolution}" -> using: "${this.cameraResolution}"`)
+    console.log(
+      `[MindAR Setup] cameraResolution received: "${cameraResolution}" -> using: "${this.cameraResolution}"`
+    )
     this.ui = new UI({ uiLoading, uiScanning, uiError })
   },
 
@@ -106,11 +106,14 @@ AFRAME.registerSystem('mindar-image-system', {
     // 해상도 설정에 따른 카메라 크기 (iPhone 브라우저 최대 FHD 지원)
     // 기존 프로젝트가 다른 해상도를 가지고 있어도 fallback으로 fhd 사용
     const resolutionMap = {
-      'fhd': { width: 1920, height: 1080 },
-      'hd': { width: 1280, height: 720 },
+      fhd: { width: 1920, height: 1080 },
+      hd: { width: 1280, height: 720 },
     }
-    const { width: cameraWidth, height: cameraHeight } = resolutionMap[this.cameraResolution] || resolutionMap['fhd']
-    console.log(`[MindAR Camera] Requested resolution: ${this.cameraResolution} (${cameraWidth}x${cameraHeight})`)
+    const { width: cameraWidth, height: cameraHeight } =
+      resolutionMap[this.cameraResolution] || resolutionMap['fhd']
+    console.log(
+      `[MindAR Camera] Requested resolution: ${this.cameraResolution} (${cameraWidth}x${cameraHeight})`
+    )
 
     navigator.mediaDevices
       .getUserMedia({
@@ -123,7 +126,9 @@ AFRAME.registerSystem('mindar-image-system', {
       })
       .then((stream) => {
         this.video.addEventListener('loadedmetadata', () => {
-          console.log(`[MindAR Camera] Resolution: ${this.video.videoWidth}x${this.video.videoHeight}`)
+          console.log(
+            `[MindAR Camera] Resolution: ${this.video.videoWidth}x${this.video.videoHeight}`
+          )
           this.video.setAttribute('width', this.video.videoWidth)
           this.video.setAttribute('height', this.video.videoHeight)
           this._startAR()
@@ -138,11 +143,10 @@ AFRAME.registerSystem('mindar-image-system', {
 
   _startAR: async function () {
     const video = this.video
-    const container = this.container
 
     // 트래킹 해상도 제한 - 가로/세로 모드 모두 지원
     // 가장 긴 변이 1920 이하면 그대로 사용 (세로 모드 1080x1920도 OK)
-    const MAX_DIMENSION = 1920
+    const MAX_DIMENSION = 1280
 
     let trackingWidth, trackingHeight
     const maxDimension = Math.max(video.videoWidth, video.videoHeight)
@@ -158,7 +162,9 @@ AFRAME.registerSystem('mindar-image-system', {
       trackingHeight = video.videoHeight
     }
 
-    console.log(`[MindAR] Camera: ${video.videoWidth}x${video.videoHeight}, Tracking: ${trackingWidth}x${trackingHeight}, Ratio: ${(video.videoWidth/trackingWidth).toFixed(2)}x`)
+    console.log(
+      `[MindAR] Camera: ${video.videoWidth}x${video.videoHeight}, Tracking: ${trackingWidth}x${trackingHeight}, Ratio: ${(video.videoWidth / trackingWidth).toFixed(2)}x`
+    )
 
     // _resize에서 사용할 수 있도록 저장
     this.trackingWidth = trackingWidth
@@ -284,7 +290,9 @@ AFRAME.registerSystem('mindar-image-system', {
     this.video.style.width = vw + 'px'
     this.video.style.height = vh + 'px'
 
-    console.log(`[MindAR _resize] Container: ${container.clientWidth}x${container.clientHeight}, Video CSS: ${vw.toFixed(0)}x${vh.toFixed(0)}, Offset: (${videoLeft.toFixed(0)}, ${videoTop.toFixed(0)}), FOV: ${fov.toFixed(1)}°`)
+    console.log(
+      `[MindAR _resize] Container: ${container.clientWidth}x${container.clientHeight}, Video CSS: ${vw.toFixed(0)}x${vh.toFixed(0)}, Offset: (${videoLeft.toFixed(0)}, ${videoTop.toFixed(0)}), FOV: ${fov.toFixed(1)}°`
+    )
   },
 })
 

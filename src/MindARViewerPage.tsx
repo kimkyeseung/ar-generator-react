@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import ConsoleLogOverlay from './components/ConsoleLogOverlay'
@@ -49,15 +49,7 @@ interface ArAssets {
   mediaItems: ProcessedMediaItem[] // 모든 미디어 아이템
 }
 
-// 단일 fetch + blob 변환
-async function fetchBlobUrlFromFileId(fileId: string): Promise<string> {
-  const res = await fetch(`${API_URL}/file/${fileId}`)
-  if (!res.ok) throw new Error('파일을 불러오지 못했습니다.')
-  const blob = await res.blob()
-  return URL.createObjectURL(blob)
-}
-
-// 메타데이터 + 모든 에셋을 한 번에 로드 (병렬)
+// 메타데이터 + 에셋 URL 생성
 async function fetchArDataAndAssets(folderId: string): Promise<{
   fileIds: ArFilesResponse
   assets: ArAssets
@@ -67,28 +59,16 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
   if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
   const fileIds: ArFilesResponse = await res.json()
 
-  // 트래킹 모드 미디어 아이템이 하나라도 있으면 AR 모드, 없으면 기본 모드
-  const hasTrackingItems = (fileIds.mediaItems || []).some(item => item.mode === 'tracking')
-  const isBasicMode = !hasTrackingItems
-
-  // Step 2: 에셋 로드 (모드에 따라 다름)
-  let mindUrl: string | undefined
-  let targetImageUrl: string | undefined
-
-  if (!isBasicMode && fileIds.mindFileId) {
-    // AR 모드: mind 파일과 타겟 이미지 로드
-    const [mind, target] = await Promise.all([
-      fetchBlobUrlFromFileId(fileIds.mindFileId),
-      fileIds.targetImageFileId
-        ? fetchBlobUrlFromFileId(fileIds.targetImageFileId)
-        : Promise.resolve(undefined),
-    ])
-    mindUrl = mind
-    targetImageUrl = target
-  }
-
   // 캐시 버스터 추가 (브라우저 HTTP 캐싱 방지)
   const cacheBuster = Date.now()
+
+  // mind 파일과 타겟 이미지는 서버 URL을 직접 사용 (blob 변환 불필요)
+  const mindUrl = fileIds.mindFileId
+    ? `${API_URL}/file/${fileIds.mindFileId}?t=${cacheBuster}`
+    : undefined
+  const targetImageUrl = fileIds.targetImageFileId
+    ? `${API_URL}/file/${fileIds.targetImageFileId}?t=${cacheBuster}`
+    : undefined
 
   // 미디어 아이템 URL 처리
   const processedMediaItems: ProcessedMediaItem[] = (fileIds.mediaItems || [])
@@ -200,34 +180,6 @@ function LandscapeWarningOverlay() {
   )
 }
 
-// 카메라 권한을 미리 요청
-function usePrefetchCamera() {
-  const [cameraReady, setCameraReady] = useState(false)
-
-  useEffect(() => {
-    let stream: MediaStream | null = null
-
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' } })
-      .then((s) => {
-        stream = s
-        setCameraReady(true)
-        // 스트림은 MindAR이 다시 요청하므로 즉시 해제
-        stream.getTracks().forEach((t) => t.stop())
-      })
-      .catch(() => {
-        // 권한 거부해도 MindAR이 다시 요청함
-        setCameraReady(true)
-      })
-
-    return () => {
-      stream?.getTracks().forEach((t) => t.stop())
-    }
-  }, [])
-
-  return cameraReady
-}
-
 export default function MindARViewerPage() {
   const { folderId } = useParams<{ folderId: string }>()
   const [searchParams] = useSearchParams()
@@ -241,9 +193,6 @@ export default function MindARViewerPage() {
   // 화면 방향 세로 고정 (AR 앱은 세로 모드가 권장됨)
   useLockPortraitOrientation()
 
-  // 카메라 권한 미리 요청 (에셋 로딩과 병렬)
-  const cameraReady = usePrefetchCamera()
-
   // 메타데이터 + 에셋을 한 번의 쿼리로 로드
   const { data, isLoading } = useQuery({
     queryKey: ['arData', folderId],
@@ -254,8 +203,7 @@ export default function MindARViewerPage() {
     refetchOnWindowFocus: false, // 포커스 시 refetch 방지 (AR 사용 중 방해 방지)
   })
 
-  // 에셋 + 카메라 모두 준비될 때까지 대기
-  const isReady = !isLoading && data && cameraReady
+  const isReady = !isLoading && !!data
 
   if (!isReady) {
     return (

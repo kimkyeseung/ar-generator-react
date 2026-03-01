@@ -246,10 +246,17 @@ export function useMindARScene({
       ensureVideoPlayback()
       styleCameraFeed()
       updateVideoPlaneFromTargetImage()
+      // onLoadingComplete는 arReady에서 호출 (카메라+AR 준비 완료 후 전환)
+    }
+
+    // arReady: mind 파일 다운로드 + 컴파일 + GPU 워밍업 완료 시점
+    const handleArReady = () => {
+      console.log('[MindAR] arReady - AR fully initialized')
       onLoadingComplete()
     }
 
     sceneEl.addEventListener('renderstart', handleRenderStart)
+    sceneEl.addEventListener('arReady', handleArReady)
 
     // ==================== 탭 전환 시 카메라 재시작 ====================
     const handleVisibilityChange = async () => {
@@ -306,6 +313,7 @@ export function useMindARScene({
     return () => {
       console.log('[MindAR] Cleanup called, isRestarting:', isRestartingRef.current)
       sceneEl.removeEventListener('renderstart', handleRenderStart)
+      sceneEl.removeEventListener('arReady', handleArReady)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
 
       if (arSystem && !isRestartingRef.current) {

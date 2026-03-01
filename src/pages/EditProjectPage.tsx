@@ -41,7 +41,7 @@ export default function EditProjectPage() {
     title: '',
     cameraResolution: 'fhd',
     videoQuality: 'low',
-    thumbnailFile: null,
+    thumbnailBase64: null,
     targetImageFiles: [],
     guideImageFile: null,
     mediaItems: [],
@@ -116,7 +116,7 @@ export default function EditProjectPage() {
           title: data.title || '',
           cameraResolution: data.cameraResolution || 'fhd',
           videoQuality: data.videoQuality || 'low',
-          thumbnailFile: null,
+          thumbnailBase64: null, // 새 썸네일 업로드 시에만 사용
           targetImageFiles: [],
           guideImageFile: null,
           mediaItems: loadedItems,
@@ -187,7 +187,7 @@ export default function EditProjectPage() {
       title,
       cameraResolution,
       videoQuality,
-      thumbnailFile,
+      thumbnailBase64,
       targetImageFiles,
       guideImageFile,
       mediaItems,
@@ -215,9 +215,9 @@ export default function EditProjectPage() {
       formData.append('videoQuality', videoQuality)
       formData.append('highPrecision', highPrecision ? 'true' : 'false')
 
-      // 썸네일 이미지 전송 (있는 경우)
-      if (thumbnailFile) {
-        formData.append('thumbnail', thumbnailFile)
+      // 썸네일 이미지 Base64 전송 (있는 경우)
+      if (thumbnailBase64) {
+        formData.append('thumbnailBase64', thumbnailBase64)
       }
       // 안내문구 이미지 전송 (있는 경우)
       if (guideImageFile) {
@@ -332,14 +332,7 @@ export default function EditProjectPage() {
     // 체크할 애셋 목록 생성
     const assets: AssetCheckResult[] = []
 
-    // 썸네일 이미지
-    if (project.thumbnailFileId) {
-      assets.push({
-        name: '썸네일 이미지',
-        url: `${API_URL}/file/${project.thumbnailFileId}`,
-        status: 'pending',
-      })
-    }
+    // 썸네일은 Base64로 DB에 저장되므로 URL 체크 불필요
 
     // 타겟 이미지
     if (project.targetImageFileId) {
@@ -430,7 +423,7 @@ export default function EditProjectPage() {
 
   // 기존 데이터 (ProjectForm에 전달)
   const existingData: ProjectFormExistingData | undefined = project ? {
-    thumbnailUrl: project.thumbnailFileId ? `${API_URL}/file/${project.thumbnailFileId}` : undefined,
+    thumbnailBase64: project.thumbnailBase64 || undefined,
     targetImageUrl: project.targetImageFileId ? `${API_URL}/file/${project.targetImageFileId}` : undefined,
     guideImageUrl: project.guideImageFileId ? `${API_URL}/file/${project.guideImageFileId}` : undefined,
   } : undefined

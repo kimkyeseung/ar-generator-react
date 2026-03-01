@@ -44,9 +44,12 @@ jest.mock('./components/ConsoleLogOverlay', () => ({
 }))
 
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+
+// Helper to flush promises and allow lazy loading to resolve
+const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0))
 
 // Mock navigator.mediaDevices
 const mockGetUserMedia = jest.fn()
@@ -130,21 +133,22 @@ describe('MindARViewerPage', () => {
           assets: {
             mindUrl: 'blob:mind-url',
             targetImageUrl: 'blob:target-url',
-            mainVideo: {
-              id: 'video-1',
-              type: 'video',
-              mode: 'tracking',
-              fileUrl: 'blob:video-url',
-              position: { x: 0.5, y: 0.5 },
-              scale: 1,
-              aspectRatio: 16 / 9,
-              chromaKeyEnabled: false,
-              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-              flatView: false,
-              linkEnabled: false,
-              order: 0,
-            },
-            mediaItems: [],
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'tracking',
+                fileUrl: 'blob:video-url',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
           },
         },
         isLoading: false,
@@ -154,7 +158,12 @@ describe('MindARViewerPage', () => {
     it('should render MindARViewer in AR mode after camera is ready', async () => {
       render(<MindARViewerPage />)
 
-      // Wait for camera permission to be granted and component to re-render
+      // Flush promises to allow lazy loading and camera permission to resolve
+      await act(async () => {
+        await flushPromises()
+      })
+
+      // Wait for Suspense to resolve and viewer to render
       await waitFor(() => {
         expect(screen.getByTestId('mindar-viewer')).toBeInTheDocument()
       })
@@ -201,21 +210,22 @@ describe('MindARViewerPage', () => {
             ],
           },
           assets: {
-            mainVideo: {
-              id: 'video-1',
-              type: 'video',
-              mode: 'basic',
-              fileUrl: 'blob:video-url',
-              position: { x: 0.5, y: 0.5 },
-              scale: 1,
-              aspectRatio: 16 / 9,
-              chromaKeyEnabled: false,
-              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-              flatView: false,
-              linkEnabled: false,
-              order: 0,
-            },
-            mediaItems: [],
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'basic',
+                fileUrl: 'blob:video-url',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
           },
         },
         isLoading: false,
@@ -225,7 +235,12 @@ describe('MindARViewerPage', () => {
     it('should render BasicModeViewer in basic mode after camera is ready', async () => {
       render(<MindARViewerPage />)
 
-      // Wait for camera permission to be granted and component to re-render
+      // Flush promises to allow lazy loading and camera permission to resolve
+      await act(async () => {
+        await flushPromises()
+      })
+
+      // Wait for Suspense to resolve and viewer to render
       await waitFor(() => {
         expect(screen.getByTestId('basic-mode-viewer')).toBeInTheDocument()
       })
@@ -273,21 +288,22 @@ describe('MindARViewerPage', () => {
           assets: {
             mindUrl: 'blob:mind-url',
             targetImageUrl: 'blob:target-url',
-            mainVideo: {
-              id: 'video-1',
-              type: 'video',
-              mode: 'tracking',
-              fileUrl: 'blob:video-url',
-              position: { x: 0.5, y: 0.5 },
-              scale: 1,
-              aspectRatio: 16 / 9,
-              chromaKeyEnabled: false,
-              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-              flatView: false,
-              linkEnabled: false,
-              order: 0,
-            },
-            mediaItems: [],
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'tracking',
+                fileUrl: 'blob:video-url',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
           },
         },
         isLoading: false,
@@ -317,21 +333,22 @@ describe('MindARViewerPage', () => {
             ],
           },
           assets: {
-            mainVideo: {
-              id: 'video-1',
-              type: 'video',
-              mode: 'basic',
-              fileUrl: 'blob:video-url',
-              position: { x: 0.5, y: 0.5 },
-              scale: 1,
-              aspectRatio: 16 / 9,
-              chromaKeyEnabled: false,
-              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-              flatView: false,
-              linkEnabled: false,
-              order: 0,
-            },
-            mediaItems: [],
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'basic',
+                fileUrl: 'blob:video-url',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
           },
         },
         isLoading: false,
@@ -374,23 +391,9 @@ describe('MindARViewerPage', () => {
           assets: {
             mindUrl: 'blob:mind-url',
             targetImageUrl: 'blob:target-url',
-            mainVideo: {
-              id: 'video-2', // tracking 모드인 video-2가 메인 비디오
-              type: 'video',
-              mode: 'tracking',
-              fileUrl: 'blob:video-url-2',
-              position: { x: 0.5, y: 0.5 },
-              scale: 1,
-              aspectRatio: 16 / 9,
-              chromaKeyEnabled: false,
-              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-              flatView: false,
-              linkEnabled: false,
-              order: 1,
-            },
             mediaItems: [
               {
-                id: 'video-1', // basic 모드 비디오는 mediaItems에 포함
+                id: 'video-1', // basic 모드 비디오
                 type: 'video',
                 mode: 'basic',
                 fileUrl: 'blob:video-url-1',
@@ -402,6 +405,20 @@ describe('MindARViewerPage', () => {
                 flatView: false,
                 linkEnabled: false,
                 order: 0,
+              },
+              {
+                id: 'video-2', // tracking 모드 비디오
+                type: 'video',
+                mode: 'tracking',
+                fileUrl: 'blob:video-url-2',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 1,
               },
             ],
           },
@@ -434,21 +451,22 @@ describe('MindARViewerPage', () => {
             ],
           },
           assets: {
-            mainVideo: {
-              id: 'video-1',
-              type: 'video',
-              mode: 'basic',
-              fileUrl: 'blob:video-url',
-              position: { x: 0.5, y: 0.5 },
-              scale: 1,
-              aspectRatio: 16 / 9,
-              chromaKeyEnabled: false,
-              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-              flatView: false,
-              linkEnabled: false,
-              order: 0,
-            },
-            mediaItems: [],
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'basic',
+                fileUrl: 'blob:video-url',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
           },
         },
         isLoading: false,
@@ -483,21 +501,22 @@ describe('MindARViewerPage', () => {
           assets: {
             mindUrl: 'blob:mind-url',
             targetImageUrl: 'blob:target-url',
-            mainVideo: {
-              id: 'video-1',
-              type: 'video',
-              mode: 'tracking',
-              fileUrl: 'blob:video-url',
-              position: { x: 0.5, y: 0.5 },
-              scale: 1,
-              aspectRatio: 16 / 9,
-              chromaKeyEnabled: false,
-              chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
-              flatView: false,
-              linkEnabled: false,
-              order: 0,
-            },
-            mediaItems: [],
+            mediaItems: [
+              {
+                id: 'video-1',
+                type: 'video',
+                mode: 'tracking',
+                fileUrl: 'blob:video-url',
+                position: { x: 0.5, y: 0.5 },
+                scale: 1,
+                aspectRatio: 16 / 9,
+                chromaKeyEnabled: false,
+                chromaKeySettings: { similarity: 0.4, smoothness: 0.08 },
+                flatView: false,
+                linkEnabled: false,
+                order: 0,
+              },
+            ],
           },
         },
         isLoading: false,

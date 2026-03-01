@@ -1,20 +1,19 @@
 import React, { useCallback, useRef, useState } from 'react'
 
 interface ThumbnailUploadProps {
-  file: File | null
-  existingThumbnailUrl?: string // 기존 썸네일 URL (편집 시)
-  onFileSelect: (file: File | null) => void
+  base64: string | null
+  existingThumbnailBase64?: string // 기존 썸네일 Base64 (편집 시)
+  onBase64Change: (base64: string | null) => void
   disabled?: boolean
 }
 
 export default function ThumbnailUpload({
-  file,
-  existingThumbnailUrl,
-  onFileSelect,
+  base64,
+  existingThumbnailBase64,
+  onBase64Change,
   disabled = false,
 }: ThumbnailUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // 기존 썸네일을 숨길지 여부 (삭제 버튼 클릭 시)
   const [hideExisting, setHideExisting] = useState(false)
@@ -48,32 +47,34 @@ export default function ThumbnailUpload({
           console.warn(`[Thumbnail] 정사각형 권장: 현재 ${img.width}x${img.height}`)
         }
 
-        // 프리뷰 URL 생성
-        const url = URL.createObjectURL(selectedFile)
-        setPreviewUrl(url)
-        setHideExisting(false) // 새 파일 업로드 시 상태 리셋
-        onFileSelect(selectedFile)
+        // Base64로 변환
+        const reader = new FileReader()
+        reader.onload = () => {
+          const base64Result = reader.result as string
+          setHideExisting(false) // 새 파일 업로드 시 상태 리셋
+          onBase64Change(base64Result)
+        }
+        reader.onerror = () => {
+          setError('이미지를 읽을 수 없습니다.')
+        }
+        reader.readAsDataURL(selectedFile)
       }
       img.onerror = () => {
         setError('이미지를 불러올 수 없습니다.')
       }
       img.src = URL.createObjectURL(selectedFile)
     },
-    [onFileSelect]
+    [onBase64Change]
   )
 
   const handleRemove = useCallback(() => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl)
-    }
-    setPreviewUrl(null)
     setError(null)
     setHideExisting(true) // 기존 썸네일도 숨김
-    onFileSelect(null)
+    onBase64Change(null)
     if (inputRef.current) {
       inputRef.current.value = ''
     }
-  }, [previewUrl, onFileSelect])
+  }, [onBase64Change])
 
   const handleClick = useCallback(() => {
     if (!disabled) {
@@ -81,8 +82,8 @@ export default function ThumbnailUpload({
     }
   }, [disabled])
 
-  // 표시할 이미지 URL (기존 썸네일이 숨겨진 경우 표시하지 않음)
-  const displayUrl = previewUrl || (file ? URL.createObjectURL(file) : null) || (hideExisting ? null : existingThumbnailUrl)
+  // 표시할 이미지 (새 base64 우선, 기존 썸네일 숨김이면 null)
+  const displayUrl = base64 || (hideExisting ? null : existingThumbnailBase64) || null
 
   return (
     <div className="space-y-2">

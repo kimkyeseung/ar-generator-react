@@ -129,7 +129,7 @@ const mockProjectWithMedia: Project = {
   previewVideoFileId: 'preview-123',
   targetFileId: null,
   targetImageFileId: null,
-  thumbnailFileId: null,
+  thumbnailBase64: null,
   guideImageFileId: null,
   chromaKeyColor: null,
   chromaKeySimilarity: null,

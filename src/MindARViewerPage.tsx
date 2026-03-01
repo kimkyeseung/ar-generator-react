@@ -33,7 +33,7 @@ export interface ProcessedMediaItem {
 interface ArFilesResponse {
   mindFileId?: string // 트래킹 아이템 없으면 null
   targetImageFileId?: string
-  thumbnailFileId?: string // 썸네일 이미지 ID (로딩 화면용)
+  thumbnailBase64?: string // 썸네일 이미지 Base64 (로딩 화면용)
   guideImageFileId?: string // 안내문구 이미지 ID
   highPrecision?: boolean
   cameraResolution?: CameraResolution // 'fhd' | 'hd'
@@ -44,7 +44,7 @@ interface ArFilesResponse {
 interface ArAssets {
   mindUrl?: string // 기본 모드에서는 undefined
   targetImageUrl?: string // 기본 모드에서는 undefined
-  thumbnailUrl?: string // 썸네일 이미지 URL (로딩 화면 우선 표시)
+  thumbnailBase64?: string // 썸네일 이미지 Base64 data URL (로딩 화면 우선 표시)
   guideImageUrl?: string // 안내문구 이미지 URL
   mediaItems: ProcessedMediaItem[] // 모든 미디어 아이템
 }
@@ -126,9 +126,7 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
     assets: {
       mindUrl,
       targetImageUrl,
-      thumbnailUrl: fileIds.thumbnailFileId
-        ? `${API_URL}/file/${fileIds.thumbnailFileId}?t=${cacheBuster}`
-        : undefined,
+      thumbnailBase64: fileIds.thumbnailBase64 || undefined, // 이미 data URL 형식
       guideImageUrl: fileIds.guideImageFileId
         ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
         : undefined,
@@ -330,7 +328,7 @@ export default function MindARViewerPage() {
             <MindARViewer
               mindUrl={data.assets.mindUrl!}
               targetImageUrl={data.assets.targetImageUrl!}
-              thumbnailUrl={data.assets.thumbnailUrl}
+              thumbnailUrl={data.assets.thumbnailBase64}
               highPrecision={data.fileIds.highPrecision}
               cameraResolution={data.fileIds.cameraResolution || 'fhd'}
               videoQuality={data.fileIds.videoQuality || 'low'}

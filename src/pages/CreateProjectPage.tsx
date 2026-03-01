@@ -25,7 +25,7 @@ export default function CreateProjectPage() {
     title: '',
     cameraResolution: 'fhd',
     videoQuality: 'low',
-    thumbnailFile: null,
+    thumbnailBase64: null,
     targetImageFiles: [],
     guideImageFile: null,
     mediaItems: [],
@@ -107,7 +107,7 @@ export default function CreateProjectPage() {
       title,
       cameraResolution,
       videoQuality,
-      thumbnailFile,
+      thumbnailBase64,
       targetImageFiles,
       guideImageFile,
       mediaItems,
@@ -187,9 +187,9 @@ export default function CreateProjectPage() {
       if (title) {
         formData.append('title', title)
       }
-      // 썸네일 이미지 전송 (있는 경우)
-      if (thumbnailFile) {
-        formData.append('thumbnail', thumbnailFile)
+      // 썸네일 이미지 Base64 전송 (있는 경우)
+      if (thumbnailBase64) {
+        formData.append('thumbnailBase64', thumbnailBase64)
       }
       // 안내문구 이미지 전송 (있는 경우)
       if (guideImageFile) {

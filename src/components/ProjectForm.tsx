@@ -24,7 +24,7 @@ export interface ProjectFormState {
   title: string
   cameraResolution: CameraResolution
   videoQuality: VideoQuality
-  thumbnailFile: File | null
+  thumbnailBase64: string | null
   targetImageFiles: File[]
   guideImageFile: File | null
   mediaItems: MediaItem[]
@@ -33,7 +33,7 @@ export interface ProjectFormState {
 }
 
 export interface ProjectFormExistingData {
-  thumbnailUrl?: string
+  thumbnailBase64?: string
   targetImageUrl?: string
   guideImageUrl?: string
 }
@@ -64,7 +64,7 @@ export default function ProjectForm({
     title,
     cameraResolution,
     videoQuality,
-    thumbnailFile,
+    thumbnailBase64,
     targetImageFiles,
     guideImageFile,
     mediaItems,
@@ -159,9 +159,9 @@ export default function ProjectForm({
 
         {/* 썸네일 이미지 업로드 */}
         <ThumbnailUpload
-          file={thumbnailFile}
-          existingThumbnailUrl={existingData?.thumbnailUrl}
-          onFileSelect={(file) => onChange({ thumbnailFile: file })}
+          base64={thumbnailBase64}
+          existingThumbnailBase64={existingData?.thumbnailBase64}
+          onBase64Change={(base64) => onChange({ thumbnailBase64: base64 })}
           disabled={disabled}
         />
 

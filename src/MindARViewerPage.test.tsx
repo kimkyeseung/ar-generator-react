@@ -117,7 +117,7 @@ describe('MindARViewerPage', () => {
         data: {
           fileIds: {
             mindFileId: 'mind-123',
-            videoFileId: 'video-123',
+
             targetImageFileId: 'target-123',
             cameraResolution: 'fhd',
             mediaItems: [
@@ -195,7 +195,7 @@ describe('MindARViewerPage', () => {
       mockUseQuery.mockReturnValue({
         data: {
           fileIds: {
-            videoFileId: 'video-123',
+
             videoPosition: { x: 0.5, y: 0.5 },
             videoScale: 1,
             cameraResolution: 'fhd',

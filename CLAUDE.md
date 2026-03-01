@@ -40,7 +40,6 @@ src/
 │   ├── TargetImageUpload.tsx   # 타겟 이미지 업로드 UI
 │   └── home/                   # Home 페이지 하위 컴포넌트
 │       ├── ArOptionsSection.tsx    # AR 옵션 설정 (추적 정확도 등)
-│       ├── VideoUploadSection.tsx  # 비디오 업로드 UI
 │       ├── PublishSection.tsx      # 발행 버튼 섹션
 │       └── ...                     # 기타 UI 컴포넌트
 ├── pages/

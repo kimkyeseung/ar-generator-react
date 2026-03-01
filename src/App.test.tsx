@@ -128,7 +128,7 @@ describe('App Core Components', () => {
           title: '테스트 프로젝트',
           createdAt: '2024-01-01T00:00:00.000Z',
           updatedAt: '2024-01-01T00:00:00.000Z',
-          videoFileId: 'video-1',
+
           targetFileId: 'target-1',
           targetImageFileId: null, // null to avoid canvas image loading issues in jsdom
           chromaKeyColor: null,

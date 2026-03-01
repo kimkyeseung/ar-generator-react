@@ -164,20 +164,23 @@ export default function ProjectListPage() {
                           </div>
                         )}
                       </div>
-                      {/* 비디오 썸네일 */}
+                      {/* 비디오 썸네일 (mediaItems에서 첫 번째 영상) */}
                       <div className='flex-shrink-0'>
-                        {project.videoFileId ? (
-                          <video
-                            src={`${API_URL}/file/${project.videoFileId}`}
-                            className='h-16 w-16 rounded-lg border border-gray-200 object-cover sm:h-20 sm:w-20'
-                            muted
-                            preload='metadata'
-                          />
-                        ) : (
-                          <div className='flex h-16 w-16 items-center justify-center rounded-lg border border-gray-200 bg-gray-100 sm:h-20 sm:w-20'>
-                            <span className='text-xl sm:text-2xl'>🎬</span>
-                          </div>
-                        )}
+                        {(() => {
+                          const firstVideo = project.mediaItems?.find(item => item.type === 'video')
+                          return firstVideo ? (
+                            <video
+                              src={`${API_URL}/stream/${firstVideo.fileId}`}
+                              className='h-16 w-16 rounded-lg border border-gray-200 object-cover sm:h-20 sm:w-20'
+                              muted
+                              preload='metadata'
+                            />
+                          ) : (
+                            <div className='flex h-16 w-16 items-center justify-center rounded-lg border border-gray-200 bg-gray-100 sm:h-20 sm:w-20'>
+                              <span className='text-xl sm:text-2xl'>🎬</span>
+                            </div>
+                          )
+                        })()}
                       </div>
                       {/* 프로젝트 정보 */}
                       <div className='min-w-0 flex-1'>

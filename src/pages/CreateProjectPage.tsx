@@ -221,8 +221,6 @@ export default function CreateProjectPage() {
     try {
       return await new Promise<{
         folderId: string
-        targetFileId: string
-        videoFileId: string
       }>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
 

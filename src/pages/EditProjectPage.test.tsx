@@ -125,8 +125,6 @@ const mockProjectWithMedia: Project = {
   description: null,
   width: 1,
   height: 1.5,
-  videoFileId: 'video-123',
-  previewVideoFileId: 'preview-123',
   targetFileId: null,
   targetImageFileId: null,
   thumbnailBase64: null,

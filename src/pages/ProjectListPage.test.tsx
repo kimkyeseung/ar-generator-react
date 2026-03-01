@@ -141,7 +141,7 @@ describe('ProjectListPage', () => {
         title: '첫 번째 프로젝트',
         createdAt: '2024-01-15T00:00:00.000Z',
         updatedAt: '2024-01-15T00:00:00.000Z',
-        videoFileId: 'video-1',
+
         targetFileId: 'target-1',
         targetImageFileId: null, // null to avoid canvas image loading issues in jsdom
         chromaKeyColor: '#00FF00',
@@ -153,7 +153,7 @@ describe('ProjectListPage', () => {
         title: '두 번째 프로젝트',
         createdAt: '2024-01-16T00:00:00.000Z',
         updatedAt: '2024-01-16T00:00:00.000Z',
-        videoFileId: 'video-2',
+
         targetFileId: 'target-2',
         targetImageFileId: null,
         chromaKeyColor: null,
@@ -223,7 +223,7 @@ describe('ProjectListPage', () => {
         title: '테스트',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        videoFileId: 'video-1',
+
         targetFileId: 'target-1',
         targetImageFileId: null,
         chromaKeyColor: null,
@@ -250,7 +250,7 @@ describe('ProjectListPage', () => {
         title: '테스트',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        videoFileId: 'video-1',
+
         targetFileId: 'target-1',
         targetImageFileId: null,
         chromaKeyColor: null,
@@ -277,7 +277,7 @@ describe('ProjectListPage', () => {
         title: '테스트',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        videoFileId: 'video-1',
+
         targetFileId: 'target-1',
         targetImageFileId: null,
         chromaKeyColor: null,
@@ -353,7 +353,7 @@ describe('ProjectListPage', () => {
         title: '테스트',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        videoFileId: 'video-1',
+
         targetFileId: 'target-1',
         targetImageFileId: null,
         chromaKeyColor: null,
@@ -383,7 +383,7 @@ describe('ProjectListPage', () => {
         title: '삭제될 프로젝트',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        videoFileId: 'video-1',
+
         targetFileId: 'target-1',
         targetImageFileId: null,
         chromaKeyColor: null,

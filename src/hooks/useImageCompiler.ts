@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback } from 'react'
-import { Compiler } from '../lib/image-target/compiler'
 
 interface CompileOptions {
   highPrecision?: boolean
@@ -10,10 +9,13 @@ interface CompileResult {
   originalImage: File
 }
 
+// Compiler 타입 (동적 import용)
+type CompilerType = import('../lib/image-target/compiler').Compiler
+
 export function useImageCompiler() {
   const [isCompiling, setIsCompiling] = useState(false)
   const [progress, setProgress] = useState(0)
-  const compilerRef = useRef(new Compiler())
+  const compilerRef = useRef<CompilerType | null>(null)
 
   const loadImage = (file: File): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -32,10 +34,16 @@ export function useImageCompiler() {
       setProgress(0)
 
       try {
+        // Compiler 동적 로드 (첫 호출 시에만)
+        if (!compilerRef.current) {
+          const { Compiler } = await import('../lib/image-target/compiler')
+          compilerRef.current = new Compiler()
+        }
+
         const images = await Promise.all(files.map(loadImage))
 
         const startTime = performance.now()
-        await compilerRef.current.compileImageTargets(
+        await compilerRef.current!.compileImageTargets(
           images,
           (progressValue: number) => {
             setProgress(progressValue)
@@ -46,7 +54,7 @@ export function useImageCompiler() {
           `Execution time (compile): ${performance.now() - startTime}ms`
         )
 
-        const exportedBuffer = compilerRef.current.exportData()
+        const exportedBuffer = compilerRef.current!.exportData()
         const arrayCopy = exportedBuffer.slice()
         const arrayBuffer = arrayCopy.buffer
 

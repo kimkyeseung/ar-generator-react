@@ -1,11 +1,15 @@
-import MindARViewer from './components/MindarViewer'
-import BasicModeViewer from './components/BasicModeViewer'
-import ConsoleLogOverlay from './components/ConsoleLogOverlay'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import ConsoleLogOverlay from './components/ConsoleLogOverlay'
 import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, MediaItemResponse, MediaMode, MediaType, VideoPosition, VideoQuality } from './types/project'
 import { API_URL } from './config/api'
+
+// 무거운 뷰어 컴포넌트를 조건부 lazy loading
+// MindARViewer: A-Frame, Three.js, MindAR 포함 (~370KB gzipped)
+// BasicModeViewer: 순수 Canvas 기반 (~15KB gzipped)
+const MindARViewer = lazy(() => import('./components/MindarViewer'))
+const BasicModeViewer = lazy(() => import('./components/BasicModeViewer'))
 
 // 뷰어용 처리된 미디어 아이템 (URL 포함)
 export interface ProcessedMediaItem {
@@ -289,13 +293,15 @@ export default function MindARViewerPage() {
       <>
         <LandscapeWarningOverlay />
         <section className="relative flex h-[100dvh] w-full overflow-hidden">
-          <BasicModeViewer
-            mediaItems={data.assets.mediaItems}
-            cameraResolution={data.fileIds.cameraResolution || 'fhd'}
-            videoQuality={data.fileIds.videoQuality || 'low'}
-            guideImageUrl={data.assets.guideImageUrl}
-            debugMode={isDebugMode}
-          />
+          <Suspense fallback={<ViewerLoadingFallback />}>
+            <BasicModeViewer
+              mediaItems={data.assets.mediaItems}
+              cameraResolution={data.fileIds.cameraResolution || 'fhd'}
+              videoQuality={data.fileIds.videoQuality || 'low'}
+              guideImageUrl={data.assets.guideImageUrl}
+              debugMode={isDebugMode}
+            />
+          </Suspense>
           {isLogMode && <ConsoleLogOverlay />}
         </section>
       </>
@@ -320,20 +326,34 @@ export default function MindARViewerPage() {
       <LandscapeWarningOverlay />
       <section className="relative flex h-[100dvh] w-full overflow-hidden">
         <div className="absolute inset-0">
-          <MindARViewer
-            mindUrl={data.assets.mindUrl!}
-            targetImageUrl={data.assets.targetImageUrl!}
-            thumbnailUrl={data.assets.thumbnailUrl}
-            highPrecision={data.fileIds.highPrecision}
-            cameraResolution={data.fileIds.cameraResolution || 'fhd'}
-            videoQuality={data.fileIds.videoQuality || 'low'}
-            guideImageUrl={data.assets.guideImageUrl}
-            mediaItems={data.assets.mediaItems}
-            debugMode={isDebugMode}
-          />
+          <Suspense fallback={<ViewerLoadingFallback />}>
+            <MindARViewer
+              mindUrl={data.assets.mindUrl!}
+              targetImageUrl={data.assets.targetImageUrl!}
+              thumbnailUrl={data.assets.thumbnailUrl}
+              highPrecision={data.fileIds.highPrecision}
+              cameraResolution={data.fileIds.cameraResolution || 'fhd'}
+              videoQuality={data.fileIds.videoQuality || 'low'}
+              guideImageUrl={data.assets.guideImageUrl}
+              mediaItems={data.assets.mediaItems}
+              debugMode={isDebugMode}
+            />
+          </Suspense>
         </div>
         {isLogMode && <ConsoleLogOverlay />}
       </section>
     </>
+  )
+}
+
+// Suspense 폴백 컴포넌트
+function ViewerLoadingFallback() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-600 to-pink-500">
+      <div className="flex flex-col items-center">
+        <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-white/30 border-t-white" />
+        <p className="text-sm font-medium text-white">뷰어 로딩 중...</p>
+      </div>
+    </div>
   )
 }

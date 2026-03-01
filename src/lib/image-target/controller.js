@@ -8,8 +8,8 @@ import { Tracker } from './tracker/tracker.js'
 
 const tf = { memory, nextFrame }
 
-const DEFAULT_FILTER_CUTOFF = 0.01 // 1Hz. time period in milliseconds
-const DEFAULT_FILTER_BETA = 500
+const DEFAULT_FILTER_CUTOFF = 0.001 // 낮을수록 정지 시 스무딩 강함 (떨림 감소)
+const DEFAULT_FILTER_BETA = 100 // 낮을수록 작은 움직임에 덜 반응 (떨림 감소)
 const DEFAULT_WARMUP_TOLERANCE = 3
 const DEFAULT_MISS_TOLERANCE = 10
 

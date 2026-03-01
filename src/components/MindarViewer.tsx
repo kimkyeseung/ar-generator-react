@@ -107,8 +107,8 @@ const MindARViewer: React.FC<Props> = ({
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null)
   const [videoResolution, setVideoResolution] = useState<string | null>(null)
   const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
-  const [filterMinCF, setFilterMinCF] = useState(0.01)
-  const [filterBeta, setFilterBeta] = useState(500)
+  const [filterMinCF, setFilterMinCF] = useState(0.001)
+  const [filterBeta, setFilterBeta] = useState(100)
 
   // ==================== 계산 ====================
   const basicModeItems = mediaItems.filter((item) => item.mode === 'basic')

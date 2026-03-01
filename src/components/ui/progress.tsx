@@ -1,9 +1,9 @@
-import React from 'react'
+import { HTMLAttributes } from 'react'
 
 type ProgressColor = 'primary' | 'success' | 'warning' | 'danger' | 'neutral'
 type ProgressSize = 'sm' | 'md' | 'lg'
 
-export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
   value: number // 0~100
   max?: number // 기본 100
   label?: string // 스크린리더용 라벨 텍스트

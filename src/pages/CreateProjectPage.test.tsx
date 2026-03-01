@@ -131,7 +131,6 @@ afterAll(() => {
   console.error = originalError
 })
 
-import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import CreateProjectPage from './CreateProjectPage'
 

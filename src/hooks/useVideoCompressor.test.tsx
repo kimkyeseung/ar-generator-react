@@ -5,7 +5,7 @@
  * These tests verify the hook's interface and basic behavior.
  * Integration tests with actual FFmpeg are done manually.
  */
-import React from 'react'
+import { useEffect } from 'react'
 import { render, act } from '@testing-library/react'
 
 // Mock @ffmpeg/ffmpeg before importing the hook
@@ -39,7 +39,7 @@ interface TestComponentProps {
 
 function TestComponent({ onHookResult }: TestComponentProps) {
   const result = useVideoCompressor()
-  React.useEffect(() => {
+  useEffect(() => {
     onHookResult(result)
   }, [result, onHookResult])
   return null

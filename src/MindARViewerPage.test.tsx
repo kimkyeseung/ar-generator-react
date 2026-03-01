@@ -43,7 +43,6 @@ jest.mock('./components/ConsoleLogOverlay', () => ({
   },
 }))
 
-import React from 'react'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'

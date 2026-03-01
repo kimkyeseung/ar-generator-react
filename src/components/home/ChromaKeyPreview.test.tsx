@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ChromaKeyPreview from './ChromaKeyPreview'
 import { DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'

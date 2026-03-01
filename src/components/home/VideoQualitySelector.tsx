@@ -1,4 +1,4 @@
-import React from 'react'
+import { FC } from 'react'
 import { VideoQuality } from '../../types/project'
 
 interface Props {
@@ -25,7 +25,7 @@ const qualityOptions: { value: VideoQuality; label: string; description: string 
   },
 ]
 
-const VideoQualitySelector: React.FC<Props> = ({
+const VideoQualitySelector: FC<Props> = ({
   quality,
   onQualityChange,
   disabled = false,

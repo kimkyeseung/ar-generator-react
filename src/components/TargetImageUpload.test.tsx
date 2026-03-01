@@ -3,7 +3,6 @@
  *
  * Tests verify the component renders correctly and handles file selection.
  */
-import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import TargetImageUpload from './TargetImageUpload'
 

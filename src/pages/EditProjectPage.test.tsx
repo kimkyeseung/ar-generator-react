@@ -88,7 +88,6 @@ afterAll(() => {
   console.error = originalError
 })
 
-import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import EditProjectPage from './EditProjectPage'
 import { Project, MediaItemResponse } from '../types/project'

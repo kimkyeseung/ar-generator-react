@@ -23,7 +23,6 @@ jest.mock('qrcode', () => ({
   toCanvas: jest.fn(),
 }))
 
-import React from 'react'
 import { render, screen } from '@testing-library/react'
 import ProjectListPage from './pages/ProjectListPage'
 import { QRCodePage } from './QRCodePage'

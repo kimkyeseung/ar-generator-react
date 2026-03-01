@@ -4,7 +4,7 @@
  * Tests verify the hook's interface, state management, and compilation flow.
  */
 
-import React from 'react'
+import { useEffect } from 'react'
 import { render, act } from '@testing-library/react'
 
 // Create mock functions before module mock
@@ -33,7 +33,7 @@ interface TestComponentProps {
 
 function TestComponent({ onHookResult }: TestComponentProps) {
   const result = useImageCompiler()
-  React.useEffect(() => {
+  useEffect(() => {
     onHookResult(result)
   }, [result, onHookResult])
   return null

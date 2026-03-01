@@ -14,7 +14,6 @@ jest.mock('../utils/auth', () => ({
   verifyPassword: () => mockVerifyPassword(),
 }))
 
-import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ProjectListPage from './ProjectListPage'
 

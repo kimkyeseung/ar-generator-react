@@ -1,8 +1,8 @@
-import React from 'react'
+import { ReactNode } from 'react'
 
 interface TwoColumnLayoutProps {
-  leftPanel: React.ReactNode
-  rightPanel: React.ReactNode
+  leftPanel: ReactNode
+  rightPanel: ReactNode
   rightPanelTitle?: string
 }
 

@@ -2,13 +2,13 @@
  * MindAR 뷰어 관련 타입 정의
  */
 
-export type OneEuroFilter = {
+type OneEuroFilter = {
   minCutOff: number
   beta: number
   reset: () => void
 }
 
-export type TrackingState = {
+type TrackingState = {
   showing: boolean
   isTracking: boolean
   filter: OneEuroFilter

@@ -272,14 +272,13 @@ const MindARViewer: React.FC<Props> = ({
         style={{ width: '100%', height: '100%' }}
         ref={sceneRef}
         mindar-image={mindARImageConfig}
-        assettimeout="15000"
         color-space="sRGB"
         embedded
         renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
       >
-        <a-assets>
+        <a-assets timeout="15000">
           {/* 모든 tracking 모드 비디오들 */}
           {trackingModeVideos.map((item) => (
             <video

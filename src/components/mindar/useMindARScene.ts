@@ -9,6 +9,10 @@ import { MindARScene, MindARSystem } from './types'
 declare const DeviceMotionEvent: any
 declare const DeviceOrientationEvent: any
 
+// iOS 권한 상태 추적 (모듈 레벨)
+let iosPermissionGranted = false
+let iosPermissionRequested = false
+
 interface UseMindARSceneProps {
   sceneRef: React.RefObject<MindARScene | null>
   targetImageUrl: string
@@ -34,6 +38,62 @@ export function useMindARScene({
     let arSystem: MindARSystem | null = null
 
     const targetEntity = sceneEl.querySelector<HTMLElement>('[mindar-image-target]')
+
+    // ==================== iOS 권한 요청 ====================
+    const requestIOSPermissions = async (): Promise<boolean> => {
+      if (iosPermissionGranted) return true
+      if (iosPermissionRequested) return false
+
+      iosPermissionRequested = true
+
+      try {
+        if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+          const motionResult = await DeviceMotionEvent.requestPermission()
+          if (motionResult !== 'granted') {
+            console.warn('[MindAR] DeviceMotion permission not granted:', motionResult)
+          }
+        }
+        if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
+          const orientationResult = await DeviceOrientationEvent.requestPermission()
+          if (orientationResult !== 'granted') {
+            console.warn('[MindAR] DeviceOrientation permission not granted:', orientationResult)
+          }
+        }
+        iosPermissionGranted = true
+        console.log('[MindAR] iOS motion/orientation permission granted')
+        return true
+      } catch (e) {
+        console.warn('[MindAR] iOS permission denied or unavailable', e)
+        iosPermissionRequested = false // 다시 시도 가능
+        return false
+      }
+    }
+
+    // ==================== 비디오 재생 재시도 로직 ====================
+    const playVideoWithRetry = async (video: HTMLVideoElement, maxRetries = 3): Promise<boolean> => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          // 재생 전 muted 속성 확인 (iOS autoplay 필수)
+          if (!video.muted) {
+            console.log(`[MindAR] Video ${video.id} is not muted, setting muted=true for autoplay`)
+            video.muted = true
+          }
+
+          video.currentTime = 0
+          await video.play()
+          console.log(`[MindAR] Video ${video.id} playing (attempt ${attempt})`)
+          return true
+        } catch (e) {
+          if (attempt < maxRetries) {
+            console.log(`[MindAR] Video ${video.id} play attempt ${attempt} failed, retrying...`)
+            await new Promise(r => setTimeout(r, 100))
+          } else {
+            console.warn(`[MindAR] Video ${video.id} play failed after ${maxRetries} attempts:`, e)
+          }
+        }
+      }
+      return false
+    }
 
     // ==================== 타겟 이미지 비율로 비디오 plane 크기 설정 ====================
     const updateVideoPlaneFromTargetImage = () => {
@@ -66,20 +126,23 @@ export function useMindARScene({
       const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
       console.log(`[MindAR] Found ${allVideos.length} video(s) to play`)
 
-      for (let i = 0; i < allVideos.length; i++) {
-        const video = allVideos[i]
-        try {
-          video.currentTime = 0
-          await video.play()
-          console.log(`[MindAR] Video ${video.id} playing - Resolution: ${video.videoWidth}x${video.videoHeight}`)
-        } catch (e) {
-          console.warn(`[MindAR] targetFound -> play() error for ${video.id}`, e)
-          video.play().catch(() => {})
+      for (const video of allVideos) {
+        // 이미 재생 중이면 건너뛰기
+        if (!video.paused) {
+          console.log(`[MindAR] Video ${video.id} already playing`)
+          continue
+        }
+
+        // 재시도 로직으로 재생
+        const success = await playVideoWithRetry(video, 3)
+        if (success) {
+          console.log(`[MindAR] Video ${video.id} - Resolution: ${video.videoWidth}x${video.videoHeight}`)
         }
       }
 
       // 메인 비디오 해상도 보고
-      const mainVideo = sceneEl.querySelector<HTMLVideoElement>('#ar-video')
+      const mainVideo = sceneEl.querySelector<HTMLVideoElement>('#ar-video') ||
+        allVideos.find(v => v.id.startsWith('ar-video'))
       if (mainVideo) {
         const resolution = `${mainVideo.videoWidth}x${mainVideo.videoHeight}`
         onVideoResolutionChange(resolution)
@@ -154,29 +217,26 @@ export function useMindARScene({
       })
     }
 
-    // ==================== iOS 권한 요청 ====================
-    const requestIOSPermissions = async () => {
-      try {
-        if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-          await DeviceMotionEvent.requestPermission()
-        }
-        if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
-          await DeviceOrientationEvent.requestPermission()
-        }
-        console.log('[MindAR] iOS motion/orientation permission granted')
-      } catch (e) {
-        console.warn('[MindAR] iOS permission denied or unavailable', e)
-      }
-    }
-
+    // ==================== 사용자 제스처 핸들러 ====================
     const handleUserGesture = async () => {
+      console.log('[MindAR] User gesture detected, requesting permissions and playing videos')
+
       await requestIOSPermissions()
+
+      // 사용자 제스처 후 모든 비디오 재생 시도
+      const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
+      for (const video of allVideos) {
+        if (video.paused) {
+          await playVideoWithRetry(video, 1) // 제스처 후에는 1회만 시도
+        }
+      }
+
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
     }
 
-    document.addEventListener('touchend', handleUserGesture)
-    document.addEventListener('click', handleUserGesture)
+    document.addEventListener('touchend', handleUserGesture, { passive: true })
+    document.addEventListener('click', handleUserGesture, { passive: true })
 
     // ==================== 렌더 시작 ====================
     const handleRenderStart = () => {

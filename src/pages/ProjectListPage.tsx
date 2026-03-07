@@ -23,10 +23,7 @@ export default function ProjectListPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
   // 접속 통계 관련 상태
-  const [statsTargetId, setStatsTargetId] = useState<string | null>(null)
-  const [showStatsPasswordModal, setShowStatsPasswordModal] = useState(false)
   const [showStatsModal, setShowStatsModal] = useState(false)
-  const [statsPasswordError, setStatsPasswordError] = useState<string | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
   const [accessStats, setAccessStats] = useState<{
     projectId: string
@@ -34,9 +31,12 @@ export default function ProjectListPage() {
     total: number
     monthly: { year: number; month: number; count: number }[]
   } | null>(null)
+  // 이번 달 접속 수 (버튼 뱃지용)
+  const [monthlyCountMap, setMonthlyCountMap] = useState<Record<string, number>>({})
 
   useEffect(() => {
     fetchProjects()
+    fetchMonthlyAccessCounts()
   }, [])
 
   const fetchProjects = async () => {
@@ -50,6 +50,18 @@ export default function ProjectListPage() {
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchMonthlyAccessCounts = async () => {
+    try {
+      const res = await fetch(`${API_URL}/projects/access-counts`)
+      if (res.ok) {
+        const data = await res.json()
+        setMonthlyCountMap(data)
+      }
+    } catch {
+      // 실패해도 무시 (뱃지만 안 보임)
     }
   }
 
@@ -96,31 +108,13 @@ export default function ProjectListPage() {
     }
   }
 
-  // 접속 카운트 버튼 클릭 시 비밀번호 모달 열기
-  const handleStatsClick = (id: string) => {
-    setStatsTargetId(id)
-    setStatsPasswordError(null)
-    setShowStatsPasswordModal(true)
-  }
-
-  // 비밀번호 확인 후 통계 조회
-  const handleStatsWithPassword = async (password: string) => {
-    if (!statsTargetId) return
-
+  // 접속 카운트 버튼 클릭 시 바로 통계 조회 (비밀번호 불필요)
+  const handleStatsClick = async (id: string) => {
     try {
-      const isValidPassword = await verifyPassword(password)
-      if (!isValidPassword) {
-        setStatsPasswordError('비밀번호가 올바르지 않습니다.')
-        return
-      }
-
-      setShowStatsPasswordModal(false)
       setIsLoadingStats(true)
       setShowStatsModal(true)
 
-      const res = await fetch(`${API_URL}/projects/${statsTargetId}/access-stats`, {
-        headers: { 'X-Admin-Password': password },
-      })
+      const res = await fetch(`${API_URL}/projects/${id}/access-stats`)
 
       if (!res.ok) throw new Error('통계를 불러오는데 실패했습니다.')
 
@@ -305,7 +299,11 @@ export default function ProjectListPage() {
                         onClick={() => handleStatsClick(project.id)}
                         className='flex-1 border-teal-300 text-xs text-teal-600 hover:bg-teal-50 sm:flex-none sm:text-sm'
                       >
-                        접속 카운트
+                        접속 카운트{monthlyCountMap[project.id] != null && (
+                          <span className='ml-1 inline-flex items-center justify-center rounded-full bg-teal-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none'>
+                            {monthlyCountMap[project.id].toLocaleString()}
+                          </span>
+                        )}
                       </Button>
                       <Button
                         variant='outline'
@@ -337,25 +335,12 @@ export default function ProjectListPage() {
         error={passwordError}
       />
 
-      {/* 접속 통계 비밀번호 입력 모달 */}
-      <PasswordModal
-        isOpen={showStatsPasswordModal}
-        onClose={() => {
-          setShowStatsPasswordModal(false)
-          setStatsTargetId(null)
-          setStatsPasswordError(null)
-        }}
-        onSubmit={handleStatsWithPassword}
-        error={statsPasswordError}
-      />
-
       {/* 접속 통계 결과 모달 */}
       <AccessStatsModal
         isOpen={showStatsModal}
         onClose={() => {
           setShowStatsModal(false)
           setAccessStats(null)
-          setStatsTargetId(null)
         }}
         stats={accessStats}
         isLoading={isLoadingStats}

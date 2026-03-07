@@ -299,11 +299,10 @@ export default function ProjectListPage() {
                         onClick={() => handleStatsClick(project.id)}
                         className='flex-1 border-teal-300 text-xs text-teal-600 hover:bg-teal-50 sm:flex-none sm:text-sm'
                       >
-                        접속 카운트{monthlyCountMap[project.id] != null && (
-                          <span className='ml-1 inline-flex items-center justify-center rounded-full bg-teal-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none'>
-                            {monthlyCountMap[project.id].toLocaleString()}
-                          </span>
-                        )}
+                        접속 카운트
+                        <span className='ml-1 inline-flex items-center justify-center rounded-full bg-teal-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none'>
+                          {(monthlyCountMap[project.id] ?? 0).toLocaleString()}
+                        </span>
                       </Button>
                       <Button
                         variant='outline'

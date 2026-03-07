@@ -101,15 +101,23 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       order: item.order,
     }))
 
+  const guideImageUrl = fileIds.guideImageFileId
+    ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
+    : undefined
+
+  // 가이드 이미지 프리로드 (카메라 준비 시 즉시 표시되도록)
+  if (guideImageUrl) {
+    const img = new Image()
+    img.src = guideImageUrl
+  }
+
   return {
     fileIds,
     assets: {
       mindUrl,
       targetImageUrl,
       thumbnailBase64: fileIds.thumbnailBase64 || undefined, // 이미 data URL 형식
-      guideImageUrl: fileIds.guideImageFileId
-        ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
-        : undefined,
+      guideImageUrl,
       mediaItems: processedMediaItems,
     },
   }

@@ -101,6 +101,7 @@ const MindARViewer: React.FC<Props> = ({
   // ==================== 상태 ====================
   const [isMuted, setIsMuted] = useState(isIOSDevice())
   const [isLoading, setIsLoading] = useState(true)
+  const [isArReady, setIsArReady] = useState(false)
   const [loadedVideoCount, setLoadedVideoCount] = useState(0)
 
   // 디버그 모드 상태
@@ -126,6 +127,7 @@ const MindARViewer: React.FC<Props> = ({
 
   // ==================== 콜백 ====================
   const handleLoadingComplete = useCallback(() => setIsLoading(false), [])
+  const handleArReady = useCallback(() => setIsArReady(true), [])
   const handleVideoResolutionChange = useCallback((res: string) => setVideoResolution(res), [])
   const handleVideoLoaded = useCallback(() => setLoadedVideoCount((c) => c + 1), [])
 
@@ -160,6 +162,7 @@ const MindARViewer: React.FC<Props> = ({
     sceneRef,
     targetImageUrl,
     onLoadingComplete: handleLoadingComplete,
+    onArReady: handleArReady,
     onMainVideoReady: handleVideoLoaded, // 첫 번째 비디오 로드 시 호출
     onVideoResolutionChange: handleVideoResolutionChange,
   })
@@ -224,8 +227,8 @@ const MindARViewer: React.FC<Props> = ({
       {/* 로딩 화면 */}
       {isLoading && <LoadingScreen targetImageUrl={targetImageUrl} thumbnailUrl={thumbnailUrl} />}
 
-      {/* 안내문구 이미지 */}
-      {guideImageUrl && !isAllVideosReady && !isLoading && (
+      {/* 안내문구 이미지 (카메라 준비 후 ~ AR 초기화 + 비디오 로드 완료까지 표시) */}
+      {guideImageUrl && !isLoading && (!isArReady || !isAllVideosReady) && (
         <GuideImageOverlay imageUrl={guideImageUrl} />
       )}
 

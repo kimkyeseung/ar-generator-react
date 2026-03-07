@@ -17,6 +17,7 @@ interface UseMindARSceneProps {
   sceneRef: React.RefObject<MindARScene | null>
   targetImageUrl: string
   onLoadingComplete: () => void
+  onArReady: () => void
   onMainVideoReady: () => void
   onVideoResolutionChange: (resolution: string) => void
 }
@@ -25,6 +26,7 @@ export function useMindARScene({
   sceneRef,
   targetImageUrl,
   onLoadingComplete,
+  onArReady,
   onMainVideoReady,
   onVideoResolutionChange,
 }: UseMindARSceneProps) {
@@ -246,13 +248,14 @@ export function useMindARScene({
       ensureVideoPlayback()
       styleCameraFeed()
       updateVideoPlaneFromTargetImage()
-      // onLoadingComplete는 arReady에서 호출 (카메라+AR 준비 완료 후 전환)
+      // renderstart에서 로딩 화면 해제 (카메라 피드 + 가이드 이미지 먼저 표시)
+      onLoadingComplete()
     }
 
     // arReady: mind 파일 다운로드 + 컴파일 + GPU 워밍업 완료 시점
     const handleArReady = () => {
       console.log('[MindAR] arReady - AR fully initialized')
-      onLoadingComplete()
+      onArReady()
     }
 
     sceneEl.addEventListener('renderstart', handleRenderStart)
@@ -333,7 +336,7 @@ export function useMindARScene({
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
     }
-  }, [sceneRef, targetImageUrl, onLoadingComplete, onMainVideoReady, onVideoResolutionChange])
+  }, [sceneRef, targetImageUrl, onLoadingComplete, onArReady, onMainVideoReady, onVideoResolutionChange])
 
   return { isRestartingRef }
 }

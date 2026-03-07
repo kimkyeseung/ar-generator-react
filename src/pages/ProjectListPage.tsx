@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import HeroHeader from '../components/home/HeroHeader'
 import PageBackground from '../components/home/PageBackground'
 import PasswordModal from '../components/PasswordModal'
+import AccessStatsModal from '../components/AccessStatsModal'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Project } from '../types/project'
@@ -20,6 +21,19 @@ export default function ProjectListPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+
+  // 접속 통계 관련 상태
+  const [statsTargetId, setStatsTargetId] = useState<string | null>(null)
+  const [showStatsPasswordModal, setShowStatsPasswordModal] = useState(false)
+  const [showStatsModal, setShowStatsModal] = useState(false)
+  const [statsPasswordError, setStatsPasswordError] = useState<string | null>(null)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  const [accessStats, setAccessStats] = useState<{
+    projectId: string
+    title: string | null
+    total: number
+    monthly: { year: number; month: number; count: number }[]
+  } | null>(null)
 
   useEffect(() => {
     fetchProjects()
@@ -79,6 +93,44 @@ export default function ProjectListPage() {
       alert(errorMessage)
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  // 접속 카운트 버튼 클릭 시 비밀번호 모달 열기
+  const handleStatsClick = (id: string) => {
+    setStatsTargetId(id)
+    setStatsPasswordError(null)
+    setShowStatsPasswordModal(true)
+  }
+
+  // 비밀번호 확인 후 통계 조회
+  const handleStatsWithPassword = async (password: string) => {
+    if (!statsTargetId) return
+
+    try {
+      const isValidPassword = await verifyPassword(password)
+      if (!isValidPassword) {
+        setStatsPasswordError('비밀번호가 올바르지 않습니다.')
+        return
+      }
+
+      setShowStatsPasswordModal(false)
+      setIsLoadingStats(true)
+      setShowStatsModal(true)
+
+      const res = await fetch(`${API_URL}/projects/${statsTargetId}/access-stats`, {
+        headers: { 'X-Admin-Password': password },
+      })
+
+      if (!res.ok) throw new Error('통계를 불러오는데 실패했습니다.')
+
+      const data = await res.json()
+      setAccessStats(data)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '통계 조회 중 오류가 발생했습니다.')
+      setShowStatsModal(false)
+    } finally {
+      setIsLoadingStats(false)
     }
   }
 
@@ -250,6 +302,14 @@ export default function ProjectListPage() {
                       <Button
                         variant='outline'
                         size='sm'
+                        onClick={() => handleStatsClick(project.id)}
+                        className='flex-1 border-teal-300 text-xs text-teal-600 hover:bg-teal-50 sm:flex-none sm:text-sm'
+                      >
+                        접속 카운트
+                      </Button>
+                      <Button
+                        variant='outline'
+                        size='sm'
                         onClick={() => handleDeleteClick(project.id)}
                         className='flex-1 border-red-300 text-xs text-red-500 hover:bg-red-50 sm:flex-none sm:text-sm'
                       >
@@ -275,6 +335,30 @@ export default function ProjectListPage() {
         onSubmit={handleDeleteWithPassword}
         isLoading={isDeleting}
         error={passwordError}
+      />
+
+      {/* 접속 통계 비밀번호 입력 모달 */}
+      <PasswordModal
+        isOpen={showStatsPasswordModal}
+        onClose={() => {
+          setShowStatsPasswordModal(false)
+          setStatsTargetId(null)
+          setStatsPasswordError(null)
+        }}
+        onSubmit={handleStatsWithPassword}
+        error={statsPasswordError}
+      />
+
+      {/* 접속 통계 결과 모달 */}
+      <AccessStatsModal
+        isOpen={showStatsModal}
+        onClose={() => {
+          setShowStatsModal(false)
+          setAccessStats(null)
+          setStatsTargetId(null)
+        }}
+        stats={accessStats}
+        isLoading={isLoadingStats}
       />
     </PageBackground>
   )

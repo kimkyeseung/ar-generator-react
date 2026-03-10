@@ -12,6 +12,7 @@ import { Button } from '../components/ui/button'
 import { Progress } from '../components/ui/progress'
 import {
   DEFAULT_CHROMAKEY_SETTINGS,
+  DEFAULT_STABILIZATION_SETTINGS,
   Project,
   MediaItem,
 } from '../types/project'
@@ -47,6 +48,7 @@ export default function EditProjectPage() {
     mediaItems: [],
     selectedMediaItemId: null,
     highPrecision: false,
+    stabilization: { ...DEFAULT_STABILIZATION_SETTINGS },
   })
 
   // 미리보기 줌
@@ -122,6 +124,12 @@ export default function EditProjectPage() {
           mediaItems: loadedItems,
           selectedMediaItemId: null,
           highPrecision: data.highPrecision || false,
+          stabilization: {
+            filterMinCF: (data as any).filterMinCF ?? DEFAULT_STABILIZATION_SETTINGS.filterMinCF,
+            filterBeta: (data as any).filterBeta ?? DEFAULT_STABILIZATION_SETTINGS.filterBeta,
+            missTolerance: (data as any).missTolerance ?? DEFAULT_STABILIZATION_SETTINGS.missTolerance,
+            matrixLerpFactor: (data as any).matrixLerpFactor ?? DEFAULT_STABILIZATION_SETTINGS.matrixLerpFactor,
+          },
         })
       } catch (err) {
         setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
@@ -192,6 +200,7 @@ export default function EditProjectPage() {
       guideImageFile,
       mediaItems,
       highPrecision,
+      stabilization,
     } = formState
 
     try {
@@ -214,6 +223,12 @@ export default function EditProjectPage() {
       formData.append('cameraResolution', cameraResolution)
       formData.append('videoQuality', videoQuality)
       formData.append('highPrecision', highPrecision ? 'true' : 'false')
+
+      // 트래킹 안정화 설정 전송
+      formData.append('filterMinCF', String(stabilization.filterMinCF))
+      formData.append('filterBeta', String(stabilization.filterBeta))
+      formData.append('missTolerance', String(stabilization.missTolerance))
+      formData.append('matrixLerpFactor', String(stabilization.matrixLerpFactor))
 
       // 썸네일 이미지 Base64 전송 (있는 경우)
       if (thumbnailBase64) {

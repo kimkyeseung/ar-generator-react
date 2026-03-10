@@ -12,6 +12,7 @@ import TwoColumnLayout from '../components/layout/TwoColumnLayout'
 import { Button } from '../components/ui/button'
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { API_URL } from '../config/api'
+import { DEFAULT_STABILIZATION_SETTINGS } from '../types/project'
 import { isValidHexColor } from '../utils/validation'
 import { verifyPassword } from '../utils/auth'
 
@@ -31,6 +32,7 @@ export default function CreateProjectPage() {
     mediaItems: [],
     selectedMediaItemId: null,
     highPrecision: false,
+    stabilization: { ...DEFAULT_STABILIZATION_SETTINGS },
   })
 
   // 미리보기 줌
@@ -112,6 +114,7 @@ export default function CreateProjectPage() {
       guideImageFile,
       mediaItems,
       highPrecision,
+      stabilization,
     } = formState
 
     const mediaItemsWithFiles = mediaItems.filter(item => item.file !== null)
@@ -183,6 +186,13 @@ export default function CreateProjectPage() {
       // 추적 정확도 향상 옵션 전송 (트래킹 미디어가 있을 때만)
       if (hasTrackingItems && highPrecision) {
         formData.append('highPrecision', 'true')
+      }
+      // 트래킹 안정화 설정 전송
+      if (hasTrackingItems) {
+        formData.append('filterMinCF', String(stabilization.filterMinCF))
+        formData.append('filterBeta', String(stabilization.filterBeta))
+        formData.append('missTolerance', String(stabilization.missTolerance))
+        formData.append('matrixLerpFactor', String(stabilization.matrixLerpFactor))
       }
       if (title) {
         formData.append('title', title)

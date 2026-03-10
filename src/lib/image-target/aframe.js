@@ -23,6 +23,7 @@ AFRAME.registerSystem('mindar-image-system', {
     warmupTolerance,
     filterMinCF,
     filterBeta,
+    matrixLerpFactor,
     cameraResolution,
   }) {
     this.imageTargetSrc = imageTargetSrc
@@ -31,6 +32,7 @@ AFRAME.registerSystem('mindar-image-system', {
     this.filterBeta = filterBeta
     this.missTolerance = missTolerance
     this.warmupTolerance = warmupTolerance
+    this.matrixLerpFactor = matrixLerpFactor
     this.showStats = showStats
     this.cameraResolution = cameraResolution || 'fhd'
     console.log(
@@ -178,6 +180,7 @@ AFRAME.registerSystem('mindar-image-system', {
       filterBeta: this.filterBeta,
       missTolerance: this.missTolerance,
       warmupTolerance: this.warmupTolerance,
+      matrixLerpFactor: this.matrixLerpFactor,
       onUpdate: (data) => {
         if (data.type === 'processDone') {
           if (this.mainStats) this.mainStats.update()
@@ -306,6 +309,7 @@ AFRAME.registerComponent('mindar-image', {
     filterBeta: { type: 'number', default: -1 },
     missTolerance: { type: 'int', default: -1 },
     warmupTolerance: { type: 'int', default: -1 },
+    matrixLerpFactor: { type: 'number', default: -1 },
     showStats: { type: 'boolean', default: false },
     autoStart: { type: 'boolean', default: true },
     uiLoading: { type: 'string', default: 'yes' },
@@ -326,6 +330,8 @@ AFRAME.registerComponent('mindar-image', {
         this.data.missTolerance === -1 ? null : this.data.missTolerance,
       warmupTolerance:
         this.data.warmupTolerance === -1 ? null : this.data.warmupTolerance,
+      matrixLerpFactor:
+        this.data.matrixLerpFactor === -1 ? null : this.data.matrixLerpFactor,
       showStats: this.data.showStats,
       uiLoading: this.data.uiLoading,
       uiScanning: this.data.uiScanning,

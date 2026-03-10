@@ -12,6 +12,7 @@ const DEFAULT_FILTER_CUTOFF = 0.001 // 낮을수록 정지 시 스무딩 강함 
 const DEFAULT_FILTER_BETA = 100 // 낮을수록 작은 움직임에 덜 반응 (떨림 감소)
 const DEFAULT_WARMUP_TOLERANCE = 3
 const DEFAULT_MISS_TOLERANCE = 10
+const DEFAULT_MATRIX_LERP_FACTOR = 0 // 0=비활성, 0~1 범위 (매트릭스 보간)
 
 class Controller {
   constructor({
@@ -24,6 +25,7 @@ class Controller {
     missTolerance = null,
     filterMinCF = null,
     filterBeta = null,
+    matrixLerpFactor = null,
   }) {
     this.inputWidth = inputWidth
     this.inputHeight = inputHeight
@@ -35,6 +37,8 @@ class Controller {
       warmupTolerance === null ? DEFAULT_WARMUP_TOLERANCE : warmupTolerance
     this.missTolerance =
       missTolerance === null ? DEFAULT_MISS_TOLERANCE : missTolerance
+    this.matrixLerpFactor =
+      matrixLerpFactor === null ? DEFAULT_MATRIX_LERP_FACTOR : matrixLerpFactor
     this.cropDetector = new CropDetector(
       this.inputWidth,
       this.inputHeight,
@@ -320,10 +324,24 @@ class Controller {
               trackingState.currentModelViewTransform,
               i
             )
-            trackingState.trackingMatrix = trackingState.filter.filter(
+            let filteredMatrix = trackingState.filter.filter(
               Date.now(),
               worldMatrix
             )
+
+            // 매트릭스 보간(lerp): matrixLerpFactor > 0이면 이전/현재 프레임을 보간하여 추가 안정화
+            if (
+              this.matrixLerpFactor > 0 &&
+              this.matrixLerpFactor < 1 &&
+              trackingState.trackingMatrix
+            ) {
+              const prev = trackingState.trackingMatrix
+              filteredMatrix = filteredMatrix.map(
+                (v, idx) =>
+                  prev[idx] + (v - prev[idx]) * this.matrixLerpFactor
+              )
+            }
+            trackingState.trackingMatrix = filteredMatrix
 
             const clone = trackingState.trackingMatrix.slice()
 

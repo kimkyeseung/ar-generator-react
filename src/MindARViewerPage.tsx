@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import ConsoleLogOverlay from './components/ConsoleLogOverlay'
-import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, MediaItemResponse, MediaMode, MediaType, VideoPosition, VideoQuality } from './types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, DEFAULT_STABILIZATION_SETTINGS, MediaItemResponse, MediaMode, MediaType, StabilizationSettings, VideoPosition, VideoQuality } from './types/project'
 import { API_URL } from './config/api'
 
 // 무거운 뷰어 컴포넌트를 조건부 lazy loading
@@ -38,6 +38,11 @@ interface ArFilesResponse {
   highPrecision?: boolean
   cameraResolution?: CameraResolution // 'fhd' | 'hd'
   videoQuality?: VideoQuality // 'high' | 'medium' | 'low'
+  // 트래킹 안정화 설정
+  filterMinCF?: number
+  filterBeta?: number
+  missTolerance?: number
+  matrixLerpFactor?: number
   mediaItems?: MediaItemResponse[] // 모든 미디어는 여기에 포함
 }
 
@@ -291,6 +296,12 @@ export default function MindARViewerPage() {
               guideImageUrl={data.assets.guideImageUrl}
               mediaItems={data.assets.mediaItems}
               debugMode={isDebugMode}
+              stabilization={{
+                filterMinCF: data.fileIds.filterMinCF ?? DEFAULT_STABILIZATION_SETTINGS.filterMinCF,
+                filterBeta: data.fileIds.filterBeta ?? DEFAULT_STABILIZATION_SETTINGS.filterBeta,
+                missTolerance: data.fileIds.missTolerance ?? DEFAULT_STABILIZATION_SETTINGS.missTolerance,
+                matrixLerpFactor: data.fileIds.matrixLerpFactor ?? DEFAULT_STABILIZATION_SETTINGS.matrixLerpFactor,
+              }}
             />
           </Suspense>
         </div>

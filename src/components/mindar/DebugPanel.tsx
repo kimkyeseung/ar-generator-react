@@ -15,9 +15,13 @@ interface DebugPanelProps {
   stabilizationEnabled: boolean
   filterMinCF: number
   filterBeta: number
+  missTolerance: number
+  matrixLerpFactor: number
   onToggleStabilization: () => void
   onFilterMinCFChange: (value: number) => void
   onFilterBetaChange: (value: number) => void
+  onMissToleranceChange: (value: number) => void
+  onMatrixLerpFactorChange: (value: number) => void
 }
 
 export function DebugPanel({
@@ -30,29 +34,33 @@ export function DebugPanel({
   stabilizationEnabled,
   filterMinCF,
   filterBeta,
+  missTolerance,
+  matrixLerpFactor,
   onToggleStabilization,
   onFilterMinCFChange,
   onFilterBetaChange,
+  onMissToleranceChange,
+  onMatrixLerpFactorChange,
 }: DebugPanelProps) {
   const qualityLabel = videoQuality === 'high' ? '고화질' : videoQuality === 'medium' ? '중화질' : '저화질'
   const qualityColor = videoQuality === 'high' ? 'bg-purple-500' : videoQuality === 'medium' ? 'bg-blue-500' : 'bg-orange-500'
   const isPlayingOriginal = !hasPreviewVideo || isHDReady
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/80 p-4 text-white backdrop-blur-sm">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/80 p-4 text-white backdrop-blur-sm max-h-[60vh] overflow-y-auto">
       <div className="mx-auto max-w-md space-y-3">
         {/* 상태 표시 */}
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">디버그 모드</span>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <Badge color="bg-blue-500">📷 {cameraResolution.toUpperCase()}</Badge>
-            <Badge color={qualityColor}>🎬 {qualityLabel}</Badge>
+            <Badge color="bg-blue-500">{cameraResolution.toUpperCase()}</Badge>
+            <Badge color={qualityColor}>{qualityLabel}</Badge>
             <Badge color={isPlayingOriginal ? 'bg-green-500' : 'bg-yellow-500'}>
-              {isPlayingOriginal ? '🔄 원본 재생중' : '⏳ 프리뷰 재생중'}
+              {isPlayingOriginal ? '원본' : '프리뷰'}
             </Badge>
-            {videoResolution && <Badge color="bg-indigo-500">🖥️ {videoResolution}</Badge>}
+            {videoResolution && <Badge color="bg-indigo-500">{videoResolution}</Badge>}
             {videoFileSize && (
-              <Badge color="bg-teal-500">💾 {(videoFileSize / 1024 / 1024).toFixed(1)}MB</Badge>
+              <Badge color="bg-teal-500">{(videoFileSize / 1024 / 1024).toFixed(1)}MB</Badge>
             )}
           </div>
         </div>
@@ -85,9 +93,25 @@ export function DebugPanel({
               label="filterBeta (높을수록 반응 빠름)"
               value={filterBeta}
               min={0}
-              max={2000}
-              step={10}
+              max={200}
+              step={1}
               onChange={onFilterBetaChange}
+            />
+            <Slider
+              label="missTolerance (추적 유지 프레임)"
+              value={missTolerance}
+              min={1}
+              max={30}
+              step={1}
+              onChange={onMissToleranceChange}
+            />
+            <Slider
+              label="matrixLerp (0=OFF, 0.7=권장)"
+              value={matrixLerpFactor}
+              min={0}
+              max={0.95}
+              step={0.05}
+              onChange={onMatrixLerpFactorChange}
             />
           </>
         )}
@@ -123,7 +147,7 @@ function Slider({
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
         <span>{label}</span>
-        <span className="font-mono">{value}</span>
+        <span className="font-mono">{step < 0.01 ? value.toFixed(4) : step < 1 ? value.toFixed(2) : value}</span>
       </div>
       <input
         type="range"

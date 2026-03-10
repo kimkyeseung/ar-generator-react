@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import 'aframe'
 import '../lib/image-target/aframe.js'
-import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, VideoQuality } from '../types/project'
+import { CameraResolution, ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS, DEFAULT_STABILIZATION_SETTINGS, StabilizationSettings, VideoQuality } from '../types/project'
 import { ProcessedMediaItem } from '../MindARViewerPage'
 import { SpeakerIcon } from './ui/SpeakerIcon'
 import { isIOSDevice } from '../utils/camera'
@@ -35,6 +35,7 @@ interface Props {
   guideImageUrl?: string
   mediaItems?: ProcessedMediaItem[] // 모든 미디어 아이템 (tracking + basic)
   debugMode?: boolean
+  stabilization?: StabilizationSettings
 }
 
 // Tracking 모드 비디오를 A-Frame 씬에서 렌더링하기 위한 컴포넌트
@@ -95,6 +96,7 @@ const MindARViewer: React.FC<Props> = ({
   guideImageUrl,
   mediaItems = [],
   debugMode = false,
+  stabilization = DEFAULT_STABILIZATION_SETTINGS,
 }) => {
   const sceneRef = useRef<MindARScene | null>(null)
 
@@ -108,8 +110,10 @@ const MindARViewer: React.FC<Props> = ({
   const [videoFileSize, setVideoFileSize] = useState<number | null>(null)
   const [videoResolution, setVideoResolution] = useState<string | null>(null)
   const [stabilizationEnabled, setStabilizationEnabled] = useState(true)
-  const [filterMinCF, setFilterMinCF] = useState(0.001)
-  const [filterBeta, setFilterBeta] = useState(100)
+  const [filterMinCF, setFilterMinCF] = useState(stabilization.filterMinCF)
+  const [filterBeta, setFilterBeta] = useState(stabilization.filterBeta)
+  const [missTolerance, setMissTolerance] = useState(stabilization.missTolerance)
+  const [matrixLerpFactor, setMatrixLerpFactor] = useState(stabilization.matrixLerpFactor)
 
   // ==================== 계산 ====================
   const basicModeItems = mediaItems.filter((item) => item.mode === 'basic')
@@ -198,16 +202,18 @@ const MindARViewer: React.FC<Props> = ({
 
     controller.filterMinCF = newMinCF
     controller.filterBeta = newBeta
+    controller.missTolerance = missTolerance
+    controller.matrixLerpFactor = stabilizationEnabled ? matrixLerpFactor : 0
 
-    controller.trackingStates?.forEach((state) => {
+    controller.trackingStates?.forEach((state: any) => {
       if (state.filter) {
         state.filter.minCutOff = newMinCF
         state.filter.beta = newBeta
       }
     })
 
-    console.log('[Debug] Filter updated:', { stabilizationEnabled, minCutOff: newMinCF, beta: newBeta })
-  }, [debugMode, stabilizationEnabled, filterMinCF, filterBeta])
+    console.log('[Debug] Filter updated:', { stabilizationEnabled, minCutOff: newMinCF, beta: newBeta, missTolerance, matrixLerpFactor })
+  }, [debugMode, stabilizationEnabled, filterMinCF, filterBeta, missTolerance, matrixLerpFactor])
 
   // ==================== A-Frame 설정 ====================
   const mindARImageConfig = [
@@ -219,6 +225,8 @@ const MindARViewer: React.FC<Props> = ({
     `cameraResolution: ${cameraResolution}`,
     stabilizationEnabled && `filterMinCF: ${filterMinCF}`,
     stabilizationEnabled && `filterBeta: ${filterBeta}`,
+    `missTolerance: ${missTolerance}`,
+    `matrixLerpFactor: ${stabilizationEnabled ? matrixLerpFactor : 0}`,
   ].filter(Boolean).join('; ')
 
   // ==================== Render ====================
@@ -263,9 +271,13 @@ const MindARViewer: React.FC<Props> = ({
           stabilizationEnabled={stabilizationEnabled}
           filterMinCF={filterMinCF}
           filterBeta={filterBeta}
+          missTolerance={missTolerance}
+          matrixLerpFactor={matrixLerpFactor}
           onToggleStabilization={() => setStabilizationEnabled(!stabilizationEnabled)}
           onFilterMinCFChange={setFilterMinCF}
           onFilterBetaChange={setFilterBeta}
+          onMissToleranceChange={setMissTolerance}
+          onMatrixLerpFactorChange={setMatrixLerpFactor}
         />
       )}
 

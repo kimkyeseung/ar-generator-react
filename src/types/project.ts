@@ -21,6 +21,30 @@ export const DEFAULT_CHROMAKEY_SETTINGS: ChromaKeySettings = {
   smoothness: 0.08,
 }
 
+// AR 트래킹 안정화 설정
+export interface StabilizationSettings {
+  filterMinCF: number    // One-Euro Filter 최소 컷오프 주파수 (정지 시 스무딩 강도)
+  filterBeta: number     // One-Euro Filter 속도 반응도 (움직임 추종 속도)
+  missTolerance: number  // 추적 소실 시 오버레이 유지 프레임 수
+  matrixLerpFactor: number // 매트릭스 보간 비율 (0=비활성, 0~1)
+}
+
+// 기본값 (MindAR 원본 값 - 안정적이고 검증됨)
+export const DEFAULT_STABILIZATION_SETTINGS: StabilizationSettings = {
+  filterMinCF: 0.001,
+  filterBeta: 100,
+  missTolerance: 10,
+  matrixLerpFactor: 0,
+}
+
+// 권장값 (떨림 최소화 최적화)
+export const RECOMMENDED_STABILIZATION_SETTINGS: StabilizationSettings = {
+  filterMinCF: 0.001,
+  filterBeta: 1,
+  missTolerance: 5,
+  matrixLerpFactor: 0.7,
+}
+
 // 개별 미디어 아이템 (영상 또는 이미지)
 export interface MediaItem {
   id: string

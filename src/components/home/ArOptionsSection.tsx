@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ExternalLink } from 'lucide-react'
 import {
   StabilizationSettings,
   DEFAULT_STABILIZATION_SETTINGS,
@@ -10,6 +11,7 @@ type ArOptionsSectionProps = {
   onHighPrecisionChange: (value: boolean) => void
   stabilization: StabilizationSettings
   onStabilizationChange: (updates: Partial<StabilizationSettings>) => void
+  folderId?: string
 }
 
 export default function ArOptionsSection({
@@ -17,6 +19,7 @@ export default function ArOptionsSection({
   onHighPrecisionChange,
   stabilization,
   onStabilizationChange,
+  folderId,
 }: ArOptionsSectionProps) {
   const [showStabilization, setShowStabilization] = useState(false)
 
@@ -73,7 +76,7 @@ export default function ArOptionsSection({
         {showStabilization && (
           <div className='mt-3 space-y-4'>
             {/* 프리셋 버튼 */}
-            <div className='flex gap-2'>
+            <div className='flex gap-2 flex-wrap'>
               <button
                 type='button'
                 onClick={() => onStabilizationChange(DEFAULT_STABILIZATION_SETTINGS)}
@@ -95,6 +98,30 @@ export default function ArOptionsSection({
                 }`}
               >
                 권장값 (떨림 최소화)
+              </button>
+              <button
+                type='button'
+                disabled={!folderId}
+                title={!folderId ? '프로젝트를 먼저 저장해주세요' : '현재 설정값으로 AR 뷰어를 미리봅니다'}
+                onClick={() => {
+                  if (!folderId) return
+                  const params = new URLSearchParams({
+                    mode: 'debug',
+                    filterMinCF: String(stabilization.filterMinCF),
+                    filterBeta: String(stabilization.filterBeta),
+                    missTolerance: String(stabilization.missTolerance),
+                    matrixLerpFactor: String(stabilization.matrixLerpFactor),
+                  })
+                  window.open(`/result/${folderId}?${params.toString()}`, '_blank')
+                }}
+                className={`px-3 py-1.5 text-xs rounded-lg border transition-colors flex items-center gap-1 ${
+                  folderId
+                    ? 'bg-white text-emerald-600 border-emerald-300 hover:bg-emerald-50'
+                    : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                }`}
+              >
+                <ExternalLink size={12} />
+                미리보기
               </button>
             </div>
 

@@ -541,6 +541,7 @@ export default function EditProjectPage() {
       workflowStatus={workflowStatus}
       footer={formFooter}
       hasExistingTargetImage={!!project.targetImageFileId}
+      folderId={project.folderId}
     />
   )
 

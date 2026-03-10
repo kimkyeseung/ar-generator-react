@@ -206,6 +206,12 @@ export default function MindARViewerPage() {
   // 화면 방향 세로 고정 (AR 앱은 세로 모드가 권장됨)
   useLockPortraitOrientation()
 
+  // URL 파라미터에서 안정화 설정 오버라이드 값 읽기 (debug 모드 미리보기용)
+  const paramFilterMinCF = searchParams.get('filterMinCF')
+  const paramFilterBeta = searchParams.get('filterBeta')
+  const paramMissTolerance = searchParams.get('missTolerance')
+  const paramMatrixLerpFactor = searchParams.get('matrixLerpFactor')
+
   // 메타데이터 + 에셋을 한 번의 쿼리로 로드
   const { data, isLoading } = useQuery({
     queryKey: ['arData', folderId],
@@ -297,10 +303,10 @@ export default function MindARViewerPage() {
               mediaItems={data.assets.mediaItems}
               debugMode={isDebugMode}
               stabilization={{
-                filterMinCF: data.fileIds.filterMinCF ?? DEFAULT_STABILIZATION_SETTINGS.filterMinCF,
-                filterBeta: data.fileIds.filterBeta ?? DEFAULT_STABILIZATION_SETTINGS.filterBeta,
-                missTolerance: data.fileIds.missTolerance ?? DEFAULT_STABILIZATION_SETTINGS.missTolerance,
-                matrixLerpFactor: data.fileIds.matrixLerpFactor ?? DEFAULT_STABILIZATION_SETTINGS.matrixLerpFactor,
+                filterMinCF: (isDebugMode && paramFilterMinCF !== null) ? parseFloat(paramFilterMinCF) : (data.fileIds.filterMinCF ?? DEFAULT_STABILIZATION_SETTINGS.filterMinCF),
+                filterBeta: (isDebugMode && paramFilterBeta !== null) ? parseFloat(paramFilterBeta) : (data.fileIds.filterBeta ?? DEFAULT_STABILIZATION_SETTINGS.filterBeta),
+                missTolerance: (isDebugMode && paramMissTolerance !== null) ? parseInt(paramMissTolerance, 10) : (data.fileIds.missTolerance ?? DEFAULT_STABILIZATION_SETTINGS.missTolerance),
+                matrixLerpFactor: (isDebugMode && paramMatrixLerpFactor !== null) ? parseFloat(paramMatrixLerpFactor) : (data.fileIds.matrixLerpFactor ?? DEFAULT_STABILIZATION_SETTINGS.matrixLerpFactor),
               }}
             />
           </Suspense>

@@ -51,6 +51,8 @@ export interface ProjectFormProps {
   footer: React.ReactNode
   /** Edit mode: 기존 타겟 이미지가 있어서 새 타겟 이미지가 선택사항인 경우 */
   hasExistingTargetImage?: boolean
+  /** Edit mode: 미리보기 버튼에 사용할 folderId */
+  folderId?: string
 }
 
 export default function ProjectForm({
@@ -62,6 +64,7 @@ export default function ProjectForm({
   workflowStatus,
   footer,
   hasExistingTargetImage = false,
+  folderId,
 }: ProjectFormProps) {
   const {
     title,
@@ -236,6 +239,7 @@ export default function ProjectForm({
                 onStabilizationChange={(updates) =>
                   onChange({ stabilization: { ...stabilization, ...updates } })
                 }
+                folderId={folderId}
               />
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>

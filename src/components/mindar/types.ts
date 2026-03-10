@@ -17,6 +17,8 @@ type TrackingState = {
 export type MindARController = {
   filterMinCF: number
   filterBeta: number
+  missTolerance: number
+  matrixLerpFactor: number
   trackingStates: TrackingState[]
 }
 

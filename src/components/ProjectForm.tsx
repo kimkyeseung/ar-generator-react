@@ -14,6 +14,8 @@ import {
   VideoQuality,
   MediaItem,
   MediaType,
+  StabilizationSettings,
+  DEFAULT_STABILIZATION_SETTINGS,
   createDefaultMediaItem,
 } from '../types/project'
 
@@ -30,6 +32,7 @@ export interface ProjectFormState {
   mediaItems: MediaItem[]
   selectedMediaItemId: string | null
   highPrecision: boolean
+  stabilization: StabilizationSettings
 }
 
 export interface ProjectFormExistingData {
@@ -70,6 +73,7 @@ export default function ProjectForm({
     mediaItems,
     selectedMediaItemId,
     highPrecision,
+    stabilization,
   } = state
 
   // 트래킹 모드 미디어 아이템 존재 여부
@@ -228,6 +232,10 @@ export default function ProjectForm({
               <ArOptionsSection
                 highPrecision={highPrecision}
                 onHighPrecisionChange={(value) => onChange({ highPrecision: value })}
+                stabilization={stabilization}
+                onStabilizationChange={(updates) =>
+                  onChange({ stabilization: { ...stabilization, ...updates } })
+                }
               />
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>

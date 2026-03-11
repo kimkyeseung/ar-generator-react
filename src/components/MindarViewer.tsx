@@ -42,10 +42,9 @@ interface Props {
 interface TrackingVideoEntityProps {
   item: ProcessedMediaItem
   videoId: string
-  isMuted: boolean
 }
 
-function TrackingVideoEntity({ item, videoId, isMuted }: TrackingVideoEntityProps) {
+function TrackingVideoEntity({ item, videoId }: TrackingVideoEntityProps) {
   // position과 scale을 A-Frame 좌표로 변환
   // position.x, position.y는 0~1 범위 (화면 비율)
   // A-Frame에서는 중앙이 0,0이고 타겟 이미지 크기가 width=1
@@ -78,7 +77,6 @@ function TrackingVideoEntity({ item, videoId, isMuted }: TrackingVideoEntityProp
       height={videoHeight.toString()}
       rotation="0 0 0"
       loop="true"
-      muted={isMuted ? 'true' : 'false'}
       autoplay="true"
       playsinline="true"
       {...(item.flatView ? { billboard: '', material: 'depthTest: false' } : {})}
@@ -101,7 +99,9 @@ const MindARViewer: React.FC<Props> = ({
   const sceneRef = useRef<MindARScene | null>(null)
 
   // ==================== 상태 ====================
-  const [isMuted, setIsMuted] = useState(isIOSDevice())
+  // 초기 muted 값 (리렌더링 시에도 변하지 않아 <video> 요소 재초기화 방지)
+  const initialMuted = useRef(isIOSDevice()).current
+  const [isMuted, setIsMuted] = useState(initialMuted)
   const [isLoading, setIsLoading] = useState(true)
   const [isArReady, setIsArReady] = useState(false)
   const [loadedVideoCount, setLoadedVideoCount] = useState(0)
@@ -304,7 +304,7 @@ const MindARViewer: React.FC<Props> = ({
               crossOrigin="anonymous"
               playsInline
               webkit-playsinline="true"
-              muted={isMuted}
+              muted={initialMuted}
               preload="auto"
               autoPlay
               onLoadedData={() => {
@@ -324,7 +324,6 @@ const MindARViewer: React.FC<Props> = ({
               key={item.id}
               item={item}
               videoId={`ar-video-${item.id}`}
-              isMuted={isMuted}
             />
           ))}
         </a-entity>

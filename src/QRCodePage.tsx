@@ -12,9 +12,13 @@ export function QRCodePage() {
   // 디버그 모드 상태
   const [isDebugMode, setIsDebugMode] = useState(false);
 
+  // 캐시 방지용 타임스탬프 (페이지 진입 시 1회 고정, QR 코드 일관성 유지)
+  const [cacheBuster] = useState(() => Date.now());
+
   // QR 코드에 사용될 URL (디버그 모드일 때 쿼리 추가)
   const baseUrl = `${window.location.origin}/result/${folderId}`;
-  const fullUrl = isDebugMode ? `${baseUrl}?mode=debug` : baseUrl;
+  const query = isDebugMode ? `?mode=debug&v=${cacheBuster}` : `?v=${cacheBuster}`;
+  const fullUrl = `${baseUrl}${query}`;
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -77,7 +81,7 @@ export function QRCodePage() {
 
           <Button
             onClick={() => {
-              navigate(`/result/${folderId}${isDebugMode ? '?mode=debug' : ''}`);
+              navigate(`/result/${folderId}${query}`);
             }}
             className="w-full"
           >

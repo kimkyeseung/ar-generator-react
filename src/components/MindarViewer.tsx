@@ -155,25 +155,30 @@ const MindARViewer: React.FC<Props> = ({
     if (!allVideos || allVideos.length === 0) return
 
     const newMuted = !isMuted
+    let actualMuted = newMuted
 
     // for...of 사용 (forEach+async는 유저 제스처 컨텍스트 유실)
     for (const video of Array.from(allVideos)) {
-      video.muted = newMuted
       try {
-        // muted 변경 후 항상 play() 호출 (모바일에서 muted 변경 시 비디오가 멈출 수 있음)
+        // iOS: 재생 중 muted 변경 시 오디오 세션 전환 실패 방지
+        // pause → muted 변경 → play 순서로 깔끔한 상태 전환
+        const wasPlaying = !video.paused
+        if (wasPlaying) video.pause()
+        video.muted = newMuted
         await video.play()
       } catch (e) {
         console.warn(`[MindAR] Failed to play ${video.id} with muted=${newMuted}:`, e)
         if (!newMuted) {
           // 언뮤트 실패 시 muted로 되돌리고 재생 복구
           video.muted = true
+          actualMuted = true
           try { await video.play() } catch {}
         }
       }
     }
 
-    setIsMuted(newMuted)
-    console.log(`[MindAR] Sound ${newMuted ? 'disabled' : 'enabled'}`)
+    setIsMuted(actualMuted)
+    console.log(`[MindAR] Sound ${actualMuted ? 'disabled' : 'enabled'}`)
   }, [isMuted])
 
   // ==================== MindAR 씬 훅 ====================

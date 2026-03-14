@@ -97,32 +97,39 @@ const BasicModeViewer: React.FC<Props> = ({
   // 음소거 토글 - 일반 비디오에만 적용 (ChromaKeyVideo는 muted prop으로 제어)
   const handleToggleMute = useCallback(async () => {
     const newMutedState = !isMuted
+    let actualMuted = newMutedState
 
     // for...of 사용 (forEach+async는 유저 제스처 컨텍스트 유실)
     for (const video of Array.from(videoRefs.current.values())) {
-      video.muted = newMutedState
       try {
-        // muted 변경 후 항상 play() 호출 (모바일에서 muted 변경 시 비디오가 멈출 수 있음)
+        // iOS: 재생 중 muted 변경 시 오디오 세션 전환 실패 방지
+        // pause → muted 변경 → play 순서로 깔끔한 상태 전환
+        const wasPlaying = !video.paused
+        if (wasPlaying) video.pause()
+        video.muted = newMutedState
         await video.play()
       } catch (e) {
         console.warn('[BasicMode] Failed to play with muted=' + newMutedState, e)
         if (!newMutedState) {
           video.muted = true
+          actualMuted = true
           try { await video.play() } catch {}
         }
       }
     }
 
-    setIsMuted(newMutedState)
-    console.log(`[BasicMode] Sound ${newMutedState ? 'disabled' : 'enabled'}`)
+    setIsMuted(actualMuted)
+    console.log(`[BasicMode] Sound ${actualMuted ? 'disabled' : 'enabled'}`)
   }, [isMuted])
 
   // isMuted 상태 변경 시 일반 비디오에 반영
+  // (handleToggleMute에서 이미 처리하지만, 외부 state 변경 시 동기화 보장)
   useEffect(() => {
     videoRefs.current.forEach((video) => {
-      video.muted = isMuted
-      // muted 변경 후 재생 보장
-      if (video.paused) {
+      if (video.muted !== isMuted) {
+        const wasPlaying = !video.paused
+        if (wasPlaying) video.pause()
+        video.muted = isMuted
         video.play().catch(() => {})
       }
     })

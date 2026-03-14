@@ -15,6 +15,7 @@ let iosPermissionPromise: Promise<boolean> | null = null
 interface UseMindARSceneProps {
   sceneRef: React.RefObject<MindARScene | null>
   targetImageUrl: string
+  isMutedRef: React.RefObject<boolean>
   onLoadingComplete: () => void
   onArReady: () => void
   onVideoResolutionChange: (resolution: string) => void
@@ -23,6 +24,7 @@ interface UseMindARSceneProps {
 export function useMindARScene({
   sceneRef,
   targetImageUrl,
+  isMutedRef,
   onLoadingComplete,
   onArReady,
   onVideoResolutionChange,
@@ -81,17 +83,20 @@ export function useMindARScene({
     const playVideoWithRetry = async (video: HTMLVideoElement, maxRetries = 3): Promise<boolean> => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          // 재생 전 muted 속성 확인 (iOS autoplay 필수)
-          if (!video.muted) {
-            console.log(`[MindAR] Video ${video.id} is not muted, setting muted=true for autoplay`)
-            video.muted = true
-          }
+          // 사용자의 음소거 설정 존중
+          video.muted = isMutedRef.current ?? true
 
           video.currentTime = 0
           await video.play()
-          console.log(`[MindAR] Video ${video.id} playing (attempt ${attempt})`)
+          console.log(`[MindAR] Video ${video.id} playing (attempt ${attempt}, muted=${video.muted})`)
           return true
         } catch (e) {
+          // unmuted 재생 실패 시 muted로 폴백 (iOS autoplay 정책)
+          if (!video.muted) {
+            console.log(`[MindAR] Video ${video.id} unmuted play failed, falling back to muted`)
+            video.muted = true
+            continue // muted로 같은 attempt 재시도
+          }
           if (attempt < maxRetries) {
             console.log(`[MindAR] Video ${video.id} play attempt ${attempt} failed, retrying...`)
             await new Promise(r => setTimeout(r, 100))
@@ -313,12 +318,11 @@ export function useMindARScene({
         }
       } else {
         console.log('[MindAR] Tab became hidden')
-        // 모든 AR 비디오 일시정지 및 음소거
+        // 모든 AR 비디오 일시정지 (음소거 상태는 유지 - 사용자 설정 존중)
         const allVideos = sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]')
         allVideos.forEach((video) => {
           video.pause()
-          video.muted = true
-          console.log(`[MindAR] Video ${video.id} paused and muted`)
+          console.log(`[MindAR] Video ${video.id} paused`)
         })
       }
     }

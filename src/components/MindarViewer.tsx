@@ -102,6 +102,9 @@ const MindARViewer: React.FC<Props> = ({
   // 초기 muted 값 (리렌더링 시에도 변하지 않아 <video> 요소 재초기화 방지)
   const initialMuted = useRef(isIOSDevice()).current
   const [isMuted, setIsMuted] = useState(initialMuted)
+  // useMindARScene에 최신 muted 상태 전달 (effect 재실행 없이 ref로 참조)
+  const isMutedRef = useRef(isMuted)
+  isMutedRef.current = isMuted
   const [isLoading, setIsLoading] = useState(true)
   const [isArReady, setIsArReady] = useState(false)
   const [loadedVideoCount, setLoadedVideoCount] = useState(0)
@@ -177,6 +180,7 @@ const MindARViewer: React.FC<Props> = ({
   useMindARScene({
     sceneRef,
     targetImageUrl,
+    isMutedRef,
     onLoadingComplete: handleLoadingComplete,
     onArReady: handleArReady,
     onVideoResolutionChange: handleVideoResolutionChange,

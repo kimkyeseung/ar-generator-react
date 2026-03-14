@@ -35,6 +35,10 @@ export default function ChromaKeyVideo({
     const video = videoRef.current
     if (video) {
       video.muted = muted
+      // muted 변경 후 재생 보장 (모바일에서 muted 변경 시 비디오가 멈출 수 있음)
+      if (video.paused) {
+        video.play().catch(() => {})
+      }
     }
   }, [muted])
 

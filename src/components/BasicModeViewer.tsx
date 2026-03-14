@@ -98,21 +98,20 @@ const BasicModeViewer: React.FC<Props> = ({
   const handleToggleMute = useCallback(async () => {
     const newMutedState = !isMuted
 
-    videoRefs.current.forEach(async (video) => {
-      if (!newMutedState) {
-        try {
-          video.muted = false
-          if (video.paused) {
-            await video.play()
-          }
-        } catch (e) {
-          console.warn('[BasicMode] Failed to unmute:', e)
+    // for...of 사용 (forEach+async는 유저 제스처 컨텍스트 유실)
+    for (const video of Array.from(videoRefs.current.values())) {
+      video.muted = newMutedState
+      try {
+        // muted 변경 후 항상 play() 호출 (모바일에서 muted 변경 시 비디오가 멈출 수 있음)
+        await video.play()
+      } catch (e) {
+        console.warn('[BasicMode] Failed to play with muted=' + newMutedState, e)
+        if (!newMutedState) {
           video.muted = true
+          try { await video.play() } catch {}
         }
-      } else {
-        video.muted = true
       }
-    })
+    }
 
     setIsMuted(newMutedState)
     console.log(`[BasicMode] Sound ${newMutedState ? 'disabled' : 'enabled'}`)
@@ -122,6 +121,10 @@ const BasicModeViewer: React.FC<Props> = ({
   useEffect(() => {
     videoRefs.current.forEach((video) => {
       video.muted = isMuted
+      // muted 변경 후 재생 보장
+      if (video.paused) {
+        video.play().catch(() => {})
+      }
     })
   }, [isMuted])
 

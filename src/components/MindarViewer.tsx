@@ -143,19 +143,21 @@ const MindARViewer: React.FC<Props> = ({
 
     const newMuted = !isMuted
 
-    allVideos.forEach(async (video) => {
-      if (!newMuted) {
-        try {
-          video.muted = false
-          if (video.paused) await video.play()
-        } catch (e) {
-          console.warn(`[MindAR] Failed to unmute ${video.id}:`, e)
+    // for...of 사용 (forEach+async는 유저 제스처 컨텍스트 유실)
+    for (const video of Array.from(allVideos)) {
+      video.muted = newMuted
+      try {
+        // muted 변경 후 항상 play() 호출 (모바일에서 muted 변경 시 비디오가 멈출 수 있음)
+        await video.play()
+      } catch (e) {
+        console.warn(`[MindAR] Failed to play ${video.id} with muted=${newMuted}:`, e)
+        if (!newMuted) {
+          // 언뮤트 실패 시 muted로 되돌리고 재생 복구
           video.muted = true
+          try { await video.play() } catch {}
         }
-      } else {
-        video.muted = true
       }
-    })
+    }
 
     setIsMuted(newMuted)
     console.log(`[MindAR] Sound ${newMuted ? 'disabled' : 'enabled'}`)

@@ -81,21 +81,23 @@ export function useMindARScene({
 
     // ==================== 비디오 재생 재시도 로직 ====================
     const playVideoWithRetry = async (video: HTMLVideoElement, maxRetries = 3): Promise<boolean> => {
+      // 첫 시도는 사용자 설정 존중, 실패 시 muted 폴백
+      const preferredMuted = isMutedRef.current ?? true
+      let useMuted = preferredMuted
+
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          // 사용자의 음소거 설정 존중
-          video.muted = isMutedRef.current ?? true
-
+          video.muted = useMuted
           video.currentTime = 0
           await video.play()
           console.log(`[MindAR] Video ${video.id} playing (attempt ${attempt}, muted=${video.muted})`)
           return true
         } catch (e) {
-          // unmuted 재생 실패 시 muted로 폴백 (iOS autoplay 정책)
-          if (!video.muted) {
+          // unmuted 재생 실패 시 muted로 폴백 (iOS: 유저 제스처 없이 unmuted 재생 불가)
+          if (!useMuted) {
             console.log(`[MindAR] Video ${video.id} unmuted play failed, falling back to muted`)
-            video.muted = true
-            continue // muted로 같은 attempt 재시도
+            useMuted = true
+            continue
           }
           if (attempt < maxRetries) {
             console.log(`[MindAR] Video ${video.id} play attempt ${attempt} failed, retrying...`)

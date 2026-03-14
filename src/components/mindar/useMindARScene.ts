@@ -9,16 +9,14 @@ import { MindARScene, MindARSystem } from './types'
 declare const DeviceMotionEvent: any
 declare const DeviceOrientationEvent: any
 
-// iOS 권한 상태 추적 (모듈 레벨)
-let iosPermissionGranted = false
-let iosPermissionRequested = false
+// iOS 권한 요청 Promise (모듈 레벨 - 페이지당 1회만 요청, 에러 시 재시도 가능)
+let iosPermissionPromise: Promise<boolean> | null = null
 
 interface UseMindARSceneProps {
   sceneRef: React.RefObject<MindARScene | null>
   targetImageUrl: string
   onLoadingComplete: () => void
   onArReady: () => void
-  onMainVideoReady: () => void
   onVideoResolutionChange: (resolution: string) => void
 }
 
@@ -27,48 +25,56 @@ export function useMindARScene({
   targetImageUrl,
   onLoadingComplete,
   onArReady,
-  onMainVideoReady,
   onVideoResolutionChange,
 }: UseMindARSceneProps) {
   const isRestartingRef = useRef(false)
 
   useEffect(() => {
+    let isMounted = true
     const sceneEl = sceneRef.current
     if (!sceneEl) return
 
     const containerEl = sceneEl.parentElement as HTMLElement | null
     let arSystem: MindARSystem | null = null
+    let restartSafetyTimer: ReturnType<typeof setTimeout> | null = null
 
     const targetEntity = sceneEl.querySelector<HTMLElement>('[mindar-image-target]')
 
     // ==================== iOS 권한 요청 ====================
     const requestIOSPermissions = async (): Promise<boolean> => {
-      if (iosPermissionGranted) return true
-      if (iosPermissionRequested) return false
+      // 이미 진행 중이거나 완료된 요청이 있으면 동일 Promise 반환
+      if (iosPermissionPromise) return iosPermissionPromise
 
-      iosPermissionRequested = true
+      iosPermissionPromise = (async () => {
+        try {
+          let allGranted = true
 
-      try {
-        if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-          const motionResult = await DeviceMotionEvent.requestPermission()
-          if (motionResult !== 'granted') {
-            console.warn('[MindAR] DeviceMotion permission not granted:', motionResult)
+          if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+            const motionResult = await DeviceMotionEvent.requestPermission()
+            if (motionResult !== 'granted') {
+              console.warn('[MindAR] DeviceMotion permission not granted:', motionResult)
+              allGranted = false
+            }
           }
-        }
-        if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
-          const orientationResult = await DeviceOrientationEvent.requestPermission()
-          if (orientationResult !== 'granted') {
-            console.warn('[MindAR] DeviceOrientation permission not granted:', orientationResult)
+          if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
+            const orientationResult = await DeviceOrientationEvent.requestPermission()
+            if (orientationResult !== 'granted') {
+              console.warn('[MindAR] DeviceOrientation permission not granted:', orientationResult)
+              allGranted = false
+            }
           }
+
+          console.log(`[MindAR] iOS motion/orientation permission ${allGranted ? 'granted' : 'partially denied'}`)
+          return allGranted
+        } catch (e) {
+          console.warn('[MindAR] iOS permission denied or unavailable', e)
+          // 에러 시 Promise 초기화하여 재시도 가능
+          iosPermissionPromise = null
+          return false
         }
-        iosPermissionGranted = true
-        console.log('[MindAR] iOS motion/orientation permission granted')
-        return true
-      } catch (e) {
-        console.warn('[MindAR] iOS permission denied or unavailable', e)
-        iosPermissionRequested = false // 다시 시도 가능
-        return false
-      }
+      })()
+
+      return iosPermissionPromise
     }
 
     // ==================== 비디오 재생 재시도 로직 ====================
@@ -197,21 +203,13 @@ export function useMindARScene({
 
     // ==================== 비디오 재생 보장 ====================
     const ensureVideoPlayback = () => {
-      // 모든 AR 비디오 요소 가져오기
       const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
       if (allVideos.length === 0) {
         console.warn('[MindAR] No video elements found')
         return
       }
 
-      // 첫 번째 비디오가 이미 로드되었으면 상태 업데이트
-      const firstVideo = allVideos[0]
-      if (firstVideo && firstVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        console.log('[MindAR] First video already loaded at renderstart, readyState:', firstVideo.readyState)
-        onMainVideoReady()
-      }
-
-      // 모든 비디오 재생 시도
+      // 모든 비디오 재생 시도 (로드 카운팅은 JSX onLoadedData에서 처리)
       allVideos.forEach((videoEl) => {
         void videoEl.play().catch((err) => {
           console.warn(`[MindAR] video ${videoEl.id} autoplay blocked`, err)
@@ -272,6 +270,14 @@ export function useMindARScene({
         isRestartingRef.current = true
         console.log('[MindAR] Tab became visible, restarting AR system...')
 
+        // 안전 타임아웃: 5초 후 강제 리셋 (stuck 방지)
+        restartSafetyTimer = setTimeout(() => {
+          if (isRestartingRef.current) {
+            console.warn('[MindAR] Restart safety timeout, forcing reset')
+            isRestartingRef.current = false
+          }
+        }, 5000)
+
         if (arSystem) {
           try {
             try {
@@ -281,21 +287,28 @@ export function useMindARScene({
             }
 
             await new Promise((r) => setTimeout(r, 500))
+            if (!isMounted) return
 
             console.log('[MindAR] Calling arSystem.start()...')
             arSystem.start()
             console.log('[MindAR] arSystem.start() called')
 
             await new Promise((r) => setTimeout(r, 1500))
+            if (!isMounted) return
+
             styleCameraFeed()
             console.log('[MindAR] AR system restart completed')
           } catch (e) {
             console.error('[MindAR] Failed to restart AR system', e)
           } finally {
+            if (restartSafetyTimer) clearTimeout(restartSafetyTimer)
+            restartSafetyTimer = null
             isRestartingRef.current = false
           }
         } else {
           console.warn('[MindAR] arSystem is null, cannot restart')
+          if (restartSafetyTimer) clearTimeout(restartSafetyTimer)
+          restartSafetyTimer = null
           isRestartingRef.current = false
         }
       } else {
@@ -314,12 +327,21 @@ export function useMindARScene({
 
     // ==================== 클린업 ====================
     return () => {
+      isMounted = false
       console.log('[MindAR] Cleanup called, isRestarting:', isRestartingRef.current)
+
       sceneEl.removeEventListener('renderstart', handleRenderStart)
       sceneEl.removeEventListener('arReady', handleArReady)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
 
-      if (arSystem && !isRestartingRef.current) {
+      // 안전 타이머 정리
+      if (restartSafetyTimer) {
+        clearTimeout(restartSafetyTimer)
+        restartSafetyTimer = null
+      }
+
+      // 컴포넌트 언마운트 시 항상 arSystem 정지 시도
+      if (arSystem) {
         try {
           arSystem.stop()
           console.log('[MindAR] Cleanup: arSystem.stop() called')
@@ -327,6 +349,7 @@ export function useMindARScene({
           console.warn('[MindAR] cleanup arSystem.stop() failed:', e)
         }
       }
+      isRestartingRef.current = false
 
       observer?.disconnect()
       window.removeEventListener('resize', styleCameraFeed)
@@ -336,7 +359,7 @@ export function useMindARScene({
       document.removeEventListener('touchend', handleUserGesture)
       document.removeEventListener('click', handleUserGesture)
     }
-  }, [sceneRef, targetImageUrl, onLoadingComplete, onArReady, onMainVideoReady, onVideoResolutionChange])
+  }, [sceneRef, targetImageUrl, onLoadingComplete, onArReady, onVideoResolutionChange])
 
   return { isRestartingRef }
 }

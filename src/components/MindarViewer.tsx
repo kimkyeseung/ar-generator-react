@@ -129,6 +129,16 @@ const MindARViewer: React.FC<Props> = ({
   const totalVideoCount = basicModeVideoCount + trackingModeVideoCount
   const isAllVideosReady = loadedVideoCount >= totalVideoCount
 
+  // 가이드 이미지 최소 표시 시간 보장 (캐시된 mind 파일 등으로 arReady가 빨리 발생해도 최소 시간 표시)
+  const [guideMinTimeElapsed, setGuideMinTimeElapsed] = useState(false)
+
+  useEffect(() => {
+    if (!isLoading && guideImageUrl) {
+      const timer = setTimeout(() => setGuideMinTimeElapsed(true), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [isLoading, guideImageUrl])
+
   // ==================== 콜백 ====================
   const handleLoadingComplete = useCallback(() => setIsLoading(false), [])
   const handleArReady = useCallback(() => setIsArReady(true), [])
@@ -169,7 +179,6 @@ const MindARViewer: React.FC<Props> = ({
     targetImageUrl,
     onLoadingComplete: handleLoadingComplete,
     onArReady: handleArReady,
-    onMainVideoReady: handleVideoLoaded, // 첫 번째 비디오 로드 시 호출
     onVideoResolutionChange: handleVideoResolutionChange,
   })
 
@@ -236,11 +245,6 @@ const MindARViewer: React.FC<Props> = ({
     <>
       {/* 로딩 화면 */}
       {isLoading && <LoadingScreen targetImageUrl={targetImageUrl} thumbnailUrl={thumbnailUrl} />}
-
-      {/* 안내문구 이미지 (카메라 준비 후 ~ AR 초기화 + 비디오 로드 완료까지 표시) */}
-      {guideImageUrl && !isLoading && (!isArReady || !isAllVideosReady) && (
-        <GuideImageOverlay imageUrl={guideImageUrl} />
-      )}
 
       {/* 스피커 토글 버튼 */}
       <button
@@ -330,6 +334,12 @@ const MindARViewer: React.FC<Props> = ({
           ))}
         </a-entity>
       </a-scene>
+
+      {/* 안내문구 이미지 (a-scene 뒤에 렌더링하여 캔버스 위에 표시 보장) */}
+      {/* 로딩 완료 후 ~ (최소 표시시간 경과 AND AR 준비 AND 비디오 로드 완료)까지 표시 */}
+      {guideImageUrl && !isLoading && (!guideMinTimeElapsed || !isArReady || !isAllVideosReady) && (
+        <GuideImageOverlay imageUrl={guideImageUrl} />
+      )}
     </>
   )
 }

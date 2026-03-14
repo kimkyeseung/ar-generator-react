@@ -9,7 +9,7 @@ interface GuideImageOverlayProps {
 
 export function GuideImageOverlay({ imageUrl }: GuideImageOverlayProps) {
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
+    <div className="fixed inset-0 z-[45] flex items-center justify-center pointer-events-none">
       <img
         src={imageUrl}
         alt="안내문구"

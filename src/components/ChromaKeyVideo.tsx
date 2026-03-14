@@ -54,6 +54,15 @@ export default function ChromaKeyVideo({
     const keyColor = hexToRgb(chromaKeyColor)
     const { similarity, smoothness } = chromaKeySettings
 
+    // 성능 최적화: 루프 밖에서 상수 미리 계산 (Math.sqrt/Math.pow 제거)
+    const inv255 = 1 / 255
+    const { r: kr, g: kg, b: kb } = keyColor
+    const simSq3 = similarity * similarity * 3
+    const smoothBound = similarity + smoothness
+    const smoothBoundSq3 = smoothBound * smoothBound * 3
+    const invSmoothness = smoothness > 0 ? 1 / smoothness : 0
+    const sqrt3 = Math.sqrt(3)
+
     let animationId: number
     let isRunning = true
 
@@ -79,24 +88,18 @@ export default function ChromaKeyVideo({
       const data = imageData.data
 
       for (let i = 0; i < data.length; i += 4) {
-        const r = data[i]
-        const g = data[i + 1]
-        const b = data[i + 2]
+        // 제곱 거리로 비교 (대부분 픽셀에서 Math.sqrt 불필요)
+        const dr = (data[i] - kr) * inv255
+        const dg = (data[i + 1] - kg) * inv255
+        const db = (data[i + 2] - kb) * inv255
+        const distSq3 = dr * dr + dg * dg + db * db
 
-        // 색상 거리 계산
-        const distance =
-          Math.sqrt(
-            Math.pow((r - keyColor.r) / 255, 2) +
-              Math.pow((g - keyColor.g) / 255, 2) +
-              Math.pow((b - keyColor.b) / 255, 2)
-          ) / Math.sqrt(3)
-
-        // 알파 계산
-        if (distance < similarity) {
+        if (distSq3 < simSq3) {
           data[i + 3] = 0
-        } else if (distance < similarity + smoothness) {
-          const alpha = (distance - similarity) / smoothness
-          data[i + 3] = Math.round(alpha * 255)
+        } else if (distSq3 < smoothBoundSq3) {
+          // 전환 영역 픽셀만 sqrt 계산 (전체의 소수)
+          const distance = Math.sqrt(distSq3) / sqrt3
+          data[i + 3] = Math.round((distance - similarity) * invSmoothness * 255)
         }
       }
 

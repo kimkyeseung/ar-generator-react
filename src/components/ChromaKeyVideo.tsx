@@ -30,15 +30,15 @@ export default function ChromaKeyVideo({
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // muted prop 변경 시 비디오에 반영
+  // muted prop 변경 시 비디오에 반영 (pause 없이 muted만 변경하여 즉시 적용)
   useEffect(() => {
     const video = videoRef.current
     if (video && video.muted !== muted) {
-      // iOS: 재생 중 muted 변경 시 오디오 세션 전환 실패 방지
-      const wasPlaying = !video.paused
-      if (wasPlaying) video.pause()
       video.muted = muted
-      video.play().catch(() => {})
+      // 일시정지 상태였으면 재생 시작
+      if (video.paused) {
+        video.play().catch(() => {})
+      }
     }
   }, [muted])
 

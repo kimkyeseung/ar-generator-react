@@ -64,15 +64,15 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
   if (!res.ok) throw new Error('AR 파일 정보를 불러오지 못했습니다.')
   const fileIds: ArFilesResponse = await res.json()
 
-  // 캐시 버스터 추가 (브라우저 HTTP 캐싱 방지)
-  const cacheBuster = Date.now()
+  // 캐시 키: fileId 자체가 고유하므로 별도 cache buster 불필요
+  // 파일이 변경되면 새 fileId가 할당되므로 자연스럽게 캐시가 무효화됨
 
   // mind 파일과 타겟 이미지는 서버 URL을 직접 사용 (blob 변환 불필요)
   const mindUrl = fileIds.mindFileId
-    ? `${API_URL}/file/${fileIds.mindFileId}?t=${cacheBuster}`
+    ? `${API_URL}/file/${fileIds.mindFileId}`
     : undefined
   const targetImageUrl = fileIds.targetImageFileId
-    ? `${API_URL}/file/${fileIds.targetImageFileId}?t=${cacheBuster}`
+    ? `${API_URL}/file/${fileIds.targetImageFileId}`
     : undefined
 
   // 미디어 아이템 URL 처리
@@ -83,10 +83,10 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
       type: item.type,
       mode: item.mode,
       fileUrl: item.type === 'video'
-        ? `${API_URL}/stream/${item.fileId}?t=${cacheBuster}`
-        : `${API_URL}/file/${item.fileId}?t=${cacheBuster}`,
+        ? `${API_URL}/stream/${item.fileId}`
+        : `${API_URL}/file/${item.fileId}`,
       previewFileUrl: item.previewFileId
-        ? `${API_URL}/stream/${item.previewFileId}?t=${cacheBuster}`
+        ? `${API_URL}/stream/${item.previewFileId}`
         : undefined,
       position: {
         x: item.positionX ?? 0.5,
@@ -107,7 +107,7 @@ async function fetchArDataAndAssets(folderId: string): Promise<{
     }))
 
   const guideImageUrl = fileIds.guideImageFileId
-    ? `${API_URL}/file/${fileIds.guideImageFileId}?t=${cacheBuster}`
+    ? `${API_URL}/file/${fileIds.guideImageFileId}`
     : undefined
 
   // 가이드 이미지 프리로드 (카메라 준비 시 즉시 표시되도록)

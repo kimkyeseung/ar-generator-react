@@ -4,7 +4,7 @@ import { ZoomIn, ZoomOut, Move, Maximize2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '../ui/button'
 import { API_URL } from '../../config/api'
 import { isValidHexColor } from '../../utils/validation'
-import { hexToRgb } from '../../utils/chromakey'
+import { hexToRgb, precomputeChromaKeyConstants, applyChromaKey } from '../../utils/chromakey'
 
 const MIN_SCALE = 0.2
 const MAX_SCALE = 5.0
@@ -188,12 +188,12 @@ export default function UnifiedPreviewCanvas({
     items.forEach((item) => {
       const existingPreview = mediaPreviewsMap.get(item.id)
 
-      // 이미 로드된 경우 재사용
+      // 이미 로드된 경우 재사용 (파일 참조 비교 - Object URL 생성 없이)
       if (existingPreview && existingPreview.element) {
-        const isSameFile =
-          (item.file && existingPreview.objectUrl === URL.createObjectURL(item.file)) ||
+        const isSameSource =
+          (item.file && existingPreview.objectUrl !== null) ||
           (!item.file && item.existingFileId)
-        if (isSameFile) {
+        if (isSameSource) {
           newPreviews.set(item.id, existingPreview)
           return
         }
@@ -425,35 +425,13 @@ export default function UnifiedPreviewCanvas({
             // 비디오를 임시 캔버스에 그리기
             tempCtx.drawImage(element, 0, 0, srcWidth, srcHeight)
 
-            // 크로마키 처리
+            // 크로마키 처리 (최적화된 공유 유틸리티 사용)
             const keyColor = hexToRgb(isValidHexColor(item.chromaKeyColor) ? item.chromaKeyColor : '#00FF00')
             const { similarity, smoothness } = item.chromaKeySettings
+            const constants = precomputeChromaKeyConstants(keyColor, similarity, smoothness)
 
             const imageData = tempCtx.getImageData(0, 0, srcWidth, srcHeight)
-            const data = imageData.data
-
-            for (let i = 0; i < data.length; i += 4) {
-              const r = data[i]
-              const g = data[i + 1]
-              const b = data[i + 2]
-
-              // 색상 거리 계산 (정규화)
-              const distance =
-                Math.sqrt(
-                  Math.pow(r - keyColor.r, 2) +
-                  Math.pow(g - keyColor.g, 2) +
-                  Math.pow(b - keyColor.b, 2)
-                ) / Math.sqrt(3) / 255
-
-              // 알파 계산
-              if (distance < similarity) {
-                data[i + 3] = 0
-              } else if (distance < similarity + smoothness) {
-                const alpha = (distance - similarity) / smoothness
-                data[i + 3] = Math.round(alpha * 255)
-              }
-            }
-
+            applyChromaKey(imageData.data, constants)
             tempCtx.putImageData(imageData, 0, 0)
 
             // 처리된 이미지를 메인 캔버스에 그리기
@@ -545,6 +523,12 @@ export default function UnifiedPreviewCanvas({
     // 보이는 영상들만 order 순서대로 합성 (크로마키 적용)
     const sortedVisibleItems = [...visibleChromaKeyItems].sort((a, b) => a.order - b.order)
 
+    // 임시 캔버스 재사용 (매 프레임 생성 방지)
+    if (!chromaKeyTempCanvasRef.current) {
+      chromaKeyTempCanvasRef.current = document.createElement('canvas')
+    }
+    const tempCanvas = chromaKeyTempCanvasRef.current
+
     for (const item of sortedVisibleItems) {
       const itemPreview = mediaPreviewsMap.get(item.id)
       if (!itemPreview?.element) continue
@@ -552,8 +536,7 @@ export default function UnifiedPreviewCanvas({
       const video = itemPreview.element as HTMLVideoElement
       if (video.readyState < 2) continue
 
-      // 임시 캔버스에 영상 그리기
-      const tempCanvas = document.createElement('canvas')
+      // 임시 캔버스 크기 조정 및 영상 그리기
       tempCanvas.width = displayWidth
       tempCanvas.height = displayHeight
       const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
@@ -561,35 +544,13 @@ export default function UnifiedPreviewCanvas({
 
       tempCtx.drawImage(video, 0, 0, displayWidth, displayHeight)
 
-      // 크로마키 처리
+      // 크로마키 처리 (최적화된 공유 유틸리티 사용)
       const keyColor = hexToRgb(isValidHexColor(item.chromaKeyColor) ? item.chromaKeyColor : '#00FF00')
       const { similarity, smoothness } = item.chromaKeySettings
+      const constants = precomputeChromaKeyConstants(keyColor, similarity, smoothness)
 
       const imageData = tempCtx.getImageData(0, 0, displayWidth, displayHeight)
-      const data = imageData.data
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i]
-        const g = data[i + 1]
-        const b = data[i + 2]
-
-        // 색상 거리 계산 (정규화)
-        const distance =
-          Math.sqrt(
-            Math.pow(r - keyColor.r, 2) +
-            Math.pow(g - keyColor.g, 2) +
-            Math.pow(b - keyColor.b, 2)
-          ) / Math.sqrt(3) / 255
-
-        // 알파 계산
-        if (distance < similarity) {
-          data[i + 3] = 0
-        } else if (distance < similarity + smoothness) {
-          const alpha = (distance - similarity) / smoothness
-          data[i + 3] = Math.round(alpha * 255)
-        }
-      }
-
+      applyChromaKey(imageData.data, constants)
       tempCtx.putImageData(imageData, 0, 0)
 
       // 처리된 이미지를 메인 캔버스에 합성

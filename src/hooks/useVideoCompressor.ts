@@ -16,8 +16,8 @@ interface CompressionProgress {
 // URL을 fetch하여 Blob URL로 변환 (CORS 우회)
 async function fetchToBlobURL(url: string, mimeType: string): Promise<string> {
   const response = await fetch(url)
-  const blob = await response.blob()
-  return URL.createObjectURL(new Blob([blob], { type: mimeType }))
+  const buffer = await response.arrayBuffer()
+  return URL.createObjectURL(new Blob([buffer], { type: mimeType }))
 }
 
 export function useVideoCompressor() {

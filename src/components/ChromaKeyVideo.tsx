@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { ChromaKeySettings, DEFAULT_CHROMAKEY_SETTINGS } from '../types/project'
-import { hexToRgb } from '../utils/chromakey'
+import { hexToRgb, precomputeChromaKeyConstants, applyChromaKey } from '../utils/chromakey'
 
 interface ChromaKeyVideoProps {
   src: string
@@ -53,15 +53,7 @@ export default function ChromaKeyVideo({
 
     const keyColor = hexToRgb(chromaKeyColor)
     const { similarity, smoothness } = chromaKeySettings
-
-    // 성능 최적화: 루프 밖에서 상수 미리 계산 (Math.sqrt/Math.pow 제거)
-    const inv255 = 1 / 255
-    const { r: kr, g: kg, b: kb } = keyColor
-    const simSq3 = similarity * similarity * 3
-    const smoothBound = similarity + smoothness
-    const smoothBoundSq3 = smoothBound * smoothBound * 3
-    const invSmoothness = smoothness > 0 ? 1 / smoothness : 0
-    const sqrt3 = Math.sqrt(3)
+    const constants = precomputeChromaKeyConstants(keyColor, similarity, smoothness)
 
     let animationId: number
     let isRunning = true
@@ -85,24 +77,7 @@ export default function ChromaKeyVideo({
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const data = imageData.data
-
-      for (let i = 0; i < data.length; i += 4) {
-        // 제곱 거리로 비교 (대부분 픽셀에서 Math.sqrt 불필요)
-        const dr = (data[i] - kr) * inv255
-        const dg = (data[i + 1] - kg) * inv255
-        const db = (data[i + 2] - kb) * inv255
-        const distSq3 = dr * dr + dg * dg + db * db
-
-        if (distSq3 < simSq3) {
-          data[i + 3] = 0
-        } else if (distSq3 < smoothBoundSq3) {
-          // 전환 영역 픽셀만 sqrt 계산 (전체의 소수)
-          const distance = Math.sqrt(distSq3) / sqrt3
-          data[i + 3] = Math.round((distance - similarity) * invSmoothness * 255)
-        }
-      }
-
+      applyChromaKey(imageData.data, constants)
       ctx.putImageData(imageData, 0, 0)
       animationId = requestAnimationFrame(processFrame)
     }

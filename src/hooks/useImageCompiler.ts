@@ -20,8 +20,14 @@ export function useImageCompiler() {
   const loadImage = (file: File): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
-      img.onload = () => resolve(img)
-      img.onerror = reject
+      img.onload = () => {
+        URL.revokeObjectURL(img.src)
+        resolve(img)
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src)
+        reject(new Error('Image load failed'))
+      }
       img.src = URL.createObjectURL(file)
     })
   }

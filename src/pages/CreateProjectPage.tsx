@@ -91,7 +91,7 @@ export default function CreateProjectPage() {
     }
     // 트래킹 미디어가 없으면 타겟 이미지 불필요
     return hasMediaItems && hasValidChromaKey
-  }, [formState])
+  }, [formState.targetImageFiles, formState.mediaItems])
 
   // 배포 버튼 클릭 시 비밀번호 모달 열기
   const handlePublishClick = () => {
@@ -284,7 +284,7 @@ export default function CreateProjectPage() {
       return 'Step 1. 영상이나 이미지를 추가해주세요.'
     }
     return 'Step 2. 위치를 조정하고 배포 버튼을 클릭하세요.'
-  }, [formState])
+  }, [formState.targetImageFiles, formState.mediaItems])
 
   // 워크플로우 상태
   const workflowStatus = useMemo(() => {

@@ -287,9 +287,12 @@ describe('BasicModeViewer', () => {
 
   describe('guide image', () => {
     it('should show guide image when videos are loading', async () => {
+      // 비디오가 있고 아직 로드되지 않은 상태에서 가이드 이미지가 표시되어야 함
+      // HTMLMediaElement.play mock이 canplay 이벤트를 발행하지 않으므로
+      // isAllVideosReady = false 상태가 유지됨
       const { container } = render(
         <BasicModeViewer
-          mediaItems={[createMediaItem()]}
+          mediaItems={[createMediaItem({ type: 'video', mode: 'basic' })]}
           guideImageUrl="https://example.com/guide.png"
         />
       )

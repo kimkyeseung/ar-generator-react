@@ -324,10 +324,17 @@ describe('ProjectListPage', () => {
 
     it('should retry fetching when clicking retry button', async () => {
       mockFetch
+        // 1차: fetchProjects 실패
         .mockResolvedValueOnce({
           ok: false,
           status: 500,
         })
+        // 2차: fetchMonthlyAccessCounts (마운트 시 병렬 호출)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([]),
+        })
+        // 3차: retry 클릭 시 fetchProjects 재호출
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([]),
@@ -339,7 +346,7 @@ describe('ProjectListPage', () => {
       fireEvent.click(retryButton)
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(2)
+        expect(mockFetch).toHaveBeenCalledTimes(3)
       })
     })
   })
@@ -390,10 +397,17 @@ describe('ProjectListPage', () => {
       }
 
       mockFetch
+        // 1차: fetchProjects
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([mockProject]),
         })
+        // 2차: fetchMonthlyAccessCounts
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([]),
+        })
+        // 3차: DELETE 요청
         .mockResolvedValueOnce({
           ok: true,
         })

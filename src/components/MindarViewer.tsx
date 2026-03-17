@@ -308,7 +308,7 @@ const MindARViewer: React.FC<Props> = ({
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
       >
-        <a-assets timeout="15000">
+        <a-assets timeout="200">
           {/* 모든 tracking 모드 비디오들 */}
           {trackingModeVideos.map((item) => (
             <video

@@ -142,9 +142,11 @@ export function useMindARScene({
       console.log(`[MindAR] Found ${allVideos.length} video(s) to play`)
 
       for (const video of allVideos) {
-        // 이미 재생 중이면 건너뛰기
         if (!video.paused) {
-          console.log(`[MindAR] Video ${video.id} already playing`)
+          // 이미 재생 중인 비디오: muted 상태를 사용자 설정과 동기화
+          const preferredMuted = isMutedRef.current ?? true
+          video.muted = preferredMuted
+          console.log(`[MindAR] Video ${video.id} already playing, synced muted=${preferredMuted}`)
           continue
         }
 
@@ -230,11 +232,17 @@ export function useMindARScene({
 
       await requestIOSPermissions()
 
-      // 사용자 제스처 후 모든 비디오 재생 시도
+      // 사용자 제스처 후 모든 비디오 재생/음소거 해제 시도
+      const preferredMuted = isMutedRef.current ?? true
       const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
       for (const video of allVideos) {
         if (video.paused) {
           await playVideoWithRetry(video, 1) // 제스처 후에는 1회만 시도
+        } else if (video.muted !== preferredMuted) {
+          // 이미 재생 중이지만 muted 상태가 사용자 설정과 다른 경우 동기화
+          // (autoplay 정책으로 muted fallback된 비디오를 제스처 후 unmute)
+          video.muted = preferredMuted
+          console.log(`[MindAR] Video ${video.id} unmuted after user gesture`)
         }
       }
 

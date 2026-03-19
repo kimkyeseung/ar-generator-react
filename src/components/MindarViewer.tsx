@@ -321,7 +321,6 @@ const MindARViewer: React.FC<Props> = ({
               webkit-playsinline="true"
               muted={initialMuted}
               preload="auto"
-              autoPlay
               onLoadedData={() => {
                 console.log(`[MindAR] Tracking video ${item.id} loaded`)
                 setLoadedVideoCount((c) => c + 1)

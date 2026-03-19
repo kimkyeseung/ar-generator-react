@@ -143,10 +143,11 @@ export function useMindARScene({
 
       for (const video of allVideos) {
         if (!video.paused) {
-          // 이미 재생 중인 비디오: muted 상태를 사용자 설정과 동기화
+          // 이미 재생 중인 비디오: 처음부터 다시 재생하고 muted 상태 동기화
           const preferredMuted = isMutedRef.current ?? true
           video.muted = preferredMuted
-          console.log(`[MindAR] Video ${video.id} already playing, synced muted=${preferredMuted}`)
+          video.currentTime = 0
+          console.log(`[MindAR] Video ${video.id} already playing, reset to start, synced muted=${preferredMuted}`)
           continue
         }
 

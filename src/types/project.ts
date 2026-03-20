@@ -56,7 +56,7 @@ export interface MediaItem {
   existingPreviewFileId: string | null // 기존 프리뷰 파일 ID
   aspectRatio: number // 가로/세로 비율
   position: VideoPosition // 위치 (0~1 범위)
-  scale: number // 크기 (0.2~5.0)
+  scale: number // 크기 (0.01~5.0)
   chromaKeyEnabled: boolean // 크로마키 활성화 여부
   chromaKeyColor: string // 크로마키 색상 (HEX)
   chromaKeySettings: ChromaKeySettings // 크로마키 세부 설정

@@ -4,7 +4,7 @@ import { Button } from '../ui/button'
 import { MediaItem, MediaMode, DEFAULT_CHROMAKEY_SETTINGS } from '../../types/project'
 import { isValidHexColor, isValidUrl } from '../../utils/validation'
 
-const MIN_SCALE = 0.2
+const MIN_SCALE = 0.01
 const MAX_SCALE = 5.0
 const SCALE_STEP = 0.1
 

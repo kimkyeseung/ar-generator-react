@@ -6,7 +6,7 @@ import { API_URL } from '../../config/api'
 import { isValidHexColor } from '../../utils/validation'
 import { hexToRgb, precomputeChromaKeyConstants, applyChromaKey } from '../../utils/chromakey'
 
-const MIN_SCALE = 0.2
+const MIN_SCALE = 0.01
 const MAX_SCALE = 5.0
 
 interface UnifiedPreviewCanvasProps {

@@ -6,7 +6,7 @@ import { isValidHexColor, isValidUrl } from '../../utils/validation'
 
 const MIN_SCALE = 0.01
 const MAX_SCALE = 5.0
-const SCALE_STEP = 0.1
+const SCALE_STEP = 0.01
 
 interface MediaItemEditorProps {
   item: MediaItem

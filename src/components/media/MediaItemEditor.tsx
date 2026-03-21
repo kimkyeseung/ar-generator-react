@@ -44,6 +44,13 @@ export default function MediaItemEditor({
       return
     }
 
+    // 파일 크기 제한 (32MB)
+    const MAX_FILE_SIZE = 32 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`파일 크기는 32MB 이하여야 합니다. (현재: ${(file.size / 1024 / 1024).toFixed(1)}MB)`)
+      return
+    }
+
     // 미디어 로드 후 종횡비 계산
     if (item.type === 'video') {
       const video = document.createElement('video')

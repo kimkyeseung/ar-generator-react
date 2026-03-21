@@ -101,6 +101,18 @@ function FileItem({
   )
 }
 
+const MAX_FILE_SIZE = 32 * 1024 * 1024 // 32MB
+
+function validateFileSize(files: File[]): File[] {
+  const oversized = files.filter((f) => f.size > MAX_FILE_SIZE)
+  if (oversized.length > 0) {
+    const names = oversized.map((f) => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join(', ')
+    alert(`파일 크기는 32MB 이하여야 합니다: ${names}`)
+    return files.filter((f) => f.size <= MAX_FILE_SIZE)
+  }
+  return files
+}
+
 export function FileUpload({
   accept,
   label,
@@ -132,7 +144,7 @@ export function FileUpload({
       e.preventDefault()
       setIsDragging(false)
 
-      const droppedFiles = Array.from(e.dataTransfer.files)
+      const droppedFiles = validateFileSize(Array.from(e.dataTransfer.files))
       if (droppedFiles.length === 0) return
 
       if (isMultiple) {
@@ -151,7 +163,7 @@ export function FileUpload({
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(e.target.files || [])
+      const selectedFiles = validateFileSize(Array.from(e.target.files || []))
       if (selectedFiles.length === 0) return
 
       if (isMultiple) {

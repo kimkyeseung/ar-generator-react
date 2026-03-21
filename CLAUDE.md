@@ -193,7 +193,7 @@ REACT_APP_API_URL=http://localhost:4000  # 백엔드 API URL
 
 ## Technical Notes
 
-- 비디오 크기 제한: 32MB
+- 비디오 크기 제한: 32MB (프론트엔드에서 개별 파일 검증)
 - 타겟 이미지 비율이 AR 오버레이에 보존됨
 - **다중 tracking 비디오**: 각 비디오는 `ar-video-{id}` ID로 A-Frame에 등록되며, order 값으로 Z축 순서 결정 (`posZ = 0.001 * (order + 1)`)
 - MindAR 컴파일은 클라이언트에서 실행 (서버 부하 없음)

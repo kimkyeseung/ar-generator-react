@@ -30,6 +30,8 @@ interface MediaPreview {
   element: HTMLVideoElement | HTMLImageElement | null
   objectUrl: string | null
   actualAspectRatio?: number // 실제 미디어에서 계산된 비율
+  sourceFile?: File | null // 소스 파일 참조 (변경 감지용)
+  sourceFileId?: string | null // 기존 파일 ID 참조 (변경 감지용)
 }
 
 export default function UnifiedPreviewCanvas({
@@ -188,14 +190,18 @@ export default function UnifiedPreviewCanvas({
     items.forEach((item) => {
       const existingPreview = mediaPreviewsMap.get(item.id)
 
-      // 이미 로드된 경우 재사용 (파일 참조 비교 - Object URL 생성 없이)
+      // 이미 로드된 경우 재사용 (파일 참조가 동일할 때만)
       if (existingPreview && existingPreview.element) {
         const isSameSource =
-          (item.file && existingPreview.objectUrl !== null) ||
-          (!item.file && item.existingFileId)
+          (item.file && item.file === existingPreview.sourceFile) ||
+          (!item.file && item.existingFileId && item.existingFileId === existingPreview.sourceFileId)
         if (isSameSource) {
           newPreviews.set(item.id, existingPreview)
           return
+        }
+        // 소스가 변경된 경우 이전 Object URL 해제
+        if (existingPreview.objectUrl) {
+          URL.revokeObjectURL(existingPreview.objectUrl)
         }
       }
 
@@ -209,7 +215,7 @@ export default function UnifiedPreviewCanvas({
           video.loop = true
           video.playsInline = true
           video.preload = 'auto'
-          const preview: MediaPreview = { id: item.id, element: video, objectUrl: url }
+          const preview: MediaPreview = { id: item.id, element: video, objectUrl: url, sourceFile: item.file }
           video.onloadedmetadata = () => {
             // 실제 영상에서 비율 계산
             if (video.videoWidth && video.videoHeight) {
@@ -225,7 +231,7 @@ export default function UnifiedPreviewCanvas({
         } else {
           const img = new window.Image()
           img.src = url
-          const preview: MediaPreview = { id: item.id, element: img, objectUrl: url }
+          const preview: MediaPreview = { id: item.id, element: img, objectUrl: url, sourceFile: item.file }
           img.onload = () => {
             // 실제 이미지에서 비율 계산
             if (img.naturalWidth && img.naturalHeight) {
@@ -246,7 +252,7 @@ export default function UnifiedPreviewCanvas({
           video.playsInline = true
           video.preload = 'auto'
           video.crossOrigin = 'anonymous'
-          const preview: MediaPreview = { id: item.id, element: video, objectUrl: null }
+          const preview: MediaPreview = { id: item.id, element: video, objectUrl: null, sourceFileId: item.existingFileId }
           video.onloadedmetadata = () => {
             // 실제 영상에서 비율 계산 (DB 값 대신 사용)
             if (video.videoWidth && video.videoHeight) {
@@ -263,7 +269,7 @@ export default function UnifiedPreviewCanvas({
           const img = new window.Image()
           img.src = url
           img.crossOrigin = 'anonymous'
-          const preview: MediaPreview = { id: item.id, element: img, objectUrl: null }
+          const preview: MediaPreview = { id: item.id, element: img, objectUrl: null, sourceFileId: item.existingFileId }
           img.onload = () => {
             // 실제 이미지에서 비율 계산 (DB 값 대신 사용)
             if (img.naturalWidth && img.naturalHeight) {

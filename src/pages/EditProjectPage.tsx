@@ -19,6 +19,10 @@ import {
 import { useImageCompiler } from '../hooks/useImageCompiler'
 import { API_URL } from '../config/api'
 import { verifyPassword } from '../utils/auth'
+import {
+  uploadSingleFile,
+  updateProjectWithIds,
+} from '../utils/fileUpload'
 
 // 애셋 체크 결과 타입
 interface AssetCheckResult {
@@ -58,6 +62,7 @@ export default function EditProjectPage() {
   const [progress, setProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadStatus, setUploadStatus] = useState<string>('')
 
   // 비밀번호 모달 상태
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -187,9 +192,9 @@ export default function EditProjectPage() {
     setShowPasswordModal(true)
   }
 
-  // 비밀번호 확인 후 (필요시 컴파일 +) 업로드
+  // 비밀번호 확인 후 (필요시 컴파일 +) 개별 파일 업로드 + JSON 제출
   const handlePasswordSubmit = async (password: string) => {
-    if (!canSave || !id) return
+    if (!canSave || !id || !project) return
 
     const {
       title,
@@ -215,47 +220,133 @@ export default function EditProjectPage() {
 
       // 비밀번호 확인 성공 - 모달 닫기
       setShowPasswordModal(false)
+      setIsUploading(true)
+      setProgress(0)
 
-      const formData = new FormData()
-
-      // 메타데이터
-      formData.append('title', title)
-      formData.append('cameraResolution', cameraResolution)
-      formData.append('videoQuality', videoQuality)
-      formData.append('highPrecision', highPrecision ? 'true' : 'false')
-
-      // 트래킹 안정화 설정 전송
-      formData.append('filterMinCF', String(stabilization.filterMinCF))
-      formData.append('filterBeta', String(stabilization.filterBeta))
-      formData.append('missTolerance', String(stabilization.missTolerance))
-      formData.append('matrixLerpFactor', String(stabilization.matrixLerpFactor))
-
-      // 썸네일 이미지 Base64 전송 (있는 경우)
-      if (thumbnailBase64) {
-        formData.append('thumbnailBase64', thumbnailBase64)
-      }
-      // 안내문구 이미지 전송 (있는 경우)
-      if (guideImageFile) {
-        formData.append('guideImage', guideImageFile)
-      }
-
-      // 새 타겟 이미지가 있으면 컴파일 후 추가 (트래킹 아이템이 있을 때만)
+      // 2. 새 타겟 이미지가 있으면 컴파일 (트래킹 아이템이 있을 때만)
+      let targetBuffer: ArrayBuffer | null = null
+      let originalImage: File | null = null
       if (hasTrackingItems && targetImageFiles.length > 0) {
-        const { targetBuffer, originalImage } = await compile(targetImageFiles, {
-          highPrecision,
-        })
-        const blob = new Blob([targetBuffer], { type: 'application/octet-stream' })
-        formData.append('target', blob, 'targets.mind')
-        formData.append('targetImage', originalImage)
+        const compiled = await compile(targetImageFiles, { highPrecision })
+        targetBuffer = compiled.targetBuffer
+        originalImage = compiled.originalImage
       }
 
-      // 멀티 미디어 아이템 추가
-      if (mediaItems.length > 0) {
-        // 미디어 아이템 메타데이터 JSON
-        const mediaItemsMetadata = mediaItems.map((item, index) => ({
+      // 3. 변경된 파일만 개별 업로드
+      // 업로드할 파일 수 계산
+      const folderId = project.folderId
+      let totalFiles = 0
+      if (targetBuffer) totalFiles++
+      if (originalImage) totalFiles++
+      if (guideImageFile) totalFiles++
+      mediaItems.forEach(item => {
+        if (item.file) totalFiles++ // 새 미디어 파일
+        if (item.previewFile) totalFiles++ // 새 프리뷰 파일
+      })
+
+      let uploadedCount = 0
+      const updateProgress = (fileLabel: string, filePercent: number) => {
+        if (totalFiles === 0) return
+        const base = (uploadedCount / totalFiles) * 100
+        const filePortion = (filePercent / 100) * (1 / totalFiles) * 100
+        setProgress(Math.round(base + filePortion))
+        setUploadStatus(`파일 업로드 중 (${uploadedCount + 1}/${totalFiles}) - ${fileLabel}`)
+      }
+
+      // Upload .mind file (if changed)
+      let targetFileId: string | undefined
+      if (targetBuffer) {
+        const blob = new Blob([targetBuffer], { type: 'application/octet-stream' })
+        const result = await uploadSingleFile(blob, password, folderId, 'target', {
+          fileName: 'targets.mind',
+          onProgress: (pct) => updateProgress('타겟 파일', pct),
+        })
+        targetFileId = result.fileId
+        uploadedCount++
+      }
+
+      // Upload target image (if changed)
+      let targetImageFileId: string | undefined
+      if (originalImage) {
+        const result = await uploadSingleFile(originalImage, password, folderId, 'targetImage', {
+          onProgress: (pct) => updateProgress('타겟 이미지', pct),
+        })
+        targetImageFileId = result.fileId
+        uploadedCount++
+      }
+
+      // Upload guide image (if changed)
+      let guideImageFileId: string | undefined
+      if (guideImageFile) {
+        const result = await uploadSingleFile(guideImageFile, password, folderId, 'guideImage', {
+          onProgress: (pct) => updateProgress('안내문구 이미지', pct),
+        })
+        guideImageFileId = result.fileId
+        uploadedCount++
+      }
+
+      // Upload media files (only changed ones)
+      const mediaItemsPayload: Array<{
+        id?: string
+        type: string
+        mode: string
+        fileId: string
+        previewFileId?: string
+        positionX: number
+        positionY: number
+        scale: number
+        aspectRatio: number
+        chromaKeyEnabled: boolean
+        chromaKeyColor: string
+        chromaKeySimilarity: number
+        chromaKeySmoothness: number
+        flatView: boolean
+        linkEnabled: boolean
+        linkUrl: string
+        order: number
+      }> = []
+
+      for (let i = 0; i < mediaItems.length; i++) {
+        const item = mediaItems[i]
+
+        let fileId: string
+        let previewFileId: string | undefined
+
+        if (item.file) {
+          // New file - upload it
+          const mediaResult = await uploadSingleFile(item.file, password, folderId, 'media', {
+            index: i,
+            onProgress: (pct) => updateProgress(`미디어 ${i + 1}`, pct),
+          })
+          fileId = mediaResult.fileId
+          uploadedCount++
+        } else if (item.existingFileId) {
+          // Unchanged - keep existing ID
+          fileId = item.existingFileId
+        } else {
+          // No file at all - skip this item
+          continue
+        }
+
+        if (item.previewFile) {
+          // New preview - upload it
+          const previewResult = await uploadSingleFile(item.previewFile, password, folderId, 'preview', {
+            index: i,
+            onProgress: (pct) => updateProgress(`프리뷰 ${i + 1}`, pct),
+          })
+          previewFileId = previewResult.fileId
+          uploadedCount++
+        } else if (item.existingPreviewFileId) {
+          // Unchanged - keep existing preview ID
+          previewFileId = item.existingPreviewFileId
+        }
+
+        mediaItemsPayload.push({
           id: item.existingFileId ? item.id : undefined, // 기존 아이템만 ID 전송
           type: item.type,
           mode: item.mode,
+          fileId,
+          previewFileId,
           positionX: item.position.x,
           positionY: item.position.y,
           scale: item.scale,
@@ -265,54 +356,42 @@ export default function EditProjectPage() {
           chromaKeySimilarity: item.chromaKeySettings?.similarity,
           chromaKeySmoothness: item.chromaKeySettings?.smoothness,
           flatView: item.flatView,
-          linkEnabled: item.linkEnabled,
-          linkUrl: item.linkUrl,
-          order: index,
-        }))
-        formData.append('mediaItems', JSON.stringify(mediaItemsMetadata))
-
-        // 미디어 파일 추가
-        for (let i = 0; i < mediaItems.length; i++) {
-          const item = mediaItems[i]
-          if (item.file) {
-            formData.append(`media_${i}_file`, item.file)
-          }
-          if (item.previewFile) {
-            formData.append(`media_${i}_preview`, item.previewFile)
-          }
-        }
+          linkEnabled: item.linkEnabled ?? false,
+          linkUrl: item.linkUrl ?? '',
+          order: i,
+        })
       }
 
-      // 업로드
-      setProgress(0)
-      setIsUploading(true)
+      // 4. JSON으로 프로젝트 업데이트 제출
+      setUploadStatus('프로젝트 저장 중...')
+      setProgress(100)
 
-      const res = await new Promise<Project>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('POST', `${API_URL}/projects/${id}/update`)
-        xhr.setRequestHeader('X-Admin-Password', password)
-        xhr.responseType = 'json'
+      const updateData: Record<string, unknown> = {
+        title,
+        cameraResolution,
+        videoQuality,
+        highPrecision: highPrecision ? 'true' : 'false',
+        filterMinCF: stabilization.filterMinCF,
+        filterBeta: stabilization.filterBeta,
+        missTolerance: stabilization.missTolerance,
+        matrixLerpFactor: stabilization.matrixLerpFactor,
+        mediaItems: mediaItemsPayload,
+      }
 
-        xhr.upload.onprogress = (evt) => {
-          if (evt.lengthComputable) {
-            const pct = Math.round((evt.loaded / evt.total) * 100)
-            setProgress(pct)
-          }
-        }
+      if (targetFileId) {
+        updateData.targetFileId = targetFileId
+      }
+      if (targetImageFileId) {
+        updateData.targetImageFileId = targetImageFileId
+      }
+      if (guideImageFileId) {
+        updateData.guideImageFileId = guideImageFileId
+      }
+      if (thumbnailBase64) {
+        updateData.thumbnailBase64 = thumbnailBase64
+      }
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setProgress(100)
-            resolve(xhr.response)
-          } else if (xhr.status === 401) {
-            reject(new Error('401: 비밀번호가 올바르지 않습니다.'))
-          } else {
-            reject(new Error(`업데이트 실패: ${xhr.status}`))
-          }
-        }
-        xhr.onerror = () => reject(new Error('Network error'))
-        xhr.send(formData)
-      })
+      const res = await updateProjectWithIds(password, id, updateData) as Project
 
       // React Query 캐시 무효화 (새 영상이 즉시 반영되도록)
       await queryClient.invalidateQueries({ queryKey: ['arData', res.folderId] })
@@ -327,15 +406,16 @@ export default function EditProjectPage() {
       setUploadError(errorMessage)
     } finally {
       setIsUploading(false)
+      setUploadStatus('')
     }
   }
 
   // 워크플로우 상태
   const workflowStatus = useMemo(() => {
     if (isCompiling) return `타겟 변환 중 (${Math.round(compileProgress)}%)`
-    if (isUploading) return `저장 중 (${progress}%)`
+    if (isUploading) return uploadStatus || `저장 중 (${progress}%)`
     return '편집 모드'
-  }, [isCompiling, isUploading, compileProgress, progress])
+  }, [isCompiling, isUploading, compileProgress, progress, uploadStatus])
 
   // 애셋 체크 함수
   const handleAssetCheck = useCallback(async () => {
@@ -497,7 +577,7 @@ export default function EditProjectPage() {
             />
           </div>
           <p className='text-sm text-gray-500 mt-2 text-center'>
-            {progress}% 업로드 중...
+            {uploadStatus || `${progress}% 업로드 중...`}
           </p>
         </div>
       )}

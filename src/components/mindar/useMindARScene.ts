@@ -313,6 +313,17 @@ export function useMindARScene({
             if (!isMounted) return
 
             styleCameraFeed()
+
+            // 탭 전환 시 브라우저가 비디오를 pause하므로 재생 재시도
+            // iOS에서 유저 제스처 없이 unmuted play()은 실패할 수 있어 muted로 시작
+            const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
+            for (const video of allVideos) {
+              if (video.paused) {
+                video.muted = true
+                void video.play().catch(() => {})
+              }
+            }
+
             console.log('[MindAR] AR system restart completed')
           } catch (e) {
             console.error('[MindAR] Failed to restart AR system', e)

@@ -156,10 +156,11 @@ const MindARViewer: React.FC<Props> = ({
 
     const newMuted = !isMuted
     let actualMuted = newMuted
+    const videoArray = Array.from(allVideos)
 
     // 재생 중 muted 속성만 변경 (pause/play 없이 미디어 파이프라인 유지)
     // pause → play 사이클은 오디오 디코더 재초기화 + 버퍼 재충전이 필요해 수초 지연 발생
-    for (const video of Array.from(allVideos)) {
+    for (const video of videoArray) {
       video.muted = newMuted
 
       // 일시정지 상태였으면 재생 시작
@@ -175,6 +176,11 @@ const MindARViewer: React.FC<Props> = ({
           }
         }
       }
+    }
+
+    // 폴백 발생 시 이미 unmuted된 비디오들도 muted로 동기화
+    if (actualMuted !== newMuted) {
+      videoArray.forEach((video) => { video.muted = true })
     }
 
     setIsMuted(actualMuted)

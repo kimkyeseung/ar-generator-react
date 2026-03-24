@@ -100,8 +100,9 @@ const BasicModeViewer: React.FC<Props> = ({
   const handleToggleMute = useCallback(async () => {
     const newMutedState = !isMuted
     let actualMuted = newMutedState
+    const videoArray = Array.from(videoRefs.current.values())
 
-    for (const video of Array.from(videoRefs.current.values())) {
+    for (const video of videoArray) {
       video.muted = newMutedState
 
       // 일시정지 상태였으면 재생 시작
@@ -117,6 +118,11 @@ const BasicModeViewer: React.FC<Props> = ({
           }
         }
       }
+    }
+
+    // 폴백 발생 시 이미 unmuted된 비디오들도 muted로 동기화
+    if (actualMuted !== newMutedState) {
+      videoArray.forEach((video) => { video.muted = true })
     }
 
     setIsMuted(actualMuted)

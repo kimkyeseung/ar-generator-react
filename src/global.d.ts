@@ -176,5 +176,6 @@ declare namespace JSX {
     'a-plane': any
     'a-gltf-model': any
     'a-video': any
+    'a-image': any
   }
 }

@@ -38,13 +38,13 @@ interface Props {
   stabilization?: StabilizationSettings
 }
 
-// Tracking 모드 비디오를 A-Frame 씬에서 렌더링하기 위한 컴포넌트
-interface TrackingVideoEntityProps {
+// Tracking 모드 미디어를 A-Frame 씬에서 렌더링하기 위한 컴포넌트
+interface TrackingMediaEntityProps {
   item: ProcessedMediaItem
-  videoId: string
+  assetId: string
 }
 
-function TrackingVideoEntity({ item, videoId }: TrackingVideoEntityProps) {
+function TrackingMediaEntity({ item, assetId }: TrackingMediaEntityProps) {
   // position과 scale을 A-Frame 좌표로 변환
   // position.x, position.y는 0~1 범위 (화면 비율)
   // A-Frame에서는 중앙이 0,0이고 타겟 이미지 크기가 width=1
@@ -52,33 +52,49 @@ function TrackingVideoEntity({ item, videoId }: TrackingVideoEntityProps) {
   const posY = (0.5 - item.position.y) * 1 // Y축 반전
   const posZ = 0.001 * (item.order + 1) // Z-fighting 방지를 위해 약간 앞으로
 
-  // 비디오 크기 계산 (scale 적용)
-  const videoWidth = item.scale
-  const videoHeight = item.scale / item.aspectRatio
+  // 미디어 크기 계산 (scale 적용)
+  const mediaWidth = item.scale
+  const mediaHeight = item.scale / item.aspectRatio
 
-  if (item.chromaKeyEnabled && item.chromaKeyColor) {
+  // 비디오 + 크로마키
+  if (item.type === 'video' && item.chromaKeyEnabled && item.chromaKeyColor) {
     return (
       <a-plane
         position={`${posX} ${posY} ${posZ}`}
-        width={videoWidth.toString()}
-        height={videoHeight.toString()}
+        width={mediaWidth.toString()}
+        height={mediaHeight.toString()}
         rotation="0 0 0"
-        chromakey-material={`src: #${videoId}; color: ${item.chromaKeyColor}; similarity: ${item.chromaKeySettings.similarity}; smoothness: ${item.chromaKeySettings.smoothness}${item.flatView ? '; depthTest: false' : ''}`}
+        chromakey-material={`src: #${assetId}; color: ${item.chromaKeyColor}; similarity: ${item.chromaKeySettings.similarity}; smoothness: ${item.chromaKeySettings.smoothness}${item.flatView ? '; depthTest: false' : ''}`}
         {...(item.flatView ? { billboard: '' } : {})}
       />
     )
   }
 
+  // 비디오 (크로마키 없음)
+  if (item.type === 'video') {
+    return (
+      <a-video
+        src={`#${assetId}`}
+        position={`${posX} ${posY} ${posZ}`}
+        width={mediaWidth.toString()}
+        height={mediaHeight.toString()}
+        rotation="0 0 0"
+        loop="true"
+        autoplay="true"
+        playsinline="true"
+        {...(item.flatView ? { billboard: '', material: 'depthTest: false' } : {})}
+      />
+    )
+  }
+
+  // 이미지
   return (
-    <a-video
-      src={`#${videoId}`}
+    <a-image
+      src={`#${assetId}`}
       position={`${posX} ${posY} ${posZ}`}
-      width={videoWidth.toString()}
-      height={videoHeight.toString()}
+      width={mediaWidth.toString()}
+      height={mediaHeight.toString()}
       rotation="0 0 0"
-      loop="true"
-      autoplay="true"
-      playsinline="true"
       {...(item.flatView ? { billboard: '', material: 'depthTest: false' } : {})}
     />
   )
@@ -120,10 +136,12 @@ const MindARViewer: React.FC<Props> = ({
 
   // ==================== 계산 ====================
   const basicModeItems = mediaItems.filter((item) => item.mode === 'basic')
-  // tracking 모드 비디오 (order 순서대로)
-  const trackingModeVideos = mediaItems
-    .filter((item) => item.mode === 'tracking' && item.type === 'video')
+  // tracking 모드 아이템 (order 순서대로)
+  const trackingModeItems = mediaItems
+    .filter((item) => item.mode === 'tracking')
     .sort((a, b) => a.order - b.order)
+  const trackingModeVideos = trackingModeItems.filter((item) => item.type === 'video')
+  const trackingModeImages = trackingModeItems.filter((item) => item.type === 'image')
   // basic 모드 비디오 개수
   const basicModeVideoCount = basicModeItems.filter((item) => item.type === 'video').length
   // tracking 모드 비디오 개수
@@ -315,7 +333,7 @@ const MindARViewer: React.FC<Props> = ({
         device-orientation-permission-ui="enabled: false"
       >
         <a-assets timeout="200">
-          {/* 모든 tracking 모드 비디오들 */}
+          {/* tracking 모드 비디오 에셋 */}
           {trackingModeVideos.map((item) => (
             <video
               key={item.id}
@@ -333,17 +351,26 @@ const MindARViewer: React.FC<Props> = ({
               }}
             />
           ))}
+          {/* tracking 모드 이미지 에셋 */}
+          {trackingModeImages.map((item) => (
+            <img
+              key={item.id}
+              id={`ar-image-${item.id}`}
+              src={item.fileUrl}
+              crossOrigin="anonymous"
+            />
+          ))}
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false" />
 
         <a-entity mindar-image-target="targetIndex: 0">
-          {/* 모든 tracking 모드 비디오들 (order 순서대로 렌더링) */}
-          {trackingModeVideos.map((item) => (
-            <TrackingVideoEntity
+          {/* 모든 tracking 모드 미디어 (order 순서대로 렌더링) */}
+          {trackingModeItems.map((item) => (
+            <TrackingMediaEntity
               key={item.id}
               item={item}
-              videoId={`ar-video-${item.id}`}
+              assetId={item.type === 'video' ? `ar-video-${item.id}` : `ar-image-${item.id}`}
             />
           ))}
         </a-entity>

@@ -274,14 +274,14 @@ export default function MindARViewerPage() {
   }
 
   // AR 모드: MindARViewer 렌더링
-  // tracking 모드 비디오가 하나도 없으면 에러
-  const hasTrackingVideo = data.assets.mediaItems.some(
-    (item) => item.type === 'video' && item.mode === 'tracking'
+  // tracking 모드 미디어(비디오 또는 이미지)가 하나도 없으면 에러
+  const hasTrackingMedia = data.assets.mediaItems.some(
+    (item) => item.mode === 'tracking'
   )
-  if (!hasTrackingVideo) {
+  if (!hasTrackingMedia) {
     return (
       <div className="flex h-[100dvh] w-full items-center justify-center bg-red-500">
-        <p className="text-white">비디오가 없습니다.</p>
+        <p className="text-white">미디어가 없습니다.</p>
       </div>
     )
   }

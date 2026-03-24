@@ -141,14 +141,15 @@ export function useMindARScene({
       const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
       console.log(`[MindAR] Found ${allVideos.length} video(s) to play`)
 
-      for (const video of allVideos) {
+      // 모든 비디오를 병렬로 재생 (순차 재생 시 다중 비디오 시작 타이밍 어긋남 방지)
+      await Promise.all(allVideos.map(async (video) => {
         if (!video.paused) {
           // 이미 재생 중인 비디오: 처음부터 다시 재생하고 muted 상태 동기화
           const preferredMuted = isMutedRef.current ?? true
           video.muted = preferredMuted
           video.currentTime = 0
           console.log(`[MindAR] Video ${video.id} already playing, reset to start, synced muted=${preferredMuted}`)
-          continue
+          return
         }
 
         // 재시도 로직으로 재생
@@ -156,7 +157,7 @@ export function useMindARScene({
         if (success) {
           console.log(`[MindAR] Video ${video.id} - Resolution: ${video.videoWidth}x${video.videoHeight}`)
         }
-      }
+      }))
 
       // 메인 비디오 해상도 보고
       const mainVideo = sceneEl.querySelector<HTMLVideoElement>('#ar-video') ||

@@ -370,7 +370,7 @@ export default function EditProjectPage() {
         title,
         cameraResolution,
         videoQuality,
-        highPrecision: highPrecision ? 'true' : 'false',
+        highPrecision,
         filterMinCF: stabilization.filterMinCF,
         filterBeta: stabilization.filterBeta,
         missTolerance: stabilization.missTolerance,

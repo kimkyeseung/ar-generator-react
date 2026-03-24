@@ -137,6 +137,11 @@ export interface Project {
   videoQuality: VideoQuality // 'high' | 'medium' | 'low' - 영상 품질
   videoPosition: VideoPosition | null // 기본모드에서 비디오 위치
   videoScale: number | null // 기본모드에서 비디오 크기 (0.01~5.0)
+  // 트래킹 안정화 설정
+  filterMinCF: number | null
+  filterBeta: number | null
+  missTolerance: number | null
+  matrixLerpFactor: number | null
   // 멀티 미디어 아이템 (새 시스템)
   mediaItems: MediaItemResponse[]
   createdAt: string

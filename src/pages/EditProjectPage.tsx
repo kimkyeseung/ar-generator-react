@@ -130,10 +130,10 @@ export default function EditProjectPage() {
           selectedMediaItemId: null,
           highPrecision: data.highPrecision || false,
           stabilization: {
-            filterMinCF: (data as any).filterMinCF ?? DEFAULT_STABILIZATION_SETTINGS.filterMinCF,
-            filterBeta: (data as any).filterBeta ?? DEFAULT_STABILIZATION_SETTINGS.filterBeta,
-            missTolerance: (data as any).missTolerance ?? DEFAULT_STABILIZATION_SETTINGS.missTolerance,
-            matrixLerpFactor: (data as any).matrixLerpFactor ?? DEFAULT_STABILIZATION_SETTINGS.matrixLerpFactor,
+            filterMinCF: data.filterMinCF ?? DEFAULT_STABILIZATION_SETTINGS.filterMinCF,
+            filterBeta: data.filterBeta ?? DEFAULT_STABILIZATION_SETTINGS.filterBeta,
+            missTolerance: data.missTolerance ?? DEFAULT_STABILIZATION_SETTINGS.missTolerance,
+            matrixLerpFactor: data.matrixLerpFactor ?? DEFAULT_STABILIZATION_SETTINGS.matrixLerpFactor,
           },
         })
       } catch (err) {

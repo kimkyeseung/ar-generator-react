@@ -141,21 +141,23 @@ export function useMindARScene({
       const allVideos = Array.from(sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]'))
       console.log(`[MindAR] Found ${allVideos.length} video(s) to play`)
 
-      // 모든 비디오를 병렬로 재생 (순차 재생 시 다중 비디오 시작 타이밍 어긋남 방지)
+      // 모든 비디오를 병렬로 처리
+      // targetLost에서 비디오를 pause하지 않으므로 대부분 이미 재생 중
+      // play() 호출 최소화로 iOS 자동재생 정책 문제 방지
+      const preferredMuted = isMutedRef.current ?? true
       await Promise.all(allVideos.map(async (video) => {
-        if (!video.paused) {
-          // 이미 재생 중인 비디오: 처음부터 다시 재생하고 muted 상태 동기화
-          const preferredMuted = isMutedRef.current ?? true
-          video.muted = preferredMuted
-          video.currentTime = 0
-          console.log(`[MindAR] Video ${video.id} already playing, reset to start, synced muted=${preferredMuted}`)
-          return
-        }
+        // muted 상태 동기화 및 처음부터 재생
+        video.muted = preferredMuted
+        video.currentTime = 0
 
-        // 재시도 로직으로 재생
-        const success = await playVideoWithRetry(video, 3)
-        if (success) {
-          console.log(`[MindAR] Video ${video.id} - Resolution: ${video.videoWidth}x${video.videoHeight}`)
+        if (video.paused) {
+          // 초기 로드 등으로 아직 재생 시작 전인 경우에만 play() 호출
+          const success = await playVideoWithRetry(video, 3)
+          if (success) {
+            console.log(`[MindAR] Video ${video.id} started - Resolution: ${video.videoWidth}x${video.videoHeight}`)
+          }
+        } else {
+          console.log(`[MindAR] Video ${video.id} reset to start, synced muted=${preferredMuted}`)
         }
       }))
 
@@ -170,12 +172,9 @@ export function useMindARScene({
 
     const handleTargetLost = () => {
       console.log('[MindAR] targetLost')
-      // 모든 AR 비디오 일시정지
-      const allVideos = sceneEl.querySelectorAll<HTMLVideoElement>('video[id^="ar-video"]')
-      allVideos.forEach((video) => {
-        video.pause()
-        console.log(`[MindAR] Video ${video.id} paused`)
-      })
+      // 비디오를 pause하지 않음 - MindAR이 entity를 자동으로 숨김
+      // pause → play 사이클을 피해 iOS 자동재생 정책 문제 및
+      // 오디오 디코더 재초기화로 인한 영상 멈춤 방지
     }
 
     targetEntity?.addEventListener('targetFound', handleTargetFound)

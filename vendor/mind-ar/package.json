@@ -32,11 +32,13 @@
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@msgpack/msgpack": "^2.8.0",
     "@tensorflow/tfjs": "^4.2.0",
-    "canvas": "3.2.0",
     "mathjs": "^11.6.0",
     "ml-matrix": "^6.10.4",
     "svd-js": "^1.1.1",
     "tinyqueue": "^2.0.3"
+  },
+  "optionalDependencies": {
+    "canvas": "3.2.0"
   },
   "peerDependencies": {
     "three": ">=0.136.0"
